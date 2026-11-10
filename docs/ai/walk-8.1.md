@@ -39,8 +39,10 @@ The toolbar is judged against `design/toolbar-mock.html`; the reader's parts aga
 the ruling's name (a "proposed: …" there is the agent's suggestion — keep it by writing `differs by ruling` in Verdict,
 or overwrite it) or one line saying what is wrong and where; **Notes** = anything else (a screenshot of a fix goes beside
 the shots as `fix-<surface>-<cell>.png`). A "proposed: n/a" cell is a state that does not exist at that width — write
-`n/a` to confirm. Never leave a cell blank and never write one verdict for a group of cells. Live items (below) get the
-same three words plus what you saw.
+`n/a` to confirm. **Since 2026-11-10 (HUMAN RULING, walk prep) the table is ONE verdict per surface**, with a
+**Per-cell exceptions** column for any cell that differs; a surface is done when its verdict covers every cell not
+listed as an exception and every exception has its own word. Live items (below) get the same three words plus what
+you saw.
 
 **What happens after.** Every **fix** becomes a numbered discovered task — **8.1a, 8.1b, …** — written into tasks.md and
 run before group 9; the walk is ticked only when every cell has its own verdict, every pending-list row is empty or
@@ -85,6 +87,106 @@ go-live (`docs/store/GO-LIVE.md`).
   withdrawn); the sample document has none.
 - **Opera and Vivaldi are not installed here**; Chrome 156, Edge 157, Brave 157 and Firefox 159 are.
 
+## Human walk notes (from the review chat), 2026-11-09 / 10
+
+*The human's walk results as recorded in the review chat, lightly summarised (not verbatim), banked by the agent at
+walk prep on 2026-11-10. Mapped to the items and surfaces below; nothing here is a verdict the notes do not contain.*
+
+**CHROME** (launcher `-Browser chrome`; Load unpacked `.output/chrome-mv3`; `-Keep` for the restart check), light and
+dark unless stated:
+
+| # | Note | Outcome | Maps to |
+| --- | --- | --- | --- |
+| 1 | Setup guide opens on install (shows "Allow access to file URLs is on" — expected for an unpacked install) | OK | I-1, I-2 (the on state); surface 1 |
+| 2 | `file:///D:/Dev/peekover/docs/store/assets/sample.md` renders formatted | OK | surface 34 |
+| 3 | Contents list (TOC) jumps, and highlights the current section while scrolling | OK | II-10 (tab reader); surfaces 35, 36 |
+| 4 | Light / dark themes | OK | surface 34 |
+| 5 | Table filter, Copy CSV, Raw toggle | OK | (the tab reader's tools; the app page's table and Raw surfaces 7, 22, 23 not covered) |
+| 6 | App page: open folder `D:\Dev\peekover\docs`, the listing, opening a file | OK | I-7 (the picker, Chrome); surfaces 4, 5 |
+| 7 | App-page features (diagram drawn, math, coloured code, folder tree, Recent, "No network calls") | OK | surfaces 5, 19, 21, 24 |
+| 8 | Pins and Recent after reopening | OK | surface 16 |
+| 9 | Export | FIX → **8.1a (landed)**: the exported HTML printed cut off | I-9 |
+| 10 | Edit, save, Watch on a scratch copy (`D:\Dev\walk-scratch\sample.md`); the 9.3a Watch timing fix confirmed in real use | OK | II-1, II-8 (partly); surfaces 13, 29 |
+| 11 | Compare (snapshots); the diff view judged fine | OK | II-1, II-6; surfaces 14, 33 |
+| 12 | Diagram copy / download / lightbox; code line numbers, wrap, copy; code theme | OK | II-5, II-7 (partly); surfaces 19, 24, 25, 28 |
+| 13 | Raw GitHub file | FIX → **8.1b (landed)**: dark-mode link hover unreadable; **8.1c (landed)**: the watch note floated over the text | I-6 |
+| 14 | Stored data list and Wipe all data | OK | II-7 (partly); surface 26 |
+| 15 | Guide stays closed after a restart (kept profile) | OK | I-1 |
+
+**EDGE** (launcher `-Browser edge`):
+
+| # | Note | Outcome | Maps to |
+| --- | --- | --- | --- |
+| E1 | Guide shows "Allow access to file URLs is on" | OK | I-1, I-2 (the on state); surface 1 |
+| E2 | `file://` renders formatted | OK | surface 34 |
+| E3 | App page diagram / math / code | OK | surfaces 19, 21, 24 |
+| E4 | Theme switch and print preview | OK | I-9 (print preview, Edge). **Dark link hover on Edge: NOT explicitly checked** |
+
+**FIREFOX:**
+- Signed 0.0.9 (the agent's AMO step 11 + the human): the guide opens once and stays closed across restarts; `file://`
+  needs "Access local files on your computer" → **9.2b (landed)**. Maps to I-1 (Firefox), I-3.
+- Hand check, Firefox 159, signed 0.0.9: picker FRESH (an edit shows when the file is opened again); drag: Watch updated
+  after a save. Recorded as final-review step 1(c) / (d); → **9.3c (landed)**. Maps to I-11.
+- **The CURRENT build's Firefox walk is NOT yet done:** the 9.2b guide section, the 9.3b drag note, the 9.3a Watch
+  timing, and 8.1a / 8.1b / 8.1c.
+
+## The remaining checklist (2026-11-10, after the walk notes) — in walking order
+
+*Everything still open in the walk, shortest path. Build: `.output` as of `224e711` (both engines built there); the
+8.1 screenshots (`67ce7b9`) still stand for the app page — nothing since changed an app-page surface except the
+Firefox-only folder notes (9.3c) and the setup guide (9.2b). Launcher: `powershell -NoProfile -ExecutionPolicy Bypass
+-File scripts\walk-profiles.ps1 -Browser <name>`. Total about **2½–3 h**.*
+
+**A · CHROME — the current build** (`-Browser chrome`, then Load unpacked `.output\chrome-mv3`) · ~35 min
+1. **8.1b** — dark theme: hover a link on `file:///D:/Dev/peekover/docs/store/assets/sample.md` and on the app page;
+   the text sits on the yellow fill. *2 min*
+2. **8.1c + I-6** — a raw GitHub file, light and dark: the "Peekover watches local files…" note sits below the last
+   line, never over text; the network indicator and "Network used" read true. *4 min*
+3. **8.1a + I-9** — app page → Export the sample → open the file → Ctrl+P: every page in the preview; then the Copy
+   as … menus. *5 min*
+4. **I-2** — chrome://extensions: the toggle's label; "Open Peekover's details" from the guide; flip off → on with the
+   guide open (it should follow on focus). *5 min*
+5. **I-7** — "Open a folder" → cancel; deny; a remote image → Load → the status line reads "Network used". *5 min*
+6. **III-6** — Tab through the app page: every control's boundary and focus ring visible. *5 min*
+7. **I-4 + I-5** — the toolbar icon in Chrome's light and dark themes; the system fonts by eye on the tab reader. *4 min*
+8. **I-1 (toggle-flip case)** — after step 4, restart with `-Keep`: the guide does not reopen. *2 min*
+
+**B · EDGE and BRAVE** (`-Browser edge`, `-Browser brave`) · ~10 min
+9. **8.1b on Edge** — dark link hover (E4 did not check it). *2 min*
+10. **I-1 / I-2 / I-4 on Edge** — restart with `-Keep`: no second guide; `edge://extensions` label; the icon. *4 min*
+11. **I-1 / I-2 / I-4 on Brave** — the same three (not walked at all), or accept Chrome + Edge for it by name. *4 min*
+
+**C · FIREFOX — the CURRENT build as a temporary add-on** (`-Browser firefox` → Load Temporary Add-on →
+`.output\firefox-mv3\manifest.json`) · ~30 min. *A temporary add-on is removed when Firefox closes, so the
+guide-once-across-restarts check stays the signed 0.0.9's (done).*
+12. **9.2b guide** — the guide opens on load: with the setting OFF it says so and shows the four steps; then
+    about:addons → Peekover → Permissions and data → turn on "Access local files on your computer"; back to the guide:
+    it says "is on". *5 min* (Whether about:addons shows that toggle for a TEMPORARY add-on is not measured; if it
+    does not, note it and judge the guide's off state only.)
+13. **I-3 + surfaces 34–36 on Firefox** — `file://` sample.md with the setting on, light and dark: the reader, the
+    contents list, scrolling; **8.1c**: the "Watching isn't available…" note below the last line; **8.1b**: dark link
+    hover. *8 min*
+14. **I-11 + 9.3b + 9.3a** — drag a folder onto the app page: read the note ("…Watch isn't offered for a picked folder —
+    drag it in instead. Watching still works here…"); open a file, press Watch, save in your editor at once: the
+    change shows within ~1 s. Then "Open a folder" (the picker): read both notes (9.3c). *8 min*
+15. **8.1a on Firefox** — Export → open → print preview: every page. *4 min*
+16. **I-4 on Firefox** — the toolbar icon, light and dark browser theme. *2 min*
+
+**D · THE SCREENSHOTS** (`D:\Dev\peekover-shots\8.1\`, the `side-…` pair where it exists) · ~75 min
+17. **The 19 surfaces the notes did not cover — Chromium, light and dark** (table rows 2, 3, 6–12, 15, 17, 18, 20,
+    22, 23, 27, 30–32): one verdict each, exceptions only where a cell differs. *~2 min each, ~40 min*
+18. **The Firefox side of every surface** (36; the setup guide and section 5 were judged live in C): Firefox draws
+    the same frames, so most are a quick compare. *~1 min each, ~30 min*
+19. **II-2, II-3, II-4, II-9, II-10 (app page TOC), and the open halves of II-1, II-5, II-7, II-8** — one line each;
+    several are "accept by name". *~15 min* (II-6 judged fine in the notes.)
+
+**E · CONTRAST AND THE LISTS** · ~10 min
+20. **III-1 … III-5** — accept by name or fix, judged on the shots you have just walked. *~6 min*
+21. **IV-1 / IV-2** — both EMPTY at HEAD (the census and the native-control sweep run green on both engines,
+    2026-11-10): confirm. *1 min*
+22. **I-8** (the render-failure banner: accept as tested-only) and **I-10** (CI and the dry run: confirm, or re-run the
+    Release workflow with dry_run). *2–5 min*
+
 ## The 8.1 items (consolidated)
 
 Each item: what to look at → what "good" looks like → record. Items I are live only.
@@ -93,32 +195,32 @@ Each item: what to look at → what "good" looks like → record. Items I are li
 
 | # | Look at | Good looks like | Verdict | Notes |
 | --- | --- | --- | --- | --- |
-| I-1 | **Install and the setup guide, per browser** (Chrome by Load unpacked; Edge, Brave from the launcher; Firefox signed): does the guide open once on install, and not again after a browser restart (`-Keep`) or a toggle flip? | Opens exactly once. (Chromium unpacked loads re-install on every launch of `--load-extension` — judge "once" on Chrome's Load unpacked + restart, and on the signed Firefox.) | | |
-| I-2 | **The file-URL toggle in each Chromium browser** (Chrome, Edge, Brave): its label as the browser shows it; typing `chrome://extensions` (or `edge://`, `brave://`); "Open Peekover's details" opening the Details page; flip off → on with the guide open: does the guide update on focus; does Peekover need a restart after? | Each step's words match what the browser shows; the guide's state follows the toggle; record what the flip did. **The default (off on a store install) is not checkable before go-live** (prep finding). | | |
-| I-3 | **Firefox `file://` (§9-6)** on the SIGNED unlisted install, fresh profile: open a local `.md` by `file://` directly (not the app page). Also look in about:addons → Peekover → Permissions. | It renders with no setup. If Firefox asks for access, or it stays plain text → a discovered task (detection or instructions, no new permission — or STOP if a permission would be needed). This decides ledger rows 26 / 296 / 304 and the Firefox listing's "not yet been checked" line (9.2). | | |
+| I-1 | **Install and the setup guide, per browser** (Chrome by Load unpacked; Edge, Brave from the launcher; Firefox signed): does the guide open once on install, and not again after a browser restart (`-Keep`) or a toggle flip? | Opens exactly once. (Chromium unpacked loads re-install on every launch of `--load-extension` — judge "once" on Chrome's Load unpacked + restart, and on the signed Firefox.) | walked (notes): Chrome OK; Edge, Firefox (signed) partly | Chrome: opens once (1), stays closed after a restart with `-Keep` (15). Edge: opens (E1); restart not noted. Firefox signed 0.0.9: once, and not again across restarts (AMO step 11 + the human). **Not walked:** Brave; the toggle-flip case; the CURRENT build's Firefox guide (9.2b). |
+| I-2 | **The file-URL toggle in each Chromium browser** (Chrome, Edge, Brave): its label as the browser shows it; typing `chrome://extensions` (or `edge://`, `brave://`); "Open Peekover's details" opening the Details page; flip off → on with the guide open: does the guide update on focus; does Peekover need a restart after? | Each step's words match what the browser shows; the guide's state follows the toggle; record what the flip did. **The default (off on a store install) is not checkable before go-live** (prep finding). | walked (notes): partly | Only the "on" state, Chrome (1) and Edge (E1). **Not walked:** the label in each browser, typing `chrome://extensions` / `edge://`, "Open Peekover's details", flip off → on with the guide open, Brave. |
+| I-3 | **Firefox `file://` (§9-6)** on the SIGNED unlisted install, fresh profile: open a local `.md` by `file://` directly (not the app page). Also look in about:addons → Peekover → Permissions. | It renders with no setup. If Firefox asks for access, or it stays plain text → a discovered task (detection or instructions, no new permission — or STOP if a permission would be needed). This decides ledger rows 26 / 296 / 304 and the Firefox listing's "not yet been checked" line (9.2). | fix — 9.2b (landed) | Signed 0.0.9: `file://` stayed plain text until "Access local files on your computer" was turned on → 9.2b (the guide's Firefox branch, floor 153). **Re-check on the current build:** the guide's Firefox section, then a `file://` .md with the setting on. |
 | I-4 | **The toolbar icon** in Chrome, Edge, Brave and Firefox, with the browser's own light and dark themes. | Crisp at toolbar size; legible on both. | | |
 | I-5 | **System font stacks by eye** on the tab reader (content script) on Windows — and macOS if available (D-3); once on a machine WITHOUT the design faces installed (CI's case: the chrome draws in the system face). Code draws Consolas on Windows (5.10, R1 — the human chose to proceed). | Reads as designed in the system face; nothing falls back to a serif or to Courier. | | |
-| I-6 | **The tab reader on a raw GitHub / GitLab / Bitbucket file** (a real network page — your choice of file). | Same reader as on `file://`; the network indicator and "Network used" read true. | fix | The human's walk "item 13", two findings: (1) dark theme, a hovered link's text is unreadable — FIXED as 8.1b (`decisions.md` "M13 TASK 8.1b"; every link, both reader surfaces); (2) on a raw web file the "Peekover watches local files…" note sits over the text at bottom-left — FIXED as 8.1c (`decisions.md` "M13 TASK 8.1c": OPTION A, the note is an aside after the document; see II-9). |
-| I-7 | **The folder picker and the denied state**: "Open a folder" (the OS dialog), cancel it, deny it. **Network used**: load a remote image with "Load" and read the status line ("Network used", no count — 4.7 ruling). | Each state is the restyled one (5.5); the status line changes from "No network calls" to "Network used". | | |
+| I-6 | **The tab reader on a raw GitHub / GitLab / Bitbucket file** (a real network page — your choice of file). | Same reader as on `file://`; the network indicator and "Network used" read true. | fix | The human's walk "item 13", two findings: (1) dark theme, a hovered link's text is unreadable — FIXED as 8.1b (`decisions.md` "M13 TASK 8.1b"; every link, both reader surfaces); (2) on a raw web file the "Peekover watches local files…" note sits over the text at bottom-left — FIXED as 8.1c (`decisions.md` "M13 TASK 8.1c": OPTION A, the note is an aside after the document; see II-9). **Walk notes:** 8.1b and 8.1c landed. **Not noted:** the network indicator and "Network used" on the raw page; dark link hover on Edge (E4). |
+| I-7 | **The folder picker and the denied state**: "Open a folder" (the OS dialog), cancel it, deny it. **Network used**: load a remote image with "Load" and read the status line ("Network used", no count — 4.7 ruling). | Each state is the restyled one (5.5); the status line changes from "No network calls" to "Network used". | walked (notes): partly | Chrome: "Open a folder", the listing, a file opened (6). **Not walked:** cancel, deny, "Network used" after Load on a remote image. |
 | I-8 | **The render-failure banner** — reachable only by a document that breaks the renderer; none is known. | Accept by name as tested-only (the fallback tests), or name a document that triggers it. | | |
-| I-9 | **The reader's own untouched surfaces** in both themes (WORKFLOW §7.4) — anything the screenshots do not reach: print preview (Ctrl+P on the tab reader), the Export download, Copy as … menus. | Nothing unstyled or broken. | fix | The exported HTML "gets cut off at the middle" (the human). → **8.1a, landed 2026-11-10:** the export wrote `@mediaprint` / `@mediascreen …` (no space), so its print rule was dropped and the file printed one page; fixed in `htmlExport.ts` (Copy as HTML shares it; the app page's own PDF never used it). "A light export comes out dark" did not reproduce — a light export paints light paper (tested); two `body{}` token blocks appear only in a dark export, dark last. Re-check: export, open, print. |
+| I-9 | **The reader's own untouched surfaces** in both themes (WORKFLOW §7.4) — anything the screenshots do not reach: print preview (Ctrl+P on the tab reader), the Export download, Copy as … menus. | Nothing unstyled or broken. | fix | The exported HTML "gets cut off at the middle" (the human). → **8.1a, landed 2026-11-10:** the export wrote `@mediaprint` / `@mediascreen …` (no space), so its print rule was dropped and the file printed one page; fixed in `htmlExport.ts` (Copy as HTML shares it; the app page's own PDF never used it). "A light export comes out dark" did not reproduce — a light export paints light paper (tested); two `body{}` token blocks appear only in a dark export, dark last. Re-check: export, open, print. **Walk notes:** print preview OK on Edge (E4); Export → 8.1a. **Not walked:** Copy as … menus; the 8.1a re-check (export + print) on both engines. |
 | I-10 | **Release dry run and CI (G-9; Q6)** — already run: Release 42171130695 and 42171186611 on `14c274f` (build green; attest and release skipped; artifacts complete; `sha256sum -c` OK); the first CI on `main` (1.1); CI 42217671355 and Supply chain 42217671570 green on `67ce7b9`. | "as expected" — or a discovered task. | | |
-| I-11 | **Firefox's two folder routes on the app page** (the shots cannot show them): (a) "Open a folder" → the file picker → the read-only snapshot, its note, Watch unavailable with its note; (b) drag the folder onto the page → the pane, Watch → the one-time notice → Watching → edit the file on disk → Compare → a snapshot → the diff view. | Each state restyled as in Chromium; the notes read true. | fix | The human, 2026-11-10, Firefox 159, the AMO-signed 0.0.9: (a) "Open a folder" → sample.md edited in Notepad and saved → clicking the file again showed the edit ("picker: fresh"); (b) drag: Watch updated after a save ("works as tested"). The picker-route texts that said "frozen" were re-worded with the human's approval — FIXED as 9.3c (`decisions.md`, "M13 TASK 9.3c"); Watch for a picked folder is carried past 0.1.0. |
+| I-11 | **Firefox's two folder routes on the app page** (the shots cannot show them): (a) "Open a folder" → the file picker → the read-only snapshot, its note, Watch unavailable with its note; (b) drag the folder onto the page → the pane, Watch → the one-time notice → Watching → edit the file on disk → Compare → a snapshot → the diff view. | Each state restyled as in Chromium; the notes read true. | fix | The human, 2026-11-10, Firefox 159, the AMO-signed 0.0.9: (a) "Open a folder" → sample.md edited in Notepad and saved → clicking the file again showed the edit ("picker: fresh"); (b) drag: Watch updated after a save ("works as tested"). The picker-route texts that said "frozen" were re-worded with the human's approval — FIXED as 9.3c (`decisions.md`, "M13 TASK 9.3c"); Watch for a picked folder is carried past 0.1.0. **Walk notes:** signed 0.0.9: picker fresh, drag Watch updated. **Not walked:** the CURRENT build (9.3a timing, 9.3b drag note, 9.3c picker notes). |
 
 ### II · Things the screenshots show that need a judgement, not a pixel match
 
 | # | Look at | Good looks like | Verdict | Notes |
 | --- | --- | --- | --- | --- |
-| II-1 | **3.1 named check** — Editing (Read / Edit / Raw while editing), the Watching pill, the one-time snapshot notice, the Compare picker, the Files overlay — WORKING, both engines, both themes (surfaces `editing`, `watching`, `watch-first-notice`, `compare-picker`, `files-overlay`). | Each matches the approved mock frame or a named ruling. | | |
+| II-1 | **3.1 named check** — Editing (Read / Edit / Raw while editing), the Watching pill, the one-time snapshot notice, the Compare picker, the Files overlay — WORKING, both engines, both themes (surfaces `editing`, `watching`, `watch-first-notice`, `compare-picker`, `files-overlay`). | Each matches the approved mock frame or a named ruling. | walked (notes): partly | Chrome: Editing (10), the Watching pill (10), Compare (11). **Not walked:** the one-time snapshot notice, the Files overlay; Firefox. |
 | II-2 | The **compact toolbar** (≤ 863 px, "⋯") at 414 (`more-menu`); the **agent file at 1280** two-row toolbar (`agent-file`, C061). | At most two rows; "⋯" holds Theme, Code theme, Stored data, Export, Setup guide. | | |
 | II-3 | The **no-folder state** (`no-folder`, `no-folder-pinned`): the mock's ink-primary "Open a folder" in the toolbar vs 5.5's body card ("Mock + uniform" ruling). | The ruling's layout; record matches / differs by ruling / fix. | | |
 | II-4 | The **Recent list** repeating the same file (prep finding). | Decide: expected, or a fix. | | |
-| II-5 | **Code**: the Peekover theme (constants colour on `const` names; the synthesised italic); "Show full code" (kept its 009 look); the in-flow code toolbar vs the mock's floating copy button (`code-blocks`, `long-code`). | As 5.8 / 5.3 built and the mock's colours. | | |
-| II-6 | **Diff view** (`diff-view`): added text told from unchanged by fill alone (removed also has line-through) — is a non-colour marker needed (WCAG 1.4.1)? And the plainer document style inside the diff (prep finding). | Decide: accept, or a fix. | | |
-| II-7 | **Panels and dialogs** (`stored-data-panel`, `export-panel`, `code-theme-panel`, `unsaved-guard`, `diagram-lightbox`): the dark scrims; the lightbox's card; popover radius 12 (mock) vs `.panelbox` 14; the mock's `.go` size vs the primaries' 11.5 px. | Matches, or the difference accepted by name. | | |
-| II-8 | **The editor** (`editing`, `editing-unsaved`, `editor-search`): the save bar sits inside the split's border (the mock draws it above); Save has no hover change and no disabled state — FLAGGED at 5.7, never ruled; the search panel's CodeMirror-default controls (prep finding). | Accept each by name, or a fix. | | |
+| II-5 | **Code**: the Peekover theme (constants colour on `const` names; the synthesised italic); "Show full code" (kept its 009 look); the in-flow code toolbar vs the mock's floating copy button (`code-blocks`, `long-code`). | As 5.8 / 5.3 built and the mock's colours. | walked (notes): partly | Chrome: code line numbers, wrap, copy, the code theme (12) OK. **Not walked:** "Show full code" (long-code), the constants colour / italic by eye; Firefox. |
+| II-6 | **Diff view** (`diff-view`): added text told from unchanged by fill alone (removed also has line-through) — is a non-colour marker needed (WCAG 1.4.1)? And the plainer document style inside the diff (prep finding). | Decide: accept, or a fix. | walked (notes): judged fine | Chrome 11: "the diff view judged fine". Firefox not walked. |
+| II-7 | **Panels and dialogs** (`stored-data-panel`, `export-panel`, `code-theme-panel`, `unsaved-guard`, `diagram-lightbox`): the dark scrims; the lightbox's card; popover radius 12 (mock) vs `.panelbox` 14; the mock's `.go` size vs the primaries' 11.5 px. | Matches, or the difference accepted by name. | walked (notes): partly | Chrome: Stored data (14), the code-theme panel and the diagram lightbox (12). **Not walked:** the Export panel, the unsaved-changes dialog; the scrims / radius / `.go` size questions; Firefox. |
+| II-8 | **The editor** (`editing`, `editing-unsaved`, `editor-search`): the save bar sits inside the split's border (the mock draws it above); Save has no hover change and no disabled state — FLAGGED at 5.7, never ruled; the search panel's CodeMirror-default controls (prep finding). | Accept each by name, or a fix. | walked (notes): partly | Chrome 10: edit and save OK. **Not ruled:** the save bar inside the split, Save's hover / disabled state, the search panel's controls. |
 | II-9 | **The tab reader's floating pills** at 1080 and 414 (`tab-reader-reading`): the bottom-left stack floats over body text mid-scroll ("no chrome over text" ruled AT REST, 5.6); the contents button sits 17 px lower while the card is open (73 vs 52). | Matches the ruling, or a fix. | | |
-| II-10 | **TOC** (`toc-open`, `short-document`): open card, rows, the "here" highlighter; at narrow widths the collapsed opener over the text's top-right (at 414 it spans 252 → 374, text to 358); the short-document card. | As 5.2 / 5.2a built. | | |
+| II-10 | **TOC** (`toc-open`, `short-document`): open card, rows, the "here" highlighter; at narrow widths the collapsed opener over the text's top-right (at 414 it spans 252 → 374, text to 358); the short-document card. | As 5.2 / 5.2a built. | walked (notes): partly | Chrome 3: the TAB READER's TOC jumps and highlights the current section. **Not walked:** the app page's TOC (`toc-open`, `short-document`) and the narrow-width opener. |
 
 ### III · Non-text contrast (WCAG 1.4.11), both themes — accept by name or fix
 
@@ -143,8 +245,8 @@ surface; record one line each.
 
 ### Close of the walk
 
-Every cell below has its own verdict; engines and viewports recorded (above and in each cell's name); every "fix" a
-numbered task (8.1a …); Golden EMPTY; `permissions: []`.
+Every surface below has its verdict, and every per-cell exception its own (HUMAN RULING 2026-11-10: one verdict per
+surface); engines and viewports recorded; every "fix" a numbered task (8.1a …); Golden EMPTY; `permissions: []`.
 
 ## Surfaces that cannot be captured automatically (a live look)
 
@@ -161,763 +263,92 @@ numbered task (8.1a …); Golden EMPTY; `permissions: []`.
 
 ## The scoring table
 
-Shots root: **`D:\Dev\peekover-shots\8.1\`**. Columns: **Cell** (theme-engine-width) · **Screenshot** · **Verdict**
-(matches / differs by ruling / fix) · **Ruling / fix** (pre-filled "proposed: …" where a recorded ruling explains a known
-difference — yours to confirm) · **Notes**. A surface with a mock also has `mock-…` and `side-…` files in its folder.
-
-
-#### `1-install/setup-guide`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `1-install/setup-guide/light-chromium-1440.png` | | proposed: differs by ruling? — not a ruling: an unpacked (--load-extension) install starts with "Allow access to file URLs" ON; a store install starts OFF (see the off shot) | |
-| light-chromium-1280 | `1-install/setup-guide/light-chromium-1280.png` | | proposed: differs by ruling? — not a ruling: an unpacked (--load-extension) install starts with "Allow access to file URLs" ON; a store install starts OFF (see the off shot) | |
-| light-chromium-1080 | `1-install/setup-guide/light-chromium-1080.png` | | proposed: differs by ruling? — not a ruling: an unpacked (--load-extension) install starts with "Allow access to file URLs" ON; a store install starts OFF (see the off shot) | |
-| light-chromium-414 | `1-install/setup-guide/light-chromium-414.png` | | proposed: differs by ruling? — not a ruling: an unpacked (--load-extension) install starts with "Allow access to file URLs" ON; a store install starts OFF (see the off shot) | |
-| dark-chromium-1440 | `1-install/setup-guide/dark-chromium-1440.png` | | proposed: differs by ruling? — not a ruling: an unpacked (--load-extension) install starts with "Allow access to file URLs" ON; a store install starts OFF (see the off shot) | |
-| dark-chromium-1280 | `1-install/setup-guide/dark-chromium-1280.png` | | proposed: differs by ruling? — not a ruling: an unpacked (--load-extension) install starts with "Allow access to file URLs" ON; a store install starts OFF (see the off shot) | |
-| dark-chromium-1080 | `1-install/setup-guide/dark-chromium-1080.png` | | proposed: differs by ruling? — not a ruling: an unpacked (--load-extension) install starts with "Allow access to file URLs" ON; a store install starts OFF (see the off shot) | |
-| dark-chromium-414 | `1-install/setup-guide/dark-chromium-414.png` | | proposed: differs by ruling? — not a ruling: an unpacked (--load-extension) install starts with "Allow access to file URLs" ON; a store install starts OFF (see the off shot) | |
-| light-firefox-1440 | `1-install/setup-guide/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `1-install/setup-guide/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `1-install/setup-guide/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `1-install/setup-guide/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `1-install/setup-guide/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `1-install/setup-guide/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `1-install/setup-guide/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `1-install/setup-guide/dark-firefox-414.png` | |  | |
-
-#### `1-install/setup-guide-file-access-off`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `1-install/setup-guide-file-access-off/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `1-install/setup-guide-file-access-off/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `1-install/setup-guide-file-access-off/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `1-install/setup-guide-file-access-off/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `1-install/setup-guide-file-access-off/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `1-install/setup-guide-file-access-off/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `1-install/setup-guide-file-access-off/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `1-install/setup-guide-file-access-off/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | — (Chromium-only state) | n/a | Firefox has no file-URL toggle | |
-| light-firefox-1280 | — (Chromium-only state) | n/a | Firefox has no file-URL toggle | |
-| light-firefox-1080 | — (Chromium-only state) | n/a | Firefox has no file-URL toggle | |
-| light-firefox-414 | — (Chromium-only state) | n/a | Firefox has no file-URL toggle | |
-| dark-firefox-1440 | — (Chromium-only state) | n/a | Firefox has no file-URL toggle | |
-| dark-firefox-1280 | — (Chromium-only state) | n/a | Firefox has no file-URL toggle | |
-| dark-firefox-1080 | — (Chromium-only state) | n/a | Firefox has no file-URL toggle | |
-| dark-firefox-414 | — (Chromium-only state) | n/a | Firefox has no file-URL toggle | |
-
-#### `3-app-chrome/no-folder`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/no-folder/light-chromium-1440.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| light-chromium-1280 | `3-app-chrome/no-folder/light-chromium-1280.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| light-chromium-1080 | `3-app-chrome/no-folder/light-chromium-1080.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| light-chromium-414 | `3-app-chrome/no-folder/light-chromium-414.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| dark-chromium-1440 | `3-app-chrome/no-folder/dark-chromium-1440.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| dark-chromium-1280 | `3-app-chrome/no-folder/dark-chromium-1280.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| dark-chromium-1080 | `3-app-chrome/no-folder/dark-chromium-1080.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| dark-chromium-414 | `3-app-chrome/no-folder/dark-chromium-414.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| light-firefox-1440 | `3-app-chrome/no-folder/light-firefox-1440.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| light-firefox-1280 | `3-app-chrome/no-folder/light-firefox-1280.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| light-firefox-1080 | `3-app-chrome/no-folder/light-firefox-1080.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| light-firefox-414 | `3-app-chrome/no-folder/light-firefox-414.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| dark-firefox-1440 | `3-app-chrome/no-folder/dark-firefox-1440.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| dark-firefox-1280 | `3-app-chrome/no-folder/dark-firefox-1280.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| dark-firefox-1080 | `3-app-chrome/no-folder/dark-firefox-1080.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-| dark-firefox-414 | `3-app-chrome/no-folder/dark-firefox-414.png` | | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) | |
-
-#### `3-app-chrome/folder-granted`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/folder-granted/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `3-app-chrome/folder-granted/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `3-app-chrome/folder-granted/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `3-app-chrome/folder-granted/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `3-app-chrome/folder-granted/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `3-app-chrome/folder-granted/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `3-app-chrome/folder-granted/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `3-app-chrome/folder-granted/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `3-app-chrome/folder-granted/light-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1280 | `3-app-chrome/folder-granted/light-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1080 | `3-app-chrome/folder-granted/light-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-414 | `3-app-chrome/folder-granted/light-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1440 | `3-app-chrome/folder-granted/dark-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1280 | `3-app-chrome/folder-granted/dark-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1080 | `3-app-chrome/folder-granted/dark-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-414 | `3-app-chrome/folder-granted/dark-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-
-#### `3-app-chrome/reading`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/reading/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `3-app-chrome/reading/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `3-app-chrome/reading/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `3-app-chrome/reading/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `3-app-chrome/reading/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `3-app-chrome/reading/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `3-app-chrome/reading/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `3-app-chrome/reading/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `3-app-chrome/reading/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `3-app-chrome/reading/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `3-app-chrome/reading/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `3-app-chrome/reading/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `3-app-chrome/reading/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `3-app-chrome/reading/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `3-app-chrome/reading/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `3-app-chrome/reading/dark-firefox-414.png` | |  | |
-
-#### `3-app-chrome/agent-file`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/agent-file/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `3-app-chrome/agent-file/light-chromium-1280.png` | | proposed: differs by ruling — C061: an agent file wraps to a second toolbar row between 864 and ~1290 px (decisions.md 2026-11-03, "M13 RULING — C061 at 1280") | |
-| light-chromium-1080 | `3-app-chrome/agent-file/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `3-app-chrome/agent-file/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `3-app-chrome/agent-file/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `3-app-chrome/agent-file/dark-chromium-1280.png` | | proposed: differs by ruling — C061: an agent file wraps to a second toolbar row between 864 and ~1290 px (decisions.md 2026-11-03, "M13 RULING — C061 at 1280") | |
-| dark-chromium-1080 | `3-app-chrome/agent-file/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `3-app-chrome/agent-file/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `3-app-chrome/agent-file/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `3-app-chrome/agent-file/light-firefox-1280.png` | | proposed: differs by ruling — C061: an agent file wraps to a second toolbar row between 864 and ~1290 px (decisions.md 2026-11-03, "M13 RULING — C061 at 1280") | |
-| light-firefox-1080 | `3-app-chrome/agent-file/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `3-app-chrome/agent-file/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `3-app-chrome/agent-file/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `3-app-chrome/agent-file/dark-firefox-1280.png` | | proposed: differs by ruling — C061: an agent file wraps to a second toolbar row between 864 and ~1290 px (decisions.md 2026-11-03, "M13 RULING — C061 at 1280") | |
-| dark-firefox-1080 | `3-app-chrome/agent-file/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `3-app-chrome/agent-file/dark-firefox-414.png` | |  | |
-
-#### `3-app-chrome/raw`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/raw/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `3-app-chrome/raw/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `3-app-chrome/raw/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `3-app-chrome/raw/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `3-app-chrome/raw/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `3-app-chrome/raw/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `3-app-chrome/raw/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `3-app-chrome/raw/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `3-app-chrome/raw/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `3-app-chrome/raw/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `3-app-chrome/raw/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `3-app-chrome/raw/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `3-app-chrome/raw/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `3-app-chrome/raw/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `3-app-chrome/raw/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `3-app-chrome/raw/dark-firefox-414.png` | |  | |
-
-#### `3-app-chrome/more-menu`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| light-chromium-1280 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| light-chromium-1080 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| light-chromium-414 | `3-app-chrome/more-menu/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| dark-chromium-1280 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| dark-chromium-1080 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| dark-chromium-414 | `3-app-chrome/more-menu/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| light-firefox-1280 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| light-firefox-1080 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| light-firefox-414 | `3-app-chrome/more-menu/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| dark-firefox-1280 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| dark-firefox-1080 | — | proposed: n/a | no "⋯" above 863 px — the app controls are in the toolbar | |
-| dark-firefox-414 | `3-app-chrome/more-menu/dark-firefox-414.png` | |  | |
-
-#### `3-app-chrome/files-overlay`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | — | proposed: n/a | no Files overlay above 1189 px — the pane stays in the row | |
-| light-chromium-1280 | — | proposed: n/a | no Files overlay above 1189 px — the pane stays in the row | |
-| light-chromium-1080 | `3-app-chrome/files-overlay/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `3-app-chrome/files-overlay/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | — | proposed: n/a | no Files overlay above 1189 px — the pane stays in the row | |
-| dark-chromium-1280 | — | proposed: n/a | no Files overlay above 1189 px — the pane stays in the row | |
-| dark-chromium-1080 | `3-app-chrome/files-overlay/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `3-app-chrome/files-overlay/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | — | proposed: n/a | no Files overlay above 1189 px — the pane stays in the row | |
-| light-firefox-1280 | — | proposed: n/a | no Files overlay above 1189 px — the pane stays in the row | |
-| light-firefox-1080 | `3-app-chrome/files-overlay/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `3-app-chrome/files-overlay/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | — | proposed: n/a | no Files overlay above 1189 px — the pane stays in the row | |
-| dark-firefox-1280 | — | proposed: n/a | no Files overlay above 1189 px — the pane stays in the row | |
-| dark-firefox-1080 | `3-app-chrome/files-overlay/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `3-app-chrome/files-overlay/dark-firefox-414.png` | |  | |
-
-#### `3-app-chrome/folder-search`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/folder-search/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `3-app-chrome/folder-search/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `3-app-chrome/folder-search/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `3-app-chrome/folder-search/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `3-app-chrome/folder-search/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `3-app-chrome/folder-search/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `3-app-chrome/folder-search/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `3-app-chrome/folder-search/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `3-app-chrome/folder-search/light-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1280 | `3-app-chrome/folder-search/light-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1080 | `3-app-chrome/folder-search/light-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-414 | `3-app-chrome/folder-search/light-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1440 | `3-app-chrome/folder-search/dark-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1280 | `3-app-chrome/folder-search/dark-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1080 | `3-app-chrome/folder-search/dark-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-414 | `3-app-chrome/folder-search/dark-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-
-#### `3-app-chrome/folder-empty`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/folder-empty/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `3-app-chrome/folder-empty/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `3-app-chrome/folder-empty/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `3-app-chrome/folder-empty/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `3-app-chrome/folder-empty/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `3-app-chrome/folder-empty/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `3-app-chrome/folder-empty/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `3-app-chrome/folder-empty/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `3-app-chrome/folder-empty/light-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1280 | `3-app-chrome/folder-empty/light-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1080 | `3-app-chrome/folder-empty/light-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-414 | `3-app-chrome/folder-empty/light-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1440 | `3-app-chrome/folder-empty/dark-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1280 | `3-app-chrome/folder-empty/dark-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1080 | `3-app-chrome/folder-empty/dark-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-414 | `3-app-chrome/folder-empty/dark-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-
-#### `3-app-chrome/watch-first-notice`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/watch-first-notice/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `3-app-chrome/watch-first-notice/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `3-app-chrome/watch-first-notice/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `3-app-chrome/watch-first-notice/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `3-app-chrome/watch-first-notice/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `3-app-chrome/watch-first-notice/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `3-app-chrome/watch-first-notice/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `3-app-chrome/watch-first-notice/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `3-app-chrome/watch-first-notice/light-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1280 | `3-app-chrome/watch-first-notice/light-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1080 | `3-app-chrome/watch-first-notice/light-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-414 | `3-app-chrome/watch-first-notice/light-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1440 | `3-app-chrome/watch-first-notice/dark-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1280 | `3-app-chrome/watch-first-notice/dark-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1080 | `3-app-chrome/watch-first-notice/dark-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-414 | `3-app-chrome/watch-first-notice/dark-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-
-#### `3-app-chrome/watching`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/watching/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `3-app-chrome/watching/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `3-app-chrome/watching/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `3-app-chrome/watching/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `3-app-chrome/watching/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `3-app-chrome/watching/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `3-app-chrome/watching/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `3-app-chrome/watching/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `3-app-chrome/watching/light-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1280 | `3-app-chrome/watching/light-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1080 | `3-app-chrome/watching/light-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-414 | `3-app-chrome/watching/light-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1440 | `3-app-chrome/watching/dark-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1280 | `3-app-chrome/watching/dark-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1080 | `3-app-chrome/watching/dark-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-414 | `3-app-chrome/watching/dark-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-
-#### `3-app-chrome/compare-picker`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/compare-picker/light-chromium-1440.png` | | proposed: differs by ruling — C130: Compare's status sits inside the dropdown while the picker is open (decisions.md 2026-11-03, "M13 RULING — C130") | |
-| light-chromium-1280 | `3-app-chrome/compare-picker/light-chromium-1280.png` | | proposed: differs by ruling — C130: Compare's status sits inside the dropdown while the picker is open (decisions.md 2026-11-03, "M13 RULING — C130") | |
-| light-chromium-1080 | `3-app-chrome/compare-picker/light-chromium-1080.png` | | proposed: differs by ruling — C130: Compare's status sits inside the dropdown while the picker is open (decisions.md 2026-11-03, "M13 RULING — C130") | |
-| light-chromium-414 | `3-app-chrome/compare-picker/light-chromium-414.png` | | proposed: differs by ruling — C130: Compare's status sits inside the dropdown while the picker is open (decisions.md 2026-11-03, "M13 RULING — C130") | |
-| dark-chromium-1440 | `3-app-chrome/compare-picker/dark-chromium-1440.png` | | proposed: differs by ruling — C130: Compare's status sits inside the dropdown while the picker is open (decisions.md 2026-11-03, "M13 RULING — C130") | |
-| dark-chromium-1280 | `3-app-chrome/compare-picker/dark-chromium-1280.png` | | proposed: differs by ruling — C130: Compare's status sits inside the dropdown while the picker is open (decisions.md 2026-11-03, "M13 RULING — C130") | |
-| dark-chromium-1080 | `3-app-chrome/compare-picker/dark-chromium-1080.png` | | proposed: differs by ruling — C130: Compare's status sits inside the dropdown while the picker is open (decisions.md 2026-11-03, "M13 RULING — C130") | |
-| dark-chromium-414 | `3-app-chrome/compare-picker/dark-chromium-414.png` | | proposed: differs by ruling — C130: Compare's status sits inside the dropdown while the picker is open (decisions.md 2026-11-03, "M13 RULING — C130") | |
-| light-firefox-1440 | `3-app-chrome/compare-picker/light-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1280 | `3-app-chrome/compare-picker/light-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1080 | `3-app-chrome/compare-picker/light-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-414 | `3-app-chrome/compare-picker/light-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1440 | `3-app-chrome/compare-picker/dark-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1280 | `3-app-chrome/compare-picker/dark-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1080 | `3-app-chrome/compare-picker/dark-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-414 | `3-app-chrome/compare-picker/dark-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-
-#### `3-app-chrome/remote-media`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/remote-media/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `3-app-chrome/remote-media/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `3-app-chrome/remote-media/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `3-app-chrome/remote-media/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `3-app-chrome/remote-media/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `3-app-chrome/remote-media/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `3-app-chrome/remote-media/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `3-app-chrome/remote-media/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `3-app-chrome/remote-media/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `3-app-chrome/remote-media/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `3-app-chrome/remote-media/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `3-app-chrome/remote-media/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `3-app-chrome/remote-media/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `3-app-chrome/remote-media/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `3-app-chrome/remote-media/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `3-app-chrome/remote-media/dark-firefox-414.png` | |  | |
-
-#### `3-app-chrome/no-folder-pinned`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `3-app-chrome/no-folder-pinned/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `3-app-chrome/no-folder-pinned/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `3-app-chrome/no-folder-pinned/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `3-app-chrome/no-folder-pinned/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `3-app-chrome/no-folder-pinned/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `3-app-chrome/no-folder-pinned/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `3-app-chrome/no-folder-pinned/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `3-app-chrome/no-folder-pinned/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `3-app-chrome/no-folder-pinned/light-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1280 | `3-app-chrome/no-folder-pinned/light-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-1080 | `3-app-chrome/no-folder-pinned/light-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| light-firefox-414 | `3-app-chrome/no-folder-pinned/light-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1440 | `3-app-chrome/no-folder-pinned/dark-firefox-1440.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1280 | `3-app-chrome/no-folder-pinned/dark-firefox-1280.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-1080 | `3-app-chrome/no-folder-pinned/dark-firefox-1080.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-| dark-firefox-414 | `3-app-chrome/no-folder-pinned/dark-firefox-414.png` | | harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | |
-
-#### `4-reader/toc-open`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/toc-open/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/toc-open/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/toc-open/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/toc-open/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/toc-open/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/toc-open/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/toc-open/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/toc-open/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/toc-open/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/toc-open/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/toc-open/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/toc-open/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/toc-open/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/toc-open/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/toc-open/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/toc-open/dark-firefox-414.png` | |  | |
-
-#### `4-reader/short-document`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/short-document/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/short-document/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/short-document/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/short-document/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/short-document/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/short-document/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/short-document/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/short-document/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/short-document/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/short-document/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/short-document/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/short-document/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/short-document/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/short-document/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/short-document/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/short-document/dark-firefox-414.png` | |  | |
-
-#### `4-reader/code-blocks`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/code-blocks/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/code-blocks/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/code-blocks/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/code-blocks/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/code-blocks/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/code-blocks/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/code-blocks/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/code-blocks/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/code-blocks/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/code-blocks/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/code-blocks/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/code-blocks/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/code-blocks/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/code-blocks/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/code-blocks/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/code-blocks/dark-firefox-414.png` | |  | |
-
-#### `4-reader/long-code`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/long-code/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/long-code/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/long-code/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/long-code/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/long-code/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/long-code/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/long-code/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/long-code/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/long-code/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/long-code/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/long-code/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/long-code/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/long-code/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/long-code/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/long-code/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/long-code/dark-firefox-414.png` | |  | |
-
-#### `4-reader/math`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/math/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/math/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/math/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/math/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/math/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/math/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/math/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/math/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/math/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/math/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/math/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/math/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/math/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/math/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/math/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/math/dark-firefox-414.png` | |  | |
-
-#### `4-reader/table-tools`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/table-tools/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/table-tools/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/table-tools/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/table-tools/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/table-tools/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/table-tools/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/table-tools/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/table-tools/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/table-tools/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/table-tools/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/table-tools/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/table-tools/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/table-tools/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/table-tools/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/table-tools/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/table-tools/dark-firefox-414.png` | |  | |
-
-#### `4-reader/table-filtered`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/table-filtered/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/table-filtered/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/table-filtered/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/table-filtered/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/table-filtered/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/table-filtered/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/table-filtered/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/table-filtered/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/table-filtered/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/table-filtered/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/table-filtered/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/table-filtered/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/table-filtered/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/table-filtered/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/table-filtered/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/table-filtered/dark-firefox-414.png` | |  | |
-
-#### `4-reader/diagram`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/diagram/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/diagram/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/diagram/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/diagram/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/diagram/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/diagram/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/diagram/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/diagram/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/diagram/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/diagram/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/diagram/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/diagram/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/diagram/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/diagram/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/diagram/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/diagram/dark-firefox-414.png` | |  | |
-
-#### `4-reader/diagram-lightbox`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/diagram-lightbox/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/diagram-lightbox/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/diagram-lightbox/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/diagram-lightbox/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/diagram-lightbox/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/diagram-lightbox/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/diagram-lightbox/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/diagram-lightbox/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/diagram-lightbox/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/diagram-lightbox/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/diagram-lightbox/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/diagram-lightbox/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/diagram-lightbox/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/diagram-lightbox/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/diagram-lightbox/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/diagram-lightbox/dark-firefox-414.png` | |  | |
-
-#### `4-reader/stored-data-panel`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/stored-data-panel/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/stored-data-panel/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/stored-data-panel/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/stored-data-panel/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/stored-data-panel/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/stored-data-panel/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/stored-data-panel/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/stored-data-panel/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/stored-data-panel/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/stored-data-panel/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/stored-data-panel/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/stored-data-panel/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/stored-data-panel/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/stored-data-panel/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/stored-data-panel/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/stored-data-panel/dark-firefox-414.png` | |  | |
-
-#### `4-reader/export-panel`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/export-panel/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/export-panel/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/export-panel/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/export-panel/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/export-panel/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/export-panel/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/export-panel/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/export-panel/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/export-panel/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/export-panel/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/export-panel/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/export-panel/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/export-panel/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/export-panel/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/export-panel/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/export-panel/dark-firefox-414.png` | |  | |
-
-#### `4-reader/code-theme-panel`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/code-theme-panel/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/code-theme-panel/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/code-theme-panel/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/code-theme-panel/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/code-theme-panel/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/code-theme-panel/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/code-theme-panel/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/code-theme-panel/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/code-theme-panel/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/code-theme-panel/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/code-theme-panel/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/code-theme-panel/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/code-theme-panel/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/code-theme-panel/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/code-theme-panel/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/code-theme-panel/dark-firefox-414.png` | |  | |
-
-#### `4-reader/editing`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/editing/light-chromium-1440.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-chromium-1280 | `4-reader/editing/light-chromium-1280.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-chromium-1080 | `4-reader/editing/light-chromium-1080.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-chromium-414 | `4-reader/editing/light-chromium-414.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-chromium-1440 | `4-reader/editing/dark-chromium-1440.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-chromium-1280 | `4-reader/editing/dark-chromium-1280.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-chromium-1080 | `4-reader/editing/dark-chromium-1080.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-chromium-414 | `4-reader/editing/dark-chromium-414.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-firefox-1440 | `4-reader/editing/light-firefox-1440.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-firefox-1280 | `4-reader/editing/light-firefox-1280.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-firefox-1080 | `4-reader/editing/light-firefox-1080.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-firefox-414 | `4-reader/editing/light-firefox-414.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-firefox-1440 | `4-reader/editing/dark-firefox-1440.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-firefox-1280 | `4-reader/editing/dark-firefox-1280.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-firefox-1080 | `4-reader/editing/dark-firefox-1080.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-firefox-414 | `4-reader/editing/dark-firefox-414.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-
-#### `4-reader/editing-unsaved`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/editing-unsaved/light-chromium-1440.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-chromium-1280 | `4-reader/editing-unsaved/light-chromium-1280.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-chromium-1080 | `4-reader/editing-unsaved/light-chromium-1080.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-chromium-414 | `4-reader/editing-unsaved/light-chromium-414.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-chromium-1440 | `4-reader/editing-unsaved/dark-chromium-1440.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-chromium-1280 | `4-reader/editing-unsaved/dark-chromium-1280.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-chromium-1080 | `4-reader/editing-unsaved/dark-chromium-1080.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-chromium-414 | `4-reader/editing-unsaved/dark-chromium-414.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-firefox-1440 | `4-reader/editing-unsaved/light-firefox-1440.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-firefox-1280 | `4-reader/editing-unsaved/light-firefox-1280.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-firefox-1080 | `4-reader/editing-unsaved/light-firefox-1080.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| light-firefox-414 | `4-reader/editing-unsaved/light-firefox-414.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-firefox-1440 | `4-reader/editing-unsaved/dark-firefox-1440.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-firefox-1280 | `4-reader/editing-unsaved/dark-firefox-1280.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-firefox-1080 | `4-reader/editing-unsaved/dark-firefox-1080.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-| dark-firefox-414 | `4-reader/editing-unsaved/dark-firefox-414.png` | | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here | |
-
-#### `4-reader/unsaved-guard`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/unsaved-guard/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/unsaved-guard/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/unsaved-guard/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/unsaved-guard/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/unsaved-guard/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/unsaved-guard/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/unsaved-guard/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/unsaved-guard/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/unsaved-guard/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/unsaved-guard/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/unsaved-guard/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/unsaved-guard/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/unsaved-guard/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/unsaved-guard/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/unsaved-guard/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/unsaved-guard/dark-firefox-414.png` | |  | |
-
-#### `4-reader/editor-search`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/editor-search/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/editor-search/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/editor-search/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/editor-search/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/editor-search/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/editor-search/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/editor-search/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/editor-search/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/editor-search/light-firefox-1440.png` | |  | |
-| light-firefox-1280 | `4-reader/editor-search/light-firefox-1280.png` | |  | |
-| light-firefox-1080 | `4-reader/editor-search/light-firefox-1080.png` | |  | |
-| light-firefox-414 | `4-reader/editor-search/light-firefox-414.png` | |  | |
-| dark-firefox-1440 | `4-reader/editor-search/dark-firefox-1440.png` | |  | |
-| dark-firefox-1280 | `4-reader/editor-search/dark-firefox-1280.png` | |  | |
-| dark-firefox-1080 | `4-reader/editor-search/dark-firefox-1080.png` | |  | |
-| dark-firefox-414 | `4-reader/editor-search/dark-firefox-414.png` | |  | |
-
-#### `4-reader/diff-view`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `4-reader/diff-view/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `4-reader/diff-view/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `4-reader/diff-view/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `4-reader/diff-view/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `4-reader/diff-view/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `4-reader/diff-view/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `4-reader/diff-view/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `4-reader/diff-view/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `4-reader/diff-view/light-firefox-1440.failed.png` (capture failed) | | | live look — the script: no snapshot row in the picker |
-| light-firefox-1280 | `4-reader/diff-view/light-firefox-1280.failed.png` (capture failed) | | | live look — the script: no snapshot row in the picker |
-| light-firefox-1080 | `4-reader/diff-view/light-firefox-1080.failed.png` (capture failed) | | | live look — the script: no snapshot row in the picker |
-| light-firefox-414 | `4-reader/diff-view/light-firefox-414.failed.png` (capture failed) | | | live look — the script: no snapshot row in the picker |
-| dark-firefox-1440 | `4-reader/diff-view/dark-firefox-1440.failed.png` (capture failed) | | | live look — the script: no snapshot row in the picker |
-| dark-firefox-1280 | `4-reader/diff-view/dark-firefox-1280.failed.png` (capture failed) | | | live look — the script: no snapshot row in the picker |
-| dark-firefox-1080 | `4-reader/diff-view/dark-firefox-1080.failed.png` (capture failed) | | | live look — the script: no snapshot row in the picker |
-| dark-firefox-414 | `4-reader/diff-view/dark-firefox-414.failed.png` (capture failed) | | | live look — the script: no snapshot row in the picker |
-
-#### `5-tab-reader/tab-reader`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `5-tab-reader/tab-reader/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `5-tab-reader/tab-reader/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `5-tab-reader/tab-reader/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `5-tab-reader/tab-reader/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `5-tab-reader/tab-reader/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `5-tab-reader/tab-reader/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `5-tab-reader/tab-reader/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `5-tab-reader/tab-reader/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `5-tab-reader/tab-reader/light-firefox-1440.png` | | not judgeable here — the Firefox shot is a TEMPORARY add-on; it showed the raw text (the content script did not run). Judge §9-6 on the signed unlisted install (item I-3) | |
-| light-firefox-1280 | `5-tab-reader/tab-reader/light-firefox-1280.png` | | not judgeable here — the Firefox shot is a TEMPORARY add-on; it showed the raw text (the content script did not run). Judge §9-6 on the signed unlisted install (item I-3) | |
-| light-firefox-1080 | `5-tab-reader/tab-reader/light-firefox-1080.png` | | not judgeable here — the Firefox shot is a TEMPORARY add-on; it showed the raw text (the content script did not run). Judge §9-6 on the signed unlisted install (item I-3) | |
-| light-firefox-414 | `5-tab-reader/tab-reader/light-firefox-414.png` | | not judgeable here — the Firefox shot is a TEMPORARY add-on; it showed the raw text (the content script did not run). Judge §9-6 on the signed unlisted install (item I-3) | |
-| dark-firefox-1440 | `5-tab-reader/tab-reader/dark-firefox-1440.png` | | not judgeable here — the Firefox shot is a TEMPORARY add-on; it showed the raw text (the content script did not run). Judge §9-6 on the signed unlisted install (item I-3) | |
-| dark-firefox-1280 | `5-tab-reader/tab-reader/dark-firefox-1280.png` | | not judgeable here — the Firefox shot is a TEMPORARY add-on; it showed the raw text (the content script did not run). Judge §9-6 on the signed unlisted install (item I-3) | |
-| dark-firefox-1080 | `5-tab-reader/tab-reader/dark-firefox-1080.png` | | not judgeable here — the Firefox shot is a TEMPORARY add-on; it showed the raw text (the content script did not run). Judge §9-6 on the signed unlisted install (item I-3) | |
-| dark-firefox-414 | `5-tab-reader/tab-reader/dark-firefox-414.png` | | not judgeable here — the Firefox shot is a TEMPORARY add-on; it showed the raw text (the content script did not run). Judge §9-6 on the signed unlisted install (item I-3) | |
-
-#### `5-tab-reader/tab-reader-contents-open`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `5-tab-reader/tab-reader-contents-open/light-chromium-1440.png` | |  | |
-| light-chromium-1280 | `5-tab-reader/tab-reader-contents-open/light-chromium-1280.png` | |  | |
-| light-chromium-1080 | `5-tab-reader/tab-reader-contents-open/light-chromium-1080.png` | |  | |
-| light-chromium-414 | `5-tab-reader/tab-reader-contents-open/light-chromium-414.png` | |  | |
-| dark-chromium-1440 | `5-tab-reader/tab-reader-contents-open/dark-chromium-1440.png` | |  | |
-| dark-chromium-1280 | `5-tab-reader/tab-reader-contents-open/dark-chromium-1280.png` | |  | |
-| dark-chromium-1080 | `5-tab-reader/tab-reader-contents-open/dark-chromium-1080.png` | |  | |
-| dark-chromium-414 | `5-tab-reader/tab-reader-contents-open/dark-chromium-414.png` | |  | |
-| light-firefox-1440 | `5-tab-reader/tab-reader-contents-open/light-firefox-1440.failed.png` (capture failed) | | | live look — the script: no contents opener (the reader did not mount?) |
-| light-firefox-1280 | `5-tab-reader/tab-reader-contents-open/light-firefox-1280.failed.png` (capture failed) | | | live look — the script: no contents opener (the reader did not mount?) |
-| light-firefox-1080 | `5-tab-reader/tab-reader-contents-open/light-firefox-1080.failed.png` (capture failed) | | | live look — the script: no contents opener (the reader did not mount?) |
-| light-firefox-414 | `5-tab-reader/tab-reader-contents-open/light-firefox-414.failed.png` (capture failed) | | | live look — the script: no contents opener (the reader did not mount?) |
-| dark-firefox-1440 | `5-tab-reader/tab-reader-contents-open/dark-firefox-1440.failed.png` (capture failed) | | | live look — the script: no contents opener (the reader did not mount?) |
-| dark-firefox-1280 | `5-tab-reader/tab-reader-contents-open/dark-firefox-1280.failed.png` (capture failed) | | | live look — the script: no contents opener (the reader did not mount?) |
-| dark-firefox-1080 | `5-tab-reader/tab-reader-contents-open/dark-firefox-1080.failed.png` (capture failed) | | | live look — the script: no contents opener (the reader did not mount?) |
-| dark-firefox-414 | `5-tab-reader/tab-reader-contents-open/dark-firefox-414.failed.png` (capture failed) | | | live look — the script: no contents opener (the reader did not mount?) |
-
-#### `5-tab-reader/tab-reader-reading`
-
-| Cell | Screenshot (under the shots root) | Verdict | Ruling / fix | Notes |
-| --- | --- | --- | --- | --- |
-| light-chromium-1440 | `5-tab-reader/tab-reader-reading/light-chromium-1440.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| light-chromium-1280 | `5-tab-reader/tab-reader-reading/light-chromium-1280.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| light-chromium-1080 | `5-tab-reader/tab-reader-reading/light-chromium-1080.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| light-chromium-414 | `5-tab-reader/tab-reader-reading/light-chromium-414.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| dark-chromium-1440 | `5-tab-reader/tab-reader-reading/dark-chromium-1440.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| dark-chromium-1280 | `5-tab-reader/tab-reader-reading/dark-chromium-1280.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| dark-chromium-1080 | `5-tab-reader/tab-reader-reading/dark-chromium-1080.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| dark-chromium-414 | `5-tab-reader/tab-reader-reading/dark-chromium-414.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| light-firefox-1440 | `5-tab-reader/tab-reader-reading/light-firefox-1440.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| light-firefox-1280 | `5-tab-reader/tab-reader-reading/light-firefox-1280.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| light-firefox-1080 | `5-tab-reader/tab-reader-reading/light-firefox-1080.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| light-firefox-414 | `5-tab-reader/tab-reader-reading/light-firefox-414.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| dark-firefox-1440 | `5-tab-reader/tab-reader-reading/dark-firefox-1440.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| dark-firefox-1280 | `5-tab-reader/tab-reader-reading/dark-firefox-1280.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| dark-firefox-1080 | `5-tab-reader/tab-reader-reading/dark-firefox-1080.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
-| dark-firefox-414 | `5-tab-reader/tab-reader-reading/dark-firefox-414.png` | | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) | |
+Shots root: **`D:\Dev\peekover-shots\8.1\`** (captured at `67ce7b9`). **One verdict per surface** (HUMAN RULING
+2026-11-10, walk prep): **Verdict** covers every cell of the surface (light / dark × Chromium / Firefox × 1440 /
+1280 / 1080 / 414) unless a cell is named in **Per-cell exceptions**, which carries that cell's own verdict or
+pre-fill. **Ruling / proposed** keeps the prep's "proposed: …" (yours to confirm or overwrite). "walked: OK (notes)"
+is pre-filled ONLY where the human's walk notes clearly cover the surface, and only for the engine they cover
+(Chromium: Chrome, and Edge where named); the rest of the surface still needs a look.
+
+| # | Surface (shots folder) | Verdict | Ruling / proposed | Per-cell exceptions | Notes |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `1-install/setup-guide` | walked: OK (notes) — Chromium | proposed: differs by ruling? — not a ruling: an unpacked (--load-extension) install starts with "Allow access to file URLs" ON; a store install starts OFF (see the off shot) | Firefox, light and dark, every width: (no pre-fill) | Notes: Chrome 1 ("Allow access to file URLs is on" — expected for an unpacked install), Edge E1. Firefox shots STALE: taken before 9.2b (the old "nothing needs setting up" copy) — judge live on the current build. |
+| 2 | `1-install/setup-guide-file-access-off` |  |  | Chromium, light and dark, every width: (no pre-fill)<br>Firefox, light and dark, every width: (was "n/a — Firefox has no file-URL toggle"; FALSE since 9.2b — see Notes) | the prep's Firefox "n/a — Firefox has no file-URL toggle" is FALSE since 9.2b (Firefox 153+ has "Access local files on your computer"): judge the Firefox off state live on the current build. |
+| 3 | `3-app-chrome/no-folder` |  | proposed: differs by ruling — 5.5 "Mock + uniform": the ink-primary "Open a folder" sits in the centred setup card, not the toolbar (decisions.md 2026-11-05, M13 TASK 5.5) |  | Not covered: Chrome 6 passed through it to open a folder; the state itself not judged. |
+| 4 | `3-app-chrome/folder-granted` | walked: OK (notes) — Chromium |  | Chromium, light and dark, every width: (no pre-fill)<br>Firefox, light and dark, every width: harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | Notes: Chrome 6. |
+| 5 | `3-app-chrome/reading` | walked: OK (notes) — Chromium |  |  | Notes: Chrome 6, 7. |
+| 6 | `3-app-chrome/agent-file` |  |  | Chromium and Firefox, light and dark, 1440 / 1080 / 414: (no pre-fill)<br>Chromium and Firefox, light and dark, 1280: proposed: differs by ruling — C061: an agent file wraps to a second toolbar row between 864 and ~1290 px (decisions.md 2026-11-03, "M13 RULING — C061 at 1280") |  |
+| 7 | `3-app-chrome/raw` |  |  |  | Not covered: Chrome 5 used the TAB READER's Raw toggle, not the app page's Raw view. |
+| 8 | `3-app-chrome/more-menu` |  |  | Chromium and Firefox, light and dark, 414: (no pre-fill)<br>Chromium and Firefox, light and dark, 1440 / 1280 / 1080: proposed: n/a — no "⋯" above 863 px — the app controls are in the toolbar |  |
+| 9 | `3-app-chrome/files-overlay` |  |  | Chromium and Firefox, light and dark, 1080 / 414: (no pre-fill)<br>Chromium and Firefox, light and dark, 1440 / 1280: proposed: n/a — no Files overlay above 1189 px — the pane stays in the row |  |
+| 10 | `3-app-chrome/folder-search` |  |  | Chromium, light and dark, every width: (no pre-fill)<br>Firefox, light and dark, every width: harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing |  |
+| 11 | `3-app-chrome/folder-empty` |  |  | Chromium, light and dark, every width: (no pre-fill)<br>Firefox, light and dark, every width: harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing |  |
+| 12 | `3-app-chrome/watch-first-notice` |  |  | Chromium, light and dark, every width: (no pre-fill)<br>Firefox, light and dark, every width: harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | Not covered: Chrome 10 pressed Watch; the one-time notice itself not judged. |
+| 13 | `3-app-chrome/watching` | walked: OK (notes) — Chromium |  | Chromium, light and dark, every width: (no pre-fill)<br>Firefox, light and dark, every width: harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | Notes: Chrome 10 (the 9.3a Watch timing confirmed in real use). |
+| 14 | `3-app-chrome/compare-picker` | walked: OK (notes) — Chromium | proposed: differs by ruling — C130: Compare's status sits inside the dropdown while the picker is open (decisions.md 2026-11-03, "M13 RULING — C130") | Firefox, light and dark, every width: harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | Notes: Chrome 11. |
+| 15 | `3-app-chrome/remote-media` |  |  |  |  |
+| 16 | `3-app-chrome/no-folder-pinned` | walked: OK (notes) — Chromium |  | Chromium, light and dark, every width: (no pre-fill)<br>Firefox, light and dark, every width: harness route, not a Firefox route (prep finding): judge the folder/watch parts live (item I-11); the rest of the frame is the real Firefox drawing | Notes: Chrome 8 (pins and Recent after reopening). |
+| 17 | `4-reader/toc-open` |  |  |  |  |
+| 18 | `4-reader/short-document` |  |  |  |  |
+| 19 | `4-reader/code-blocks` | walked: OK (notes) — Chromium |  |  | Notes: Chrome 7, 12 (line numbers, wrap, copy); Edge E3. |
+| 20 | `4-reader/long-code` |  |  |  |  |
+| 21 | `4-reader/math` | walked: OK (notes) — Chromium |  |  | Notes: Chrome 7; Edge E3. |
+| 22 | `4-reader/table-tools` |  |  |  | Not covered: Chrome 5 used the table filter and Copy CSV on the TAB READER, not the app page. |
+| 23 | `4-reader/table-filtered` |  |  |  | Not covered: Chrome 5 (tab reader, not the app page). |
+| 24 | `4-reader/diagram` | walked: OK (notes) — Chromium |  |  | Notes: Chrome 7, 12; Edge E3. |
+| 25 | `4-reader/diagram-lightbox` | walked: OK (notes) — Chromium |  |  | Notes: Chrome 12 (copy / download / lightbox). |
+| 26 | `4-reader/stored-data-panel` | walked: OK (notes) — Chromium |  |  | Notes: Chrome 14 (the list and Wipe all data). |
+| 27 | `4-reader/export-panel` |  |  |  | Not covered: Chrome 9 judged the exported FILE (fix → 8.1a, landed), not the panel. |
+| 28 | `4-reader/code-theme-panel` | walked: OK (notes) — Chromium |  |  | Notes: Chrome 12 (code theme). |
+| 29 | `4-reader/editing` | walked: OK (notes) — Chromium | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here |  | Notes: Chrome 10 (edit, save, on a scratch copy). |
+| 30 | `4-reader/editing-unsaved` |  | proposed: differs by ruling? — 5.7 deviations (1) the save bar inside the split (2) no disabled state (3) no hover change were FLAGGED, not ruled (decisions.md 2026-11-05, M13 TASK 5.7): judge them here |  | Not covered: Chrome 10 edited and saved; the unsaved state itself not judged. |
+| 31 | `4-reader/unsaved-guard` |  |  |  |  |
+| 32 | `4-reader/editor-search` |  |  |  |  |
+| 33 | `4-reader/diff-view` | walked: OK (notes) — Chromium |  |  | Notes: Chrome 11 ("the diff view judged fine"). |
+| 34 | `5-tab-reader/tab-reader` | walked: OK (notes) — Chromium |  | Chromium, light and dark, every width: (no pre-fill)<br>Firefox, light and dark, every width: not judgeable here — the Firefox shot is a TEMPORARY add-on; it showed the raw text (the content script did not run). Judge §9-6 on the signed unlisted install (item I-3) | Notes: Chrome 2, 4 (file://, both themes); Edge E2. Firefox: judge live on the current build with "Access local files on your computer" on (the shot is a temporary add-on showing plain text). |
+| 35 | `5-tab-reader/tab-reader-contents-open` | walked: OK (notes) — Chromium |  |  | Notes: Chrome 3. Firefox shots show plain text (no file access at capture) — judge live. |
+| 36 | `5-tab-reader/tab-reader-reading` | walked: OK (notes) — Chromium | proposed: differs by ruling — "no chrome over text" is read AT REST; mid-scroll floating pills overlap by design (decisions.md 2026-11-05, M13 TASK 5.6, HUMAN RULING) |  | Notes: Chrome 3 (the TOC highlights the current section while scrolling). Firefox shots show plain text (no file access at capture) — judge live. |
+
+### Still to judge, per surface
+
+Every surface needs **Firefox, light and dark** (the notes cover Chromium only). Judge from the shots unless
+marked **LIVE** (the shot is stale or cannot show the state; use the current build). Widths come from the shots.
+
+| # | Surface | Chromium (light + dark) | Firefox (light + dark) |
+| --- | --- | --- | --- |
+| 1 | `1-install/setup-guide` | walked (notes) | needed — LIVE |
+| 2 | `1-install/setup-guide-file-access-off` | needed | needed — LIVE |
+| 3 | `3-app-chrome/no-folder` | needed | needed |
+| 4 | `3-app-chrome/folder-granted` | walked (notes) | needed |
+| 5 | `3-app-chrome/reading` | walked (notes) | needed |
+| 6 | `3-app-chrome/agent-file` | needed | needed |
+| 7 | `3-app-chrome/raw` | needed | needed |
+| 8 | `3-app-chrome/more-menu` | needed | needed |
+| 9 | `3-app-chrome/files-overlay` | needed | needed |
+| 10 | `3-app-chrome/folder-search` | needed | needed |
+| 11 | `3-app-chrome/folder-empty` | needed | needed |
+| 12 | `3-app-chrome/watch-first-notice` | needed | needed |
+| 13 | `3-app-chrome/watching` | walked (notes) | needed |
+| 14 | `3-app-chrome/compare-picker` | walked (notes) | needed |
+| 15 | `3-app-chrome/remote-media` | needed | needed |
+| 16 | `3-app-chrome/no-folder-pinned` | walked (notes) | needed |
+| 17 | `4-reader/toc-open` | needed | needed |
+| 18 | `4-reader/short-document` | needed | needed |
+| 19 | `4-reader/code-blocks` | walked (notes) | needed |
+| 20 | `4-reader/long-code` | needed | needed |
+| 21 | `4-reader/math` | walked (notes) | needed |
+| 22 | `4-reader/table-tools` | needed | needed |
+| 23 | `4-reader/table-filtered` | needed | needed |
+| 24 | `4-reader/diagram` | walked (notes) | needed |
+| 25 | `4-reader/diagram-lightbox` | walked (notes) | needed |
+| 26 | `4-reader/stored-data-panel` | walked (notes) | needed |
+| 27 | `4-reader/export-panel` | needed | needed |
+| 28 | `4-reader/code-theme-panel` | walked (notes) | needed |
+| 29 | `4-reader/editing` | walked (notes) | needed |
+| 30 | `4-reader/editing-unsaved` | needed | needed |
+| 31 | `4-reader/unsaved-guard` | needed | needed |
+| 32 | `4-reader/editor-search` | needed | needed |
+| 33 | `4-reader/diff-view` | walked (notes) | needed |
+| 34 | `5-tab-reader/tab-reader` | walked (notes) | needed — LIVE |
+| 35 | `5-tab-reader/tab-reader-contents-open` | walked (notes) | needed — LIVE |
+| 36 | `5-tab-reader/tab-reader-reading` | walked (notes) | needed — LIVE |

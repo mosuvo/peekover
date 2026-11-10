@@ -1,6 +1,26 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 — walk prep: the human's walk notes banked; the table one verdict per surface.** Records only;
+  no product change. Local, on `main`; not pushed. HUMAN RULING, verbatim: "(b) Restructure the scoring table to ONE
+  verdict per surface (36 rows), plus a column for per-cell exceptions. Pre-fill "walked: OK (notes)" only where the
+  notes clearly cover a surface; keep your "proposed: …" pre-fills." The notes came from the review chat ("record them
+  as "Human walk notes (from the review chat)", not as verbatim"); the file `D:\Dev\walk-notes.txt` named first did not
+  exist.
+  - **Banked** in `docs/ai/walk-8.1.md`, "Human walk notes (from the review chat)": Chrome 1–15, Edge E1–E4, Firefox;
+    each mapped to the I / II items and the surfaces it covers. Items marked from the notes only: I-1, I-2, I-7, II-1,
+    II-5, II-7, II-8, II-10 "walked (notes): partly"; II-6 "walked (notes): judged fine"; I-3 "fix — 9.2b (landed)";
+    I-6 / I-9 / I-11 keep their fix verdicts with what the notes add. No verdict the notes do not contain.
+  - **The table:** 36 rows (one per surface): Verdict · Ruling / proposed · Per-cell exceptions · Notes; every prep
+    pre-fill kept (as the row's ruling, or a per-cell exception). **17 surfaces "walked: OK (notes) — Chromium"**; 19
+    not covered (rows 2, 3, 6–12, 15, 17, 18, 20, 22, 23, 27, 30–32). Corrected: the prep's Firefox "n/a — Firefox has no
+    file-URL toggle" on `setup-guide-file-access-off` is false since 9.2b; the Firefox setup-guide shots predate 9.2b;
+    section 5's Firefox shots show plain text — all three are judged live on the current build.
+  - **The remaining checklist** (walk-8.1.md, in walking order, grouped by engine; ~2½–3 h): Chrome live (the 8.1a /
+    8.1b / 8.1c re-checks, I-2, I-7, III-6, I-4, I-5), Edge and Brave, Firefox's current build as a temporary add-on
+    (9.2b guide, I-3, 9.3a / 9.3b / 9.3c, 8.1a / b / c), the screenshots (19 surfaces on Chromium, Firefox's side of all
+    36, the open II items), III-1…III-5, IV-1 / IV-2 (EMPTY at HEAD: `contrastCensus` and `nativeControls` green on both
+    engines, 94 / 94, 2026-11-10), I-8, I-10.
 - **2026-11-10 · M13 TASK 9.2b — the Firefox local-file setting; the floor to 153. THE 9.2 RELEASE BLOCKER IS
   CLOSED.** HUMAN RULINGS, verbatim: "FIREFOX WORDING (…): APPROVED as proposed, PLUS: raise the Firefox floor to
   strict_min_version 153.0." · "1. FIREFOX WORDING + FLOOR: APPROVED exactly as drafted (…including the new "Check

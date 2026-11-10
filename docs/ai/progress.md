@@ -17,12 +17,16 @@ signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, 
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 — WALK PREP (2026-11-10, records only): the human's walk notes banked; the table one verdict per surface.**
+Record: `decisions.md`, "M13 — walk prep". `docs/ai/walk-8.1.md` now holds the notes (Chrome 1–15, Edge E1–E4,
+Firefox), the items they cover, a 36-row table (17 surfaces walked on Chromium by the notes, 19 not), and **the
+remaining checklist in walking order (~2½–3 h)**. **THE HUMAN'S NEXT STEP:** that checklist, A → E.
+
 **M13 TASK 9.2b LANDED (2026-11-10) — the Firefox local-file setting; floor 153. THE 9.2 RELEASE BLOCKER IS
 CLOSED.** Record: `decisions.md`, "M13 TASK 9.2b". The setup guide's Firefox branch reads "Access local files on your
 computer" and gives the steps; `strict_min_version` 153.0 (the current ESR); README / CHANGELOG / the Firefox listing /
 PERMISSIONS.md say it; ledger rows re-worded, 580–585 added. Content script and app chunk identical; the guide's chunk
-9,257 / 9,129 B; `.output` 6,647,677 / 6,647,663 B. Tasks: 58, 54 ticked. **Walk prep waits on the human's notes file**
-(`D:\Dev\walk-notes.txt` was not found).
+9,257 / 9,129 B; `.output` 6,647,677 / 6,647,663 B. Tasks: 58, 54 ticked. (Walk prep then ran from the notes in the review chat — the block above.)
 
 **M13 TASK 9.3c LANDED (2026-11-10) — the picker-route wording (HUMAN RULING, approved with one change).** Record:
 `decisions.md`, "M13 TASK 9.3c". `FIREFOX_PICKER_NOTE`, `READ_ONLY_SNAPSHOT_NOTE` and the drag note's picker clause

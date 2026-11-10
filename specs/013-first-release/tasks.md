@@ -1163,6 +1163,10 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       approval of these took the agent's mock self-check, not the human's eye. Also the compact toolbar (≤ 863 px, "⋯").
       ★ *2026-11-03 (4.5's record; the C061 ruling) — ADDED TO THIS WALK:* an agent file at 1280 px gets a two-row toolbar
       (C061 ruling) — judge it with the real thing.
+      ★ *2026-11-10 (walk prep; `decisions.md`, "M13 — walk prep"; HUMAN RULING "ONE verdict per surface"):* the human's
+      walk notes (Chrome 1–15, Edge E1–E4, Firefox) are banked in `docs/ai/walk-8.1.md`; the table is one verdict per
+      surface (36) with per-cell exceptions; 17 surfaces walked on Chromium by the notes, 19 not; Firefox's current build
+      not yet walked. Fixes from the walk so far: 8.1a, 8.1b, 8.1c, and 9.2b / 9.3c from its Firefox items.
 - [x] **8.1a The exported HTML prints whole (WALK FIX, 8.1 item I-9; the human: the export "gets cut off at the
       middle").** `translateReaderStylesheet` wrote `@media${condition}` with the condition trimmed, so `@media print`
       and `@media screen and (max-width:1280px)` came out as `@mediaprint` / `@mediascreen …` — unknown at-rules, dropped.
