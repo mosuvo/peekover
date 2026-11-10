@@ -116,7 +116,7 @@ export const READER_CSS = /* css */ `
   width:100%;
 }
 .peekover-reader > :first-child{margin-top:0}
-@media screen and (max-width:1280px){.peekover-mode-toggle~.peekover-reader{padding-top:calc(var(--toc-handle-top) + var(--toc-handle-h) + 30px)}}
+@media screen and (max-width:1280px){.peekover-mode-toggle~.peekover-reader{padding-top:calc(var(--toc-handle-top) + var(--toc-handle-h) + 30px)}.peekover-mode-toggle~.peekover-raw{margin-top:calc(var(--toc-handle-top) + var(--toc-handle-h) + 30px)}}
 
 /* ---- headings ---- */
 .peekover-reader h1,.peekover-reader h2,.peekover-reader h3,
@@ -228,7 +228,7 @@ export const READER_CSS = /* css */ `
 
 /* ============ Raw fallback (never a blank page — AGENTS.md #5) ============ */
 .peekover-raw{
-  max-width:76ch;margin:56px auto;padding:26px;
+  margin:56px calc(max(0px,(100% - var(--reader-measure)) / 2) + 32px);padding:26px;
   font-family:var(--mono);font-size:13px;line-height:1.75;color:var(--muted);
   background:var(--code-bg);border:1px solid var(--line);border-radius:var(--r);
   overflow:auto;white-space:pre-wrap;word-break:break-word;
@@ -593,6 +593,10 @@ export const READER_CSS = /* css */ `
   width:auto;
   margin-right:var(--toc-w);
   margin-left:max(0px,calc((100% - var(--reader-measure) - var(--toc-w)) / 2));
+}
+:host([data-toc="open"]) .peekover-toc~.peekover-raw{
+  margin-left:calc(max(0px,(100% - var(--reader-measure) - var(--toc-w)) / 2) + 32px);
+  margin-right:calc(max(0px,(100% - var(--reader-measure) - var(--toc-w)) / 2) + var(--toc-w) + 32px);
 }
 
 .peekover-toc__list{list-style:none;margin:0;padding:0}
