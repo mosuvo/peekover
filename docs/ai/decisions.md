@@ -1,6 +1,40 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-10 · M13 TASK 8.1i FOLLOW-UP — CI FOUND AN UNHANDLED ERROR FROM `f86a01e`; FIXED (`0ea5c6d`). I-10 NOT
+  YET MEASURED.** Local, on `main`; not pushed.
+  - **What CI found (run 42857163617, `1af79a7`, job `verify`, step 7 "Test"):** `Test Files 87 passed (87)`, `Tests
+    1679 passed | 19 skipped (1698)`, `Errors 1 error` — `Error: shadowRoot is poisoned` at `tableEnhancer.test.ts:333`
+    via `mount.ts:379` (`read`), from jsdom's `runAnimationFrameCallbacks`; exit 1. Supply chain (run 42857163490)
+    green. **The release dry run was NOT dispatched** (the human's rule: CI must be green on the hash first).
+  - **Cause:** 8.1i (f)'s `trackRest` scheduled a frame that read `host.shadowRoot` after `tableEnhancer.test.ts`'s
+    D-7 outer-boundary test had made that getter throw; the throw escaped outside any test. Locally `pnpm test` had
+    exited 1 since `f86a01e` too. **CC's error:** the agent read the count line, not the exit code, and called the
+    error a deliberate test log — so the unit claims for the held branch, the 8.1i close, the reword and 8.1j were
+    wrong on exit status (corrected in place below, history not rewritten). **Rule from now on:** every suite reported
+    states its exit code.
+  - **Fix (`0ea5c6d`):** `mount.ts` — every read of the band's tracker is guarded (a disconnected host stops its own
+    tracking; any error is swallowed: the band is decorative); a new render cancels the previous render's pending
+    frame; `stopRestTracking(host)` cancels the frame and removes the host's `scroll` and the window's `resize`
+    listener, and `mountReader`'s teardown calls it before `host.remove()`. **Audit of 8.1i's other async callbacks:**
+    (a) `tocView.ts`'s breakpoint (`matchMedia` change) listener — the same guard (a disconnected host is skipped and
+    pruned; a throwing reader is skipped); (a)'s opener / Close / nav click and keydown listeners are event handlers on
+    nodes the rail owns (user-triggered, gone with the nodes) — reviewed, unchanged; (d) and (g) are CSS only.
+  - **Red first:** `mount.restBand.test.ts` 4 / 4 red (the poisoned frame throws; the old frame not cancelled; no stop
+    function; a removed host keeps its resize listener) → green; `tocView.sheetGuard.test.ts` 1 / 1 red with the guard
+    stashed (the poisoned read escapes the listener) → green. Ripple: `mountReader.test.ts`'s `./mount` mock gains
+    `stopRestTracking`, and its throw case asserts the teardown calls it.
+  - **CI's "1679 passed | 19 skipped" vs local 1,698:** CI's `verify` job runs `pnpm test` BEFORE its Build step, so
+    the 19 tests gated on a build in `.output` skip there: `compareBuilds` 2 (the real zips' form), `thirdPartyLicences`
+    12 (6 per engine, against the build's inventory and zip), `sbom` 5 (both engines built). Reproduced locally with
+    `.output` moved aside: `1684 passed | 19 skipped (1703)`, EXIT 0, the same 19 by name. Expected, env-gated, hiding
+    nothing; they run wherever a build exists (here, and the release workflow's build).
+  - **Verify (`0ea5c6d`):** `pnpm lint` EXIT 0; `pnpm test` EXIT 0 — 89 files, 1,703 / 1,703 with the build present
+    (no skip, no error); `pnpm test:browser` EXIT 0 — 2,747 passed, 65 skipped, 0 failed (both engines; census in it).
+  - **Bytes (both engines):** content script **349,530 → 349,990 B (+460)** (`4f2e9a82` / `25b7e09f`); app chunk
+    556,187 → 556,640 B (+453) (`eeb7d802`); onboarding unchanged; `.output` 6,659,448 / 6,659,434 B; zips 2,034,882 /
+    2,034,879 B (`c1ff6d8d` / `47d1d6a9`); `permissions: []`.
+  - **Next:** the human pushes; then I-10 again — CI and Supply chain green on the new hash, then the dry run.
 - **2026-11-10 · M13 TASK 8.1j — WALK SECTION E: THE HUMAN'S VERDICTS; light `--faint` to 3:1 LANDED.** Local, on
   `main`; not pushed.
   - **The human's verdicts (2026-11-10):** **III-1** accept by name, with a post-release item: non-text contrast of
@@ -19,7 +53,7 @@
     `site/index.html`, `site/privacy/index.html` and `harness/math-fidelity/app.js` (tokens.css wins where they
     disagree). Red first: `designTokens.test.ts` "--faint reaches 3:1 (WCAG 1.4.11) on --paper, light and dark" —
     light 2.60 → green (the arithmetic's control: white on black = 21).
-  - **Verify (`70a7d01`):** lint clean; unit 1,698 / 1,698; browser full suite **2,747 passed, 65 skipped, 0 failed**
+  - **Verify (`70a7d01`):** lint clean; unit 1,698 / 1,698 (**CORRECTED 2026-11-10:** the unit tests passed but vitest exited 1 (an unhandled error from `f86a01e`); corrected at `0ea5c6d`.); browser full suite **2,747 passed, 65 skipped, 0 failed**
     (both engines; the census green); `compareBuilds` + `truthPins` 99 / 99 after re-zipping.
   - **Bytes:** content script **349,530 B, ±0** (a same-length hex swap; hashes `6a1b0166` → `dbf7ab4d` (Chrome) /
     `0b5822a8` (Firefox) — the control that the value reached the graph); app chunk 556,187 B ±0 (`15789eb6` →
@@ -27,7 +61,7 @@
     2,034,745 B (`c91ea8c5` / `a5e14573`); `permissions: []`.
   - **Also in these records:** the stale commit hashes from before the reword (`1d55778` / `a7762b4` / `d1b3f52`) are now
     `b98b79b` / `13d7792` / `f86a01e` wherever they were cited (the reword: same trees, titles without "[PENDING
-    APPROVAL]", one approval line each).
+    APPROVAL]", one approval line each). The reword's own check "lint + unit" reported unit green: **CORRECTED 2026-11-10:** the unit tests passed but vitest exited 1 (an unhandled error from `f86a01e`); corrected at `0ea5c6d`.
   - Tasks: 65, 61 ticked. Left in the walk: I-10 (push → CI green → the release dry run) and the rest of items I.
 - **2026-11-10 · M13 TASK 8.1i — CLOSED: the held looks approved by the human and landed; the rest decided by the
   REVIEWER under the human's delegation.** Local, on `main`; not pushed.
@@ -46,7 +80,7 @@
     fast-forwarded; no merge commit; the branch deleted. New hashes: `b98b79b` (g), `13d7792` (a) + (d), `f86a01e` (f)
     (were `507cfb7`, `a9a0ae0`, `dbbb088`; their subjects keep the "[PENDING APPROVAL]" tag they were written with —
     approved here). With `7c4f978` (e), `c59a0a7` (c), `1916cc3` (b), `1100243` (records).
-  - **Verify on `main` (`f86a01e`):** lint clean; unit 1,697 / 1,697 (87 files; `truthPins` and `compareBuilds` among
+  - **Verify on `main` (`f86a01e`):** lint clean; unit 1,697 / 1,697 (**CORRECTED 2026-11-10:** the unit tests passed but vitest exited 1 (an unhandled error from `f86a01e`); corrected at `0ea5c6d`. 87 files; `truthPins` and `compareBuilds` among
     them, re-zipped first: 99 / 99 in their own run); browser full suite **2,747 passed, 65 skipped, 0 failed** (both
     engines; the contrast census in it, green).
   - **Bytes (both engines):** content script **349,530 B** (`6a1b0166` / `c0dbdc10`; +4,152 over 345,378 — the G-7
@@ -108,7 +142,7 @@
       1080 contents open, both engines (Watch / Theme over the table's cells) → green at 414 / 1080 / 1280 / 1440 ×
       open / closed (pills hidden, every text line and control under a pill hit-tested: band or empty page only).
       Ripple: `mount.test.ts`'s pill parts gain the band; `:host` pin 37 → 38.
-    - **Verify (branch):** lint clean; unit 1,697 / 1,697 (zips aside, as above); browser full suite 2,741 passed, 65
+    - **Verify (branch):** lint clean; unit 1,697 / 1,697 (zips aside, as above; **CORRECTED 2026-11-10:** the unit tests passed but vitest exited 1 (an unhandled error from `f86a01e`); corrected at `0ea5c6d`.); browser full suite 2,741 passed, 65
       skipped, 6 failed — the two narrow-rail assumptions (editorEyeballProxy NARROW-open, watchRemount's collapse),
       fixed as above and re-run green (46 / 46). **Bytes, content script vs 345,378 (same session, Chrome build at each
       commit; Firefox identical):** (b)(c)(e) **+459**; (g) **0**; (a)+(d) **+2,817** (348,654); (f) **+876**

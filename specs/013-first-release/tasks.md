@@ -1308,6 +1308,10 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       surface 36's Firefox cells; the branch rebased onto `main` and landed (`b98b79b` (g), `13d7792` (a)+(d),
       `f86a01e` (f)). Under the human's delegation the REVIEWER decided: a named G-7 exception for the content script
       (+4,152 B over 345,378 B), and II-1 … II-10 closed. Content script 349,530 B; full suites green on `main`.*
+      ★ *2026-11-10, FOLLOW-UP (`decisions.md`, "M13 TASK 8.1i FOLLOW-UP"): CI run 42857163617 on `1af79a7` — the unit
+      tests passed but vitest exited 1 on an unhandled error from (f)'s frame callback (`f86a01e`); "full suites green"
+      above was wrong on exit status. Fixed at `0ea5c6d` (guarded, cancelled, stopped on teardown; the breakpoint
+      listener too); `pnpm test` EXIT 0, browser EXIT 0; content script +460 B (349,990).*
 - [x] **8.1j Light `--faint` reaches 3:1 on paper (WALK FIX, item III-3; HUMAN 2026-11-10: "fix (light --faint
       #9A9DAC → the nearest value ≥ 3:1 on paper, ~#8E919F; dark unchanged)").** `--faint` draws boundaries (scrollbar
       thumbs, the tree's twisty, hovered borders, a pressed toggle): 2.60:1 on `--paper` in light.

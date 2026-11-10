@@ -17,6 +17,14 @@ signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, 
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 TASK 8.1i FOLLOW-UP (2026-11-10) — CI RED ON `1af79a7`, FIXED AT `0ea5c6d`; I-10 STILL OPEN.** Record:
+`decisions.md`, "M13 TASK 8.1i FOLLOW-UP". CI run 42857163617: every unit test passed, vitest exited 1 on an unhandled
+error from 8.1i (f)'s frame callback (`f86a01e`); the dry run was not dispatched. Fixed: the band's tracker and the
+narrow-sheet listener are guarded, cancelled on a new render and stopped on teardown. `pnpm test` EXIT 0 (1,703),
+`pnpm test:browser` EXIT 0 (2,747 / 65 skipped); content script +460 B (349,990). Earlier unit claims corrected in
+place. **THE HUMAN'S NEXT STEP:** push `main`; then I-10 is re-run (CI + Supply chain green on the new hash → the dry
+run).
+
 **M13 — WALK SECTION E DECIDED (2026-11-10, the human) + TASK 8.1j LANDED.** Record: `decisions.md`, "M13 TASK 8.1j".
 III-1, III-2, III-4 accepted by name; III-5 accepted (decorative); **III-3 fixed as 8.1j**: light `--faint` #9A9DAC →
 #8F91A0 (2.60 → 3.01:1; dark unchanged), source and every pinned copy, content script ±0 B. IV-1 / IV-2 closed (empty,
@@ -28,7 +36,7 @@ in the review chat) and what `walk-8.1.md` still lists for items I.
 The human approved the four held looks ((a) + (d), (f), (g)) and surface 36's Firefox cells, and delegated the rest; the
 **reviewer** decided a **named G-7 exception** (content script 349,530 B, +4,152 over 345,378) and **closed II-1 … II-10**
 (ok by the human's surface verdicts). The branch rebased and fast-forwarded (`b98b79b`, `13d7792`, `f86a01e`), deleted.
-`main` green: lint, unit 1,697, browser 2,747 / 65 skipped (census in it), truthPins, compareBuilds. `.output`
+`main` green: lint, unit 1,697 (**CORRECTED 2026-11-10:** the unit tests passed but vitest exited 1 (an unhandled error from `f86a01e`); corrected at `0ea5c6d`.), browser 2,747 / 65 skipped (census in it), truthPins, compareBuilds. `.output`
 6,658,535 / 6,658,521 B. Tasks: 64, **60 ticked**. Open in the walk: what `walk-8.1.md`'s checklist still lists (items I,
 III, IV); then 9.2's sign-off, 9.3's pick, 9.5's figures.
 
