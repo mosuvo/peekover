@@ -1,6 +1,24 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 — LINE ENDINGS CHECKED: a fresh Windows clone is LF; the sources zip reproduces from it.** Local; not
+  pushed. Follows I-10's sources-zip difference (CI `641e1ba3…` vs a local zip).
+  - **`.gitattributes` already pins LF** — `* text=auto eol=lf` (and `*.sh text eol=lf`), there since `3b71a8b` (task 1.1);
+    `eol=lf` overrides `core.autocrlf=true` on checkout. The index holds no CRLF (`git ls-files --eol`: no `i/crlf` or
+    `i/mixed`); `text=auto` detects all 22 binaries as binary (8 PNG, 14 woff2), so no binary rules are needed and
+    there was nothing to renormalize. No tracked file changed.
+  - **This working copy:** 8 files were CRLF on disk with an LF index (`w/crlf`) — `LICENSE`, `scripts/perf-watch.ts`,
+    `specs/004-themes-settings/tasks.md`, `specs/005-watch-diff/spec.md`, `src/theme/reader.ts`,
+    `src/theme/themeControl.ts`, `tests/browser/themeRuntime.browser.test.ts`, `tests/browser/watchDetector.browser.test.ts`
+    (written by some local tool; git saw them clean because it normalizes on add). Each unmodified, removed and checked
+    out again: 0 CRLF now.
+  - **Proof:** a fresh clone of `79bfe89` into a temp folder with `core.autocrlf=true`: 0 CRLF files; `pnpm install
+    --frozen-lockfile` EXIT 0; `pnpm exec wxt zip -b firefox` EXIT 0. Its Firefox zip = CI 42868591628's (`47d1d6a9…`).
+    Its sources zip against CI's: 380 entries each, 0 CRLF in its text, identical except exactly the 4 files committed
+    since `a2ddc67` (`git diff --name-only a2ddc67 79bfe89`): `docs/ai/decisions.md`, `docs/ai/progress.md`,
+    `docs/ai/walk-8.1.md`, `docs/store/GO-LIVE.md`.
+  - **`docs/trust/REPRODUCING.md`:** read for line-ending claims — it says to build in a fresh clone and that Windows 11
+    and Ubuntu gave the same bytes; both still true. Unchanged.
 - **2026-11-10 · M13 — I-10 MEASURED: CI and Supply chain green on `a2ddc67`; the release dry run green; no tag, no
   release.** Local records commit; not pushed. The human pushed `main` (`origin/main` = local = `a2ddc67`).
   - **CI** 42866301850 success (verify, reproducible) and **Supply chain** 42866301860 success (No remote code, OSV
