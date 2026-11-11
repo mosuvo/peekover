@@ -111,6 +111,18 @@ describe('detection (D-11)', () => {
   });
 });
 
+describe('the intro sentences (9.2, HUMAN COPY APPROVAL 2026-11-11: C-6 and C-6b)', () => {
+  // Since 8.1f the Chromium guide can ask for site access as well as the file-URL toggle, so it no longer says "one".
+  it('the Chromium intro says "a browser setting"; the Firefox intro still says "one Firefox setting"', () => {
+    expect(ONBOARDING_COPY.introChromium).toBe(
+      'Peekover shows markdown files as formatted pages. Raw files on the web need no setup. Files on your computer need a browser setting.',
+    );
+    expect(ONBOARDING_COPY.introFirefox).toBe(
+      'Peekover shows markdown files as formatted pages. Raw files on the web need no setup. Files on your computer need one Firefox setting.',
+    );
+  });
+});
+
 describe('Firefox (D-11; since 2026-11-10 the local-file setting, Firefox 153+)', () => {
   it('asks, and renders on / off / unknown with Firefox\'s own setting and steps; no button', async () => {
     const cases: Array<[string, OnboardingDeps['readFileAccess']]> = [

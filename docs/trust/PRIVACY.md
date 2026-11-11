@@ -27,14 +27,14 @@ None of it is uploaded.
 - Files you opened recently and items you pinned: their path and name.
 - Your settings, once you change one: the theme, the contents panel's state and width, the code theme, the last export format, and whether snapshots are on.
 - Snapshots: while you watch a document from a folder on the app page, Peekover keeps earlier versions of its text so that you can compare them.
-- Snapshots are the one place Peekover stores the contents of your files.
+- Only snapshots and diagram drawings keep content from your files.
 - It keeps a limited number and removes older ones by itself, and you can turn snapshots off.
 - Diagrams: drawings of the diagrams in your documents, kept so that they show faster next time; a limited number, with the oldest removed by itself.
 - Two marks: that the setup guide was shown, and that you closed the note about snapshots.
 
 ## Seeing and deleting it
 
-The "Stored data" panel on the app page lists what Peekover holds, except the mark for the note about snapshots.
+The "Stored data" panel on the app page lists everything Peekover holds except one small mark: that you closed the note about snapshots.
 "Wipe all data" in that panel deletes everything Peekover has stored.
 The same panel can erase all snapshots, or clear the diagram drawings, on their own.
 "Revoke" on an open folder forgets that folder and deletes its snapshots.
@@ -49,7 +49,7 @@ Exporting saves a file through your browser's downloads, and copying puts conten
 ## Permissions
 
 Peekover asks your browser for no permissions, on Chrome and on Firefox.
-In Chrome and Edge, reading files from your computer needs the "Allow access to file URLs" setting, which you turn on yourself.
+Reading files from your computer needs a setting that you turn on yourself: "Allow access to file URLs" in Chrome and Edge, "Access local files on your computer" in Firefox.
 
 ## Questions
 

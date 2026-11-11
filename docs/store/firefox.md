@@ -21,7 +21,7 @@ Other
 ## Description — no documented limit; a limited set of Markdown
 
 Peekover is a free, open-source browser extension that turns raw markdown files into formatted, readable pages.
-It works on raw markdown files from GitHub, GitLab and Bitbucket, and on folders of markdown files that you open on its app page.
+It works on raw markdown files from GitHub, GitLab and Bitbucket, on folders of markdown files that you open on its app page, and on files from disk once "Access local files on your computer" is on.
 It asks for no browser permissions and makes no network requests unless you ask it to.
 
 - Renders markdown with tables, task lists, strikethrough and bare-URL links.
@@ -39,7 +39,7 @@ It asks for no browser permissions and makes no network requests unless you ask 
 - On the app page, has a basic editor with a live preview and a Save button, and asks before discarding unsaved changes.
 
 - In a tab, snapshots, comparison, diagrams, math, code highlighting, export and editing are not available; open the document on the app page for those.
-- Watching does not work for raw files from GitHub, GitLab or Bitbucket, or for a folder chosen with the folder picker.
+- Watching does not work for raw files from GitHub, GitLab or Bitbucket, and isn't offered for a folder chosen with the folder picker.
 - In Firefox, Save downloads a copy of the file instead of writing it back.
 - In Firefox, files opened from disk need one setting: "Access local files on your computer", under Peekover's Permissions and data in about:addons.
 

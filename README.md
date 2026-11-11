@@ -31,7 +31,7 @@ It asks for no browser permissions and makes no network requests unless you ask 
 - In Chromium-based browsers such as Chrome and Edge, files opened from disk need the extension's "Allow access to file URLs" setting turned on.
 - Save writes the file back in Chromium-based browsers such as Chrome and Edge; in Firefox it downloads a copy instead.
 - In Firefox, watching does not work for a file opened directly from disk.
-- In Firefox, on the app page, watching works for a folder dragged in but not for one chosen with the folder picker.
+- In Firefox, on the app page, watching works for a folder dragged in and isn't offered for one chosen with the folder picker.
 - In Firefox, files opened from disk need one setting: "Access local files on your computer", under Peekover's Permissions and data in about:addons.
 
 ## Privacy and permissions

@@ -1,6 +1,40 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.2 — the copy (HUMAN COPY APPROVAL: "as you suggest" on the copy drafts and batch 2).**
+  Landed exactly as approved, from the pack's "Drafts for your approval" (`docs/ai/truth-signoff-9.2.md`):
+  - **C-1** (row 183, `site/index.html`, the Setup card): "For files on your disk, turn on “Allow access to file URLs”
+    for Peekover in Chromium-based browsers, or “Access local files on your computer” in Firefox (about:addons → Peekover
+    → Permissions and data)." **C-1b** row 82: no change.
+  - **C-2** (row 372, PRIVACY.md and the site privacy page): "Reading files from your computer needs a setting that you
+    turn on yourself: "Allow access to file URLs" in Chrome and Edge, "Access local files on your computer" in Firefox."
+  - **C-3** (row 482, `docs/store/firefox.md`): "It works on raw markdown files from GitHub, GitLab and Bitbucket, on
+    folders of markdown files that you open on its app page, and on files from disk once "Access local files on your
+    computer" is on."
+  - **C-6** (row 295, `src/app/onboarding.ts`, `introChromium`): "Files on your computer need a browser setting." Red
+    first: a new pin in `src/app/onboarding.test.ts` ("the intro sentences") failed on "one browser setting", then passed.
+    **C-6b** row 296: no change (the same test pins it as is).
+  - **C-7a** (rows 25 README, 334 CHANGELOG): "In Firefox, on the app page, watching works for a folder dragged in and
+    isn't offered for one chosen with the folder picker." Row 498 (firefox.md): "Watching does not work for raw files
+    from GitHub, GitLab or Bitbucket, and isn't offered for a folder chosen with the folder picker."
+  - **C-7b, the reviewer's variant** (not draft A or B): row 363 (PRIVACY.md and the site privacy page): "The "Stored
+    data" panel on the app page lists everything Peekover holds except one small mark: that you closed the note about
+    snapshots." Row 324 (CHANGELOG): "On the app page, a Stored data panel lists what Peekover keeps on your device,
+    except one small mark (that you closed the note about snapshots), and "Wipe all data" erases all of it."
+  - **C-7c** (row 359, PRIVACY.md and the site privacy page): "Only snapshots and diagram drawings keep content from your
+    files."
+  - **Ledger:** the ten rows' sentences and evidence were rewritten in place, each citing this approval. The site privacy
+    page keeps its `&quot;` entities, and `tests/privacyPage.test.ts` holds it equal to PRIVACY.md.
+  - **The 414 px check (C-1):** the card spans 20.7–393.3 px with nothing inside it past the viewport, and the page does
+    not scroll sideways (scrollWidth 414). With html's `overflow-x: clip` lifted, the page measures 439 px: the marquee
+    strip and the `.band`. HEAD's page measures the same 439 (a control), so C-1 adds nothing; this is the overflow that
+    9.1's ruling clips. Shots: `D:\Dev\peekover-shots\9.2\c1-site-414.png` and `c1-site-414-context.png`.
+  - **Verify (C-6 is production):** `pnpm lint` exit 0; `pnpm test` exit 0 (1705 / 1705, one more than before: the new
+    pin); `pnpm test:browser` exit 0, both engines (226 files passed, 2 skipped; 2747 tests passed, 65 skipped); `pnpm
+    build` and `wxt build -b firefox` exit 0. **Bytes:** only the onboarding chunk moved, 11,170 → 11,168 B (Chromium) and
+    11,042 → 11,040 B (Firefox), plus `onboarding.html`, whose only change is the chunk's hashed name. The content script,
+    the app chunk and both manifests are byte-identical (`permissions: []`). `.output` is now 6,659,446 / 6,659,432 B.
+
 - **2026-11-11 · M13 TASK 9.2 — batch 1 and the flags (the reading pack, `docs/ai/truth-signoff-9.2.md`).** HUMAN
   RULING, verbatim: **"batch 1 and flags: as you suggest"**. The instruction that went with it: record batch 1, make the
   evidence-only fixes, draft the copy changes for approval. Local; not pushed. 9.2 stays open.

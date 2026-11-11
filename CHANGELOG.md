@@ -23,7 +23,7 @@ The first release.
 - On the app page, draws Mermaid diagrams, renders math with Temml, and highlights code in JavaScript, TypeScript, TSX, Python, JSON, CSS, HTML, Bash, diff, YAML, Markdown, TOML and SQL.
 - On the app page, exports a standalone HTML file, prints to PDF, and copies the document as HTML, plain text or rich text.
 - On the app page, has a basic editor with a live preview and a Save button, and asks before discarding unsaved changes.
-- On the app page, a Stored data panel lists what Peekover keeps on your device, except the mark for the note about snapshots, and "Wipe all data" erases all of it.
+- On the app page, a Stored data panel lists what Peekover keeps on your device, except one small mark (that you closed the note about snapshots), and "Wipe all data" erases all of it.
 - A setup guide opens once, when Peekover is first installed, and the app page links to it.
 - Asks for no browser permissions: the manifest says `permissions: []`.
 - Makes no network requests by default, and has no telemetry and no analytics.
@@ -36,5 +36,5 @@ The first release.
 - In Chromium-based browsers such as Chrome and Edge, files opened from disk need the extension's "Allow access to file URLs" setting turned on.
 - Save writes the file back in Chromium-based browsers such as Chrome and Edge; in Firefox it downloads a copy instead.
 - In Firefox, watching does not work for a file opened directly from disk.
-- In Firefox, on the app page, watching works for a folder dragged in but not for one chosen with the folder picker.
+- In Firefox, on the app page, watching works for a folder dragged in and isn't offered for one chosen with the folder picker.
 - In Firefox, files opened from disk need one setting: "Access local files on your computer", under Peekover's Permissions and data in about:addons.

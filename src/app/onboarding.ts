@@ -79,7 +79,7 @@ export interface OnboardingController {
 /** Every user-facing sentence on the page, in one place (approved by the human at 6.1). */
 export const ONBOARDING_COPY = {
   title: 'Set up Peekover',
-  introChromium: 'Peekover shows markdown files as formatted pages. Raw files on the web need no setup. Files on your computer need one browser setting.',
+  introChromium: 'Peekover shows markdown files as formatted pages. Raw files on the web need no setup. Files on your computer need a browser setting.',
   introFirefox: 'Peekover shows markdown files as formatted pages. Raw files on the web need no setup. Files on your computer need one Firefox setting.',
   localHeading: 'Files on your computer',
   on: 'Peekover can read files on your computer: “Allow access to file URLs” is on. Open a markdown file in a tab to read it.',
