@@ -63,6 +63,22 @@ measurement-driven or explicitly deferred.*
   answer, 2026-11-11: it keeps the 9.2 ruling "Checked, not ledgered"); the question is closed, do not ask again.
   *Source:* `decisions.md`, "M13 — THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+" and "M13 — TWO HUMAN ANSWERS FROM THE
   REVIEW CHAT".
+- **Footnotes (the second user report from X, 2026-11-11; fixture `tests/fixtures/tables-footnotes-lists.md`).**
+  Today `[^early]` and its `[^early]: …` definition render as literal text and there is no notes section; the
+  regression test over the fixture pins that and is marked to update when footnotes ship. **Claims check
+  (2026-11-11): no published sentence claims or implies footnotes** — the site (row 92) and README (row 6) name only
+  tables, task lists, strikethrough and bare links; the one footnote claim, row 254, is withdrawn.
+  **Work:** the plugin is `markdown-it-footnote` (the stack is markdown-it, AGENTS.md; the kickoff named
+  remark/micromark gfm-footnote, which is not this parser), in `src/render/parse.ts` on both surfaces. The sanitizer:
+  the document profile denies `id` on purpose (DOM clobbering, `src/render/sanitize.ts`), and footnote refs and
+  back-links need anchors, so they get a namespaced, generated id (a prefix the author cannot write) re-allowed for
+  those nodes only, with a clobbering test. The TOC gains no "Footnotes" heading by accident (or one by ruling).
+  Back-links (↩) scroll inside the pane, both surfaces. HTML export and Copy plain text keep the notes section.
+  The editor highlights none of it (`src/render/editorEngine.ts`: "Footnotes are syntax under NEITHER base").
+  Golden files gain a footnote case. **Size:** not measured; it lands in the content script (the reading path), so
+  it is measured both engines against G-7's +2 KB stop. **Risk:** the `id` re-allow is the security-relevant part;
+  footnote labels are author text inside generated ids and hrefs. A ledger row and the site/README feature lists
+  change only once it ships. *Source:* the human's kickoff, 2026-11-11.
 - **Exclude `docs/store/assets/` from the sources zip (the human's call, 2026-11-11: leave as is for 0.1.0).** The
   0.1.0 sources zip carries 1,718,857 B of store PNGs (6,563,555 B in all) that AMO's reviewer does not need. A
   one-line `wxt.config.ts` change; re-check that the sources zip still rebuilds the identical Firefox zip.
