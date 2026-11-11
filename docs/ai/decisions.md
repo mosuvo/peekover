@@ -1,6 +1,21 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 — RELEASE FREEZE until the `v0.1.0` tag; the second user fixture's `<br>` copy finding carried.**
+  HUMAN RULING: after this records commit, no product or test changes before the `v0.1.0` tag; new ideas go to a
+  "post-launch ideas" list in `progress.md`; only GO-LIVE steps commit from now on. Revisit: at the tag (GO-LIVE 5.1).
+  - **The second user fixture (from X), landed before the freeze:** `tests/fixtures/tables-footnotes-lists.md` (the
+    human's, as-is). Claims check clean: no published sentence claims footnotes (row 254, the one that did, is
+    withdrawn); footnotes carried POST-RELEASE (`3b0e89c`). The table copy round-trips the pipes, both engines and
+    both surfaces, with no product change (`ab5ae6e`; red-first by ablating `markdownField`'s pipe escape). The
+    fixture pinned as rendered now, footnotes literal and marked to update (`82776f4`; red-first, three ablations).
+  - **Carried, the human's call (not for 0.1.0):** Copy Markdown / CSV of a cell with `<br>` joins its lines
+    ("onetwo"). Proposed: Markdown writes `<br>`, CSV a newline inside the quoted field (`progress.md` § Carried
+    items, POST-RELEASE).
+  - **A records slip, put right before any push:** `6f16d4d` "corrected" the close unit count to 1,722, having counted
+    `--project unit` alone; `pnpm test` runs `unit` (1,722) and `unit-perf` (1), so 1,723 was right. `c43865f`
+    withdrew it.
+
 - **2026-11-11 · M13 — TWO HUMAN ANSWERS FROM THE REVIEW CHAT, RECORDED AFTER THE CLOSE (records only).** Both given on
   2026-11-11 in the review chat and not relayed until now.
   - **Retro rule (b): test-pinned, NOT ledgered.** It keeps the 9.2 ruling "Checked, not ledgered". A claim-bearing

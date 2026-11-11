@@ -16,10 +16,15 @@
 `progress-archive.md`. Nothing in M13 is open. **The human pushes `main`** (ahead of `origin/main`, `2b85b68`, by the
 close commits), then CI and Supply chain on the new head; GO-LIVE 0.3 needs CI green on the release commit.
 
+**★ RELEASE FREEZE (HUMAN RULING, 2026-11-11), until the `v0.1.0` tag is pushed (GO-LIVE 5.1).** No product or test
+change lands before the tag; only GO-LIVE steps commit (their Done notes, and the agent tasks GO-LIVE itself names).
+A new idea, finding or fix goes to § Post-launch ideas below, not into the tree. The freeze began after the records
+commit that follows the second user fixture (`82776f4`'s tests; `decisions.md`, "M13 — RELEASE FREEZE").
+
 **Current numbers (HEAD):** `.output` 6,660,128 B (Cr) / 6,660,114 B (Fx) of 7,340,032 — headroom 679,904 / 679,918 B ·
 content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,563,555 B · manifests
-864 / 978 B, `permissions: []` · lint 0 · unit 1,723 (`pnpm test`: unit 1,722 + unit-perf 1) · browser 2,788 passed / 82 skipped (8.1k, the last product
-change) · `pnpm audit --prod` EXIT 0 (1 low, ignored) · tasks 67 / 67.
+864 / 978 B, `permissions: []` · lint 0 · unit 1,723 (`pnpm test`: unit 1,722 + unit-perf 1) · browser 2,810 passed / 82 skipped (`c43865f`, EXIT 0, 2026-11-11; +22 from
+the second user fixture's two test files; the last product change is 8.1k) · `pnpm audit --prod` EXIT 0 (1 low, ignored) · tasks 67 / 67.
 
 ## Up next
 
@@ -29,6 +34,12 @@ change) · `pnpm audit --prod` EXIT 0 (1 low, ignored) · tasks 67 / 67.
 2. **M14's first session** (§ Carried items, POST-RELEASE): place the two adopted retro rules ((b) is test-pinned,
    not ledgered — answered 2026-11-11); write the retro's "ADDENDUM AFTER THE 8.1 WALK" (`retro.md`; source: `decisions.md` "M13
    CLOSED" and the 8.1 / 9.x entries); read CI history with `gh` for each named flake (the M13 retro's carried action).
+
+### Post-launch ideas
+*The release freeze's inbox: anything new between now and the `v0.1.0` tag, one line each, with its source and date.
+Sorted into § Carried items (or dropped) by M14's first session.*
+
+- *(none yet)*
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
@@ -79,6 +90,18 @@ measurement-driven or explicitly deferred.*
   it is measured both engines against G-7's +2 KB stop. **Risk:** the `id` re-allow is the security-relevant part;
   footnote labels are author text inside generated ids and hrefs. A ledger row and the site/README feature lists
   change only once it ships. *Source:* the human's kickoff, 2026-11-11.
+- **Copy Markdown / CSV of a cell with `<br>` joins its lines (the human's call, 2026-11-11: not for 0.1.0).** The
+  fixture's `one<br>two` cell copies as "onetwo": the copy reads the cell's `textContent` (`displayedText`,
+  `src/render/tableTools.ts`) and a `<br>` adds no text. **Proposed:** Markdown writes `<br>` for it (a GFM row is one
+  line, and `<br>` is how GFM puts a break in a cell); CSV writes a newline inside the quoted field (`csvField`
+  already quotes a field with a line break, RFC 4180). **Work:** `displayedText` maps each `<br>` to a newline before
+  it collapses whitespace (the sort and filter read it too — decide whether they keep a space); `markdownField` turns
+  that newline into `<br>` instead of a space; unit tests for both serializers; the two copy cases in
+  `tablePipeCopy.browser.test.ts`'s shape on the fixture's fourth table, both engines. **Size:** tens of bytes, in
+  the content script; measure both engines. **Risk:** `markdownField`'s doc comment rules out emitting `<br>` ("an
+  HTML string — which this module does not produce", AGENTS.md #3); a `<br>` in clipboard text is not DOM, so the
+  rule's reading needs a ruling first. Excel and Sheets read a quoted multi-line field; a plain-text paste shows the
+  break. *Source:* the human's kickoff, 2026-11-11; found writing `tablePipeCopy.browser.test.ts` (`ab5ae6e`).
 - **Exclude `docs/store/assets/` from the sources zip (the human's call, 2026-11-11: leave as is for 0.1.0).** The
   0.1.0 sources zip carries 1,718,857 B of store PNGs (6,563,555 B in all) that AMO's reviewer does not need. A
   one-line `wxt.config.ts` change; re-check that the sources zip still rebuilds the identical Firefox zip.
