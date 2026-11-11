@@ -165,7 +165,7 @@ Pages works on public repositories only on this plan, so this comes after step 2
     | https://github.com/mosuvo/peekover/blob/main/docs/trust/PERMISSIONS.md | PERMISSIONS.md | #198 |
     | https://github.com/mosuvo/peekover/blob/main/docs/trust/PRIVACY.md | PRIVACY.md (linked from the privacy page's footer, 9.1) | #554 |
     | https://github.com/mosuvo/peekover/releases | The releases page (empty until step 5) | #199 |
-    | https://github.com/mosuvo/peekover/issues | The issues page, with **New issue** | #200, #466, #509, #543 |
+    | https://github.com/mosuvo/peekover/issues | The issues page, with **New issue** | #200, #373, #466, #509, #543 |
     | Private vulnerability reporting | **Report a vulnerability** on the Advisories page (step 2.3) | #46 |
     | Issues open to anyone | **New issue** works when signed in as an account that is not yours | #48, #373 |
 
@@ -305,7 +305,7 @@ the README), never from an earlier copy, a draft or a screenshot.
     10.33.0, x64)."
   - **Describe:** Name, Summary, Categories (**Web Development**, **Other**), Description, Homepage, Support site,
     Licence **MIT**, Privacy policy (paste the full text of `docs/trust/PRIVACY.md` as it stands now: the UPDATED
-    text, after 9.2 changed rows 359, 363 and 372; ledger row 510) — from `docs/store/firefox.md`.
+    text, after 9.2 changed rows 359, 363, 372 and 373; ledger row 510) — from `docs/store/firefox.md`.
     Support email: leave empty unless step 4 found the address working and the email edit has landed.
   - **Data collection:** the package declares none (`docs/store/firefox.md`, "Data collection").
   - **Check:** a confirmation page and an email from AMO.

@@ -53,5 +53,5 @@ Reading files from your computer needs a setting that you turn on yourself: "All
 
 ## Questions
 
-For a question about privacy, open an issue on Peekover's GitHub repository once it is public.
+For a question about privacy, open an issue on [Peekover's GitHub repository](https://github.com/mosuvo/peekover/issues).
 To report a security problem, see [SECURITY.md](SECURITY.md).

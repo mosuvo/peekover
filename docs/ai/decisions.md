@@ -1,6 +1,25 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.2 — batch 4 (PRIVACY.md), records and one copy change.** HUMAN RULING, verbatim: "343 OK
+  (flag 9); 359, 363, 372 OK in place (landed today, read well); 362 OK; 373 HUMAN COPY APPROVAL: "For a question about
+  privacy, open an issue on Peekover's GitHub repository." (drop "once it is public" — the policy publishes at go-live,
+  when the repo is public)."
+  - **Landed (row 373):** PRIVACY.md links "Peekover's GitHub repository" to https://github.com/mosuvo/peekover/issues.
+    The site privacy page carries the same link, in the style of its SECURITY.md link (a plain `<a href>`). The ledger row
+    now reads "…GitHub repository (https://github.com/mosuvo/peekover/issues)." and stays "live at release". GO-LIVE 3.6
+    names #373 against the issues URL, and 7.2's paste note lists rows 359, 363, 372 and 373. Checked with
+    `truthPins.test.ts` and `privacyPage.test.ts`: red before the ledger row was rewritten, then green.
+  - **Grep for go-live-tense phrasing in every published file: proposed, NOT landed.** SECURITY row 47 ("That channel
+    opens when the repository becomes public at the first release; until then the repository is private."): cut it.
+    SECURITY row 48 ("…open a GitHub issue once the repository is public."): drop the clause. SECURITY row 339 ("The
+    privacy policy published at https://peekover.dev/privacy/, which is not online yet."): drop the clause. README row
+    36 and site row 434 ("…neither online yet"): drop the clause or move the item out of "Planned". One caveat:
+    GO-LIVE makes the repository public (section 2) before the site goes live (section 3), so for those minutes a
+    README or SECURITY line that calls the site online would be early.
+  - **The pack:** batch 4's Status column, and current "Changed since review" / "CC flag" cells for 359 / 363 / 372 /
+    373, and for every other row re-worded today (183, 295, 25, 334, 324, 482, 498).
+
 - **2026-11-11 · M13 TASK 9.2 — batch 3 (the Edge listing), records.** HUMAN RULING, verbatim: "Batch 3 — HUMAN
   2026-11-11: OK. 513 / 514 carry batch 1 (436 / 437); 515 OK, confirmed at submission (GO-LIVE 6.3); 534 carries batch 1
   (457); 549 OK, checked against Edge's own form at submission (GO-LIVE 6.2); 550 / 551 OK (absolute, flag 9); 540–543 /
