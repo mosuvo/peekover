@@ -12,10 +12,20 @@
 ## Now (start here)
 
 **THE HUMAN'S NEXT STEP: `docs/ai/final-review.md`** — every remaining human step in one sitting order: (1) the Firefox
-signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, (3) the 9.2 sign-off, (4) the 9.3 pick,
+signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, (3) the 9.2 sign-off (DONE 2026-11-11), (4) the 9.3 pick,
 (5) what the agent does after. About 4¾–6 h of the human's time, plus AMO's wait. **An agent does nothing on M13 until
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
+
+**M13 TASK 9.2 — SIGNED OFF (2026-11-11).** Record: `decisions.md`, "M13 TASK 9.2 — SIGNED OFF" and the batch entries
+above it; the pack `docs/ai/truth-signoff-9.2.md`. The human's words: "I sign off the 9.2 truth re-check: every published
+sentence has a verdict, the copy changes I approved are landed, and the remaining 'live at release' rows are checked at
+go-live." 12 batches, 93 entries, all with a status. Landed copy: site setup step (Firefox's setting), PRIVACY (both
+settings, the Stored-data mark, what keeps file content, the contact line), the Firefox listing, the setup guide's "a
+browser setting" (onboarding chunk -2 B per engine), "isn't offered" for the picker route, and the go-live tense
+(SECURITY 47 cut, 48 / 339; README 36; site 434). New: `tests/extensionSize.test.ts` (fails above 6,900,000 B), GO-LIVE
+0.5, 6.2–6.4, 8.3 (a store install), 8.4 (flip the planned lines after the first attested release). `.output` 6,659,446
+/ 6,659,432 B. Tasks: 65, **62 ticked**. Left: the 8.1 walk, 9.3's pick, 9.5's figures.
 
 **M13 — I-10 MEASURED (2026-11-10).** Record: `decisions.md`, "M13 — I-10 MEASURED". On `a2ddc67`: CI 42866301850 and
 Supply chain 42866301860 green (EXIT 0); the release dry run 42868591628 green — build passed, attestation skipped

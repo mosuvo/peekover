@@ -356,6 +356,15 @@ the README), never from an earlier copy, a draft or a screenshot.
     In Chrome and Edge, flipping the toggle may restart Peekover and close the guide, and nothing else breaks (row 303).
   - **If it fails:** a guide that opens again, or anything else that breaks, is an agent task. Leave the listings up
     unless the failure is serious enough for section 9.
+- [ ] **8.4 Flip the "planned for the first public release" lines.** Once step 5.4 has verified the attestations and
+  the stores have approved (8.1), the first-release items are no longer planned (9.2 sign-off, HUMAN 2026-11-11).
+  - **Do:** an agent task, one commit. Re-word each line as a true statement, or drop it where it repeats one, and
+    rewrite its ledger row (status "true now", the 5.2 run id and 5.4's verify as evidence): attestations, SECURITY
+    row 59 (its section "Planned for the first public release", with row 339), THREAT-MODEL row 407, README row 432 (and
+    its list label row 32, with row 33 for the listings) and site row 434. The same commit runs `tests/truthPins.test.ts`.
+  - **Check:** no ledger row with status "planned" names attestations or the store listings; `truthPins.test.ts` is
+    green; the live site's Planned section and SECURITY.md show the new lines (rerun step 3.2 for the site).
+  - **If it fails:** leave the old lines up. They are still true ("planned") until the new ones land.
 
 ## 9 · Rollback — if something has to come down
 

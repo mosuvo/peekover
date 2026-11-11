@@ -1,6 +1,24 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.2 — SIGNED OFF.** HUMAN RULING, verbatim: **"I sign off the 9.2 truth re-check: every
+  published sentence has a verdict, the copy changes I approved are landed, and the remaining 'live at release' rows are
+  checked at go-live."** 9.2 ticked; tasks 65, 62 ticked.
+  - **Batches 9–11 (the same ruling's message):** "all OK. P2's wording OK as is (PERMISSIONS.md is a technical
+    document). 55 OK (exception still needed, audit exit 0 today). 59 / 407 OK as planned." Recorded per row in
+    `docs/store/claims.md` and the pack.
+  - **Checked before recording:**
+    - Every pack entry has a status (the generator now lists entries with none: an empty list, 93 of 93).
+    - `truthPins.test.ts` green (88 / 88).
+    - No "true now" row names a missing file: 491 rows, 1,109 evidence paths, 0 missing. A planted missing path is
+      caught, so the check fires.
+    - The AMO summary is 247 of 250 characters.
+  - **GO-LIVE — the planned lines:** no step flipped them after the first attested release. Added **step 8.4**, after
+    8.3: once 5.4 verifies the attestations and the stores approve, one agent commit re-words SECURITY 59 (with its
+    "Planned" section and row 339), THREAT-MODEL 407, README 432 (with rows 32 and 33) and site 434 as true statements,
+    rewrites their ledger rows, and runs truthPins.
+  - Verify line: every ledger row has evidence or is cut (cuts: 47, 36); the sign-off banked here; truthPins green.
+
 - **2026-11-11 · M13 TASK 9.2 — batches 7 and 8 (README, CHANGELOG), records.** HUMAN RULING, verbatim: "7 + 8 — HUMAN
   2026-11-11: all OK (22 / 331 as 457)." Every row in both batches is recorded OK in `docs/store/claims.md` and the
   pack; 22 and 331 are OK as is, as 457 (true for a default install; restricted site access is handled by the guide).

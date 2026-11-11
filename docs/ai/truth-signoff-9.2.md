@@ -75,7 +75,7 @@ A bare "9.2 signed off" means every row stands as written, every flag included.
 ## Recorded so far (2026-11-11)
 
 Your words: "batch 1 and flags: as you suggest", then "as you suggest" on the copy drafts and batch 2. Banked in
-`docs/ai/decisions.md` ("M13 TASK 9.2 — batch 1 and the flags", "M13 TASK 9.2 — the copy", "M13 TASK 9.2 — batch 2", "M13 TASK 9.2 — batch 3", "M13 TASK 9.2 — batch 4", "M13 TASK 9.2 — go-live tense and batch 5", "M13 TASK 9.2 — batch 6", "M13 TASK 9.2 — batches 7 and 8").
+`docs/ai/decisions.md` ("M13 TASK 9.2 — batch 1 and the flags", "M13 TASK 9.2 — the copy", "M13 TASK 9.2 — batch 2", "M13 TASK 9.2 — batch 3", "M13 TASK 9.2 — batch 4", "M13 TASK 9.2 — go-live tense and batch 5", "M13 TASK 9.2 — batch 6", "M13 TASK 9.2 — batches 7 and 8", "M13 TASK 9.2 — SIGNED OFF").
 The **Status** column of each table says what was recorded. A row with no status is still open.
 
 - **Batch 1:** every row is OK (your verdicts are in the table, and in the ledger's evidence column).
@@ -92,7 +92,8 @@ The **Status** column of each table says what was recorded. A row with no status
 - **Go-live tense (copy, 2026-11-11):** SECURITY 47 cut, 48 / 339 re-worded; README 36 withdrawn; site 434 re-worded.
 - **Batch 6:** every row is OK; row 110 now has a size guard (tests/extensionSize.test.ts, GO-LIVE 0.5).
 - **Batches 7 and 8:** every row is OK (22 / 331 as 457).
-- **Still open:** batches 9–11 as reading batches. The rows above that carry a status are already settled.
+- **Batches 9, 10 and 11:** every row is OK. Row 55: the exception is still needed (audit exit 0 today).
+- **SIGNED OFF 2026-11-11** (`docs/ai/decisions.md`, "M13 TASK 9.2 — SIGNED OFF"). Every entry below has a status; no row is open.
 
 ## The copy drafts and what landed
 
@@ -259,11 +260,11 @@ Not a ledger surface: `tests/permissionsLedger.test.ts` pins it instead, so its 
 
 | Row | Published sentence | Where | Evidence | Changed since review | CC flag | Status |
 |---|---|---|---|---|---|---|
-| P1 | "`extension.isAllowedFileSchemeAccess()` (both builds) — reads whether the user has turned on "Allow access to file URLs" (Chromium) or "Access local files on your computer" (Firefox 153+) for Peekover, so the page can say whether local files will open." | Setup guide section, line 149 | Firefox 153+ exposes the same read; both bundles are checked by onboarding.test.ts. | Rewritten at 9.2b (was "Chromium build only"; your approval "APPROVED as proposed") | — |  |
-| P2 | "`permissions.contains({ origins })` and `runtime.getManifest()` (both builds; added M13 / walk fix 8.1f) — read whether Peekover still holds the sites its content script runs on, so the page does not say "on" while the browser withholds them." | Setup guide section, line 156 | Measured with `permissions: []` on Chrome 157, Chromium 149 and Firefox 159 (decisions.md, "M13 TASK 8.1f"). | Added at 8.1f | The bullet reads two APIs and asks for no permission. Confirm the plain-English reason reads clearly. |  |
-| P3 | "In Firefox (153+) the matching setting is "Access local files on your computer", on Peekover's Permissions and data tab in about:addons." | "file:// access note", line 253 | As README 26. | Added at 9.2b (your approval) | — |  |
-| P4 | "both built manifests are byte-identical before and after it (833 / 949 B, `permissions: []`, …)" (and the same figures in the install section) | Lines 147 and 182 | A point-in-time count from task 6.1. | unchanged | NUMBER MOVED: the built manifests now read 864 / 978 B (local `.output`, 2026-11-10). The "before and after" claim was true when it was made, but the numbers read as current. Re-word as "at 6.1", or update them? | Done 2026-11-11 (evidence only, not a verdict on copy): now 864 / 978 B in both places (the number change approved by your ruling). |
-| P5 | "Measured on a command-line-loaded Chromium 149 (`--load-extension`): every browser start reports `"install"` for such an install; a store install is expected to report it once — the 8.1 walk checks it." | Install section, line 185 | "A store install is expected to report it once — the 8.1 walk checks it." | unchanged | EVIDENCE OVERSTATED, as 303 (no store install before go-live). The signed Firefox install showed it once. | Done 2026-11-11 (evidence only, not a verdict on copy): now "unpacked install walked (8.1); store install checked at go-live (`docs/store/GO-LIVE.md`, step 8.3)", per your ruling. |
+| P1 | "`extension.isAllowedFileSchemeAccess()` (both builds) — reads whether the user has turned on "Allow access to file URLs" (Chromium) or "Access local files on your computer" (Firefox 153+) for Peekover, so the page can say whether local files will open." | Setup guide section, line 149 | Firefox 153+ exposes the same read; both bundles are checked by onboarding.test.ts. | Rewritten at 9.2b (was "Chromium build only"; your approval "APPROVED as proposed") | — | HUMAN 2026-11-11: OK |
+| P2 | "`permissions.contains({ origins })` and `runtime.getManifest()` (both builds; added M13 / walk fix 8.1f) — read whether Peekover still holds the sites its content script runs on, so the page does not say "on" while the browser withholds them." | Setup guide section, line 156 | Measured with `permissions: []` on Chrome 157, Chromium 149 and Firefox 159 (decisions.md, "M13 TASK 8.1f"). | Added at 8.1f | The bullet reads two APIs and asks for no permission. Confirm the plain-English reason reads clearly. | HUMAN 2026-11-11: OK as is (PERMISSIONS.md is a technical document). |
+| P3 | "In Firefox (153+) the matching setting is "Access local files on your computer", on Peekover's Permissions and data tab in about:addons." | "file:// access note", line 253 | As README 26. | Added at 9.2b (your approval) | — | HUMAN 2026-11-11: OK |
+| P4 | "both built manifests are byte-identical before and after it (833 / 949 B, `permissions: []`, …)" (and the same figures in the install section) | Lines 147 and 182 | A point-in-time count from task 6.1. | unchanged | NUMBER MOVED: the built manifests now read 864 / 978 B (local `.output`, 2026-11-10). The "before and after" claim was true when it was made, but the numbers read as current. Re-word as "at 6.1", or update them? | HUMAN 2026-11-11: OK (864 / 978 B, landed by ruling). |
+| P5 | "Measured on a command-line-loaded Chromium 149 (`--load-extension`): every browser start reports `"install"` for such an install; a store install is expected to report it once — the 8.1 walk checks it." | Install section, line 185 | "A store install is expected to report it once — the 8.1 walk checks it." | unchanged | EVIDENCE OVERSTATED, as 303 (no store install before go-live). The signed Firefox install showed it once. | HUMAN 2026-11-11: OK (landed by ruling; GO-LIVE 8.3). |
 
 ## Batch 10 — SECURITY.md (`docs/trust/SECURITY.md`)
 
@@ -271,9 +272,9 @@ Edits on 2026-11-11 (copy approval, the go-live tense): row 47 cut, row 48 linke
 
 | Row | Published sentence | Where | Evidence | Changed since review | CC flag | Status |
 |---|---|---|---|---|---|---|
-| 46 (+ 47, 48) | Report security problems through GitHub private vulnerability reporting on this repository. / That channel opens when the repository becomes public at the first release; until then the repository is private. / For anything that is not a security problem, open a GitHub issue (https://github.com/mosuvo/peekover/issues). | Reporting | Private vulnerability reporting and issues open when the repository goes public (GO-LIVE turns them on). | live at release / planned — unchanged | No response-time promise is made, by design. | Row 47 CUT and row 48 re-worded (linked to the issues page) 2026-11-11, copy approval. The rest: your batch 10 read. |
-| 55 | CI fails on a known advisory in the production dependencies, except one recorded exception in a dependency of the diagram library. | What CI checks | supply-chain.yml (`pnpm audit --prod --audit-level low`); package.json has exactly one ignoreGhsas entry, GHSA-238p-pmpm-9mq7 (checked today). | unchanged | "one recorded exception" is still one, and still needed: `pnpm audit --prod` on 2026-11-11 found 1 low advisory, 1 ignored (exit 0). |  |
-| 59 | Build attestations on release files. | Planned | release.yml: the attest job runs only for a public repository. | live at release / planned — unchanged | — |  |
+| 46 (+ 47, 48) | Report security problems through GitHub private vulnerability reporting on this repository. / That channel opens when the repository becomes public at the first release; until then the repository is private. / For anything that is not a security problem, open a GitHub issue (https://github.com/mosuvo/peekover/issues). | Reporting | Private vulnerability reporting and issues open when the repository goes public (GO-LIVE turns them on). | live at release / planned — unchanged | No response-time promise is made, by design. | HUMAN 2026-11-11: OK, live at release (47 cut and 48 re-worded today by copy approval). |
+| 55 | CI fails on a known advisory in the production dependencies, except one recorded exception in a dependency of the diagram library. | What CI checks | supply-chain.yml (`pnpm audit --prod --audit-level low`); package.json has exactly one ignoreGhsas entry, GHSA-238p-pmpm-9mq7 (checked today). | unchanged | "one recorded exception" is still one, and still needed: `pnpm audit --prod` on 2026-11-11 found 1 low advisory, 1 ignored (exit 0). | HUMAN 2026-11-11: OK (exception still needed, audit exit 0 today). |
+| 59 | Build attestations on release files. | Planned | release.yml: the attest job runs only for a public repository. | live at release / planned — unchanged | — | HUMAN 2026-11-11: OK as planned (GO-LIVE 8.4 flips it after the first attested release). |
 
 ## Batch 11 — THREAT-MODEL.md (`docs/trust/THREAT-MODEL.md`)
 
@@ -281,14 +282,14 @@ No edit since the 9.2 prep. The rows here are statements of scope (judgements) r
 
 | Row | Published sentence | Where | Evidence | Changed since review | CC flag | Status |
 |---|---|---|---|---|---|---|
-| 378 | What you read: nobody should learn through Peekover what you read, or that you read it. | Assets | An asset statement, resting on the zero-network default (SECURITY 51). | unchanged | ABSOLUTE ("nobody should learn"), but framed as a goal ("should"). | ABSOLUTE OK (HUMAN 2026-11-11, flag 9) |
-| 381 | A website you visit, which might try to reach Peekover. | Adversaries | No `externally_connectable`; pinned at 9.2 in both engines' manifests (red-first). | Pin added at the 9.2 prep (after your last read) | — |  |
-| 402 | A browser, operating system or device that is already compromised. | Not defended | Out of scope by statement. | unchanged | — |  |
-| 403 | Other extensions you install. | Not defended | Out of scope by statement. | unchanged | — |  |
-| 404 | The sites that host images, once you choose to load them. | Not defended | After the opt-in, the browser fetches. | unchanged | — |  |
-| 405 | Someone who can use your device or read your browser profile: Peekover's storage is not encrypted. | Not defended | store.ts: plain IndexedDB rows, no encryption. | unchanged | — |  |
-| 406 | A change to a file in the instant between Save's check and its write. | Not defended | PERMISSIONS.md: "the check and the write are two steps". | unchanged | — |  |
-| 407 | Build attestations on release files, from the first public release, so that a download can be checked against the source. | Planned | release.yml attest job, public repository only. | live at release / planned — unchanged | — |  |
+| 378 | What you read: nobody should learn through Peekover what you read, or that you read it. | Assets | An asset statement, resting on the zero-network default (SECURITY 51). | unchanged | ABSOLUTE ("nobody should learn"), but framed as a goal ("should"). | HUMAN 2026-11-11: OK (flag 9). |
+| 381 | A website you visit, which might try to reach Peekover. | Adversaries | No `externally_connectable`; pinned at 9.2 in both engines' manifests (red-first). | Pin added at the 9.2 prep (after your last read) | — | HUMAN 2026-11-11: OK |
+| 402 | A browser, operating system or device that is already compromised. | Not defended | Out of scope by statement. | unchanged | — | HUMAN 2026-11-11: OK |
+| 403 | Other extensions you install. | Not defended | Out of scope by statement. | unchanged | — | HUMAN 2026-11-11: OK |
+| 404 | The sites that host images, once you choose to load them. | Not defended | After the opt-in, the browser fetches. | unchanged | — | HUMAN 2026-11-11: OK |
+| 405 | Someone who can use your device or read your browser profile: Peekover's storage is not encrypted. | Not defended | store.ts: plain IndexedDB rows, no encryption. | unchanged | — | HUMAN 2026-11-11: OK |
+| 406 | A change to a file in the instant between Save's check and its write. | Not defended | PERMISSIONS.md: "the check and the write are two steps". | unchanged | — | HUMAN 2026-11-11: OK |
+| 407 | Build attestations on release files, from the first public release, so that a download can be checked against the source. | Planned | release.yml attest job, public repository only. | live at release / planned — unchanged | — | HUMAN 2026-11-11: OK as planned (GO-LIVE 8.4 flips it after the first attested release). |
 
 ---
 
