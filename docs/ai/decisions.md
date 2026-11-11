@@ -91,6 +91,11 @@
     `site/index.html`, `site/privacy/index.html` and `harness/math-fidelity/app.js` (tokens.css wins where they
     disagree). Red first: `designTokens.test.ts` "--faint reaches 3:1 (WCAG 1.4.11) on --paper, light and dark" —
     light 2.60 → green (the arithmetic's control: white on black = 21).
+  - **8.1j follow-up (HUMAN 2026-11-11).** The light `--faint` in `site/index.html`, `site/privacy/index.html`,
+    `design/brand.html`, `design/icons.html` and `design/mockup.html` is now #8F91A0 too, pinned by
+    `designTokens.test.ts` "the site and design pages carry tokens.css’s light --faint" (red first: all five reported
+    at #9A9DAC, exit 1). Their other long-standing differences untouched; `harness/math-fidelity` left as is.
+    **Verify:** lint exit 0; unit 1,704 / 1,704, exit 0; browser full suite 2,747 passed, 65 skipped, 0 failed, exit 0.
   - **Verify (`70a7d01`):** lint clean; unit 1,698 / 1,698 (**CORRECTED 2026-11-10:** the unit tests passed but vitest exited 1 (an unhandled error from `f86a01e`); corrected at `0ea5c6d`.); browser full suite **2,747 passed, 65 skipped, 0 failed**
     (both engines; the census green); `compareBuilds` + `truthPins` 99 / 99 after re-zipping.
   - **Bytes:** content script **349,530 B, ±0** (a same-length hex swap; hashes `6a1b0166` → `dbf7ab4d` (Chrome) /

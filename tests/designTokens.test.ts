@@ -95,6 +95,20 @@ describe('design/tokens.css is the single source (013 task 2.1, D-1)', () => {
   // M13 walk item III-3 (HUMAN 2026-11-10, FIX): `--faint` draws boundaries (scrollbar thumbs, the tree's twisty, a
   // hovered border, a pressed toggle), so it must reach WCAG 1.4.11's 3:1 on the paper in BOTH themes. It was 2.60:1
   // in light (#9A9DAC); dark (3.70) is unchanged. The source is checked here; the copies by the pins below.
+  // The published site and the design references carry their own light token block. They illustrate tokens.css and
+  // were never pinned whole (some values differ there by long standing: the site's --accent-soft / --shadow, brand's
+  // --del, the font stacks). 8.1j's follow-up (HUMAN 2026-11-11) syncs and pins the LIGHT --faint only, so the 3:1
+  // value cannot drift back in the pages people read. harness/math-fidelity is a test harness and is left out.
+  it('the site and design pages carry tokens.css’s light --faint', () => {
+    const pages = ['site/index.html', 'site/privacy/index.html', 'design/brand.html', 'design/icons.html', 'design/mockup.html'];
+    const wrong = pages.flatMap((p) => {
+      const css = read(p);
+      const light = declarations(block(css, ':root'));
+      return same(light['--faint'] ?? '', LIGHT['--faint']) ? [] : [`${p}: light --faint is ${light['--faint']}, tokens.css says ${LIGHT['--faint']}`];
+    });
+    expect(wrong).toEqual([]);
+  });
+
   it('--faint reaches 3:1 (WCAG 1.4.11) on --paper, light and dark', () => {
     const lin = (v: number): number => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
     const lum = (hex: string): number => {
