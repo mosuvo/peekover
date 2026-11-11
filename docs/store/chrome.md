@@ -80,11 +80,20 @@ All three certifications are ticked: Peekover does not sell or transfer user dat
 
 https://peekover.dev/privacy/
 
+## Screenshots — upload in this order; not published (the Chrome Web Store has no caption field)
+
+1. `chrome-1-reading-light.png`: A folder open on the app page: the file list, the document and its table of contents.
+2. `chrome-2-agent-file-dark.png`: An agent instruction file, CLAUDE.md, with its badge, in the dark theme.
+3. `chrome-3-table-diagram-dark.png`: A table you can filter and copy, and a Mermaid diagram, in the dark theme.
+4. `chrome-4-math-code-light.png`: Math and highlighted code on the app page.
+5. `chrome-5-tab-reader-light.png`: A markdown file opened from disk, formatted in a browser tab.
+
 ## Submission notes — not published
 
 - Package: `.output/peekover-<version>-chrome.zip` from the draft release (check it against `SHA256SUMS`).
-- Store icon: `docs/store/assets/cws-icon-128.png`. Screenshots (at least one, 1280×800) come at spec §3.9, after the
-  design walk; the listing cannot be submitted without one.
+- Store icon: `docs/store/assets/cws-icon-128.png`. Screenshots: the five files above, from `docs/store/assets/`, all
+  1280×800, uploaded in that order (M13 task 9.3: the reviewer's pick under the human's delegation, 2026-11-11). The
+  listing cannot be submitted without at least one.
 - The summary is the manifest's `description` (`wxt.config.ts`); changing it changes the package.
 - The dashboard's exact certification wording is read at submission; if it differs from the three above, stop and
   re-check this file.

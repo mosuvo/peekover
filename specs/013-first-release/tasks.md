@@ -1387,7 +1387,7 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       green; the listing within AMO's limits; full suite; bytes stated; `permissions: []`.
       ★ *2026-11-10 (landed; `decisions.md`, "M13 TASK 9.2b"): red → green; content script and app chunk identical;
       the guide's chunk carries the Firefox branch.*
-- [ ] **9.3 ★ Store screenshots — scripted captures, the human picks (G-11; spec §3.9).** 1280×800, light and dark,
+- [x] **9.3 ★ Store screenshots — scripted captures, the human picks (G-11; spec §3.9).** 1280×800, light and dark,
       through the app-page harness from the build that passed 8.1, of a sample document kept in the repo and not
       packaged.
       Files: `scripts/capture-screenshots.ts` (new) · `docs/store/assets/sample.md` (new) · `docs/store/assets/*.png`
@@ -1407,6 +1407,12 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       `file://` with "Access local files on your computer" on (18, 24). The contact sheet is grouped by store, with
       sizes checked per store (all fit) and the earlier suggestion marked. Necessary ripple: `walk-shots.ts`
       `Engine.dragFolder`. Not packaged (both engines). **Open:** the human's picks.
+      ★ *2026-11-11 — CLOSED (`decisions.md`, "M13 TASK 9.3 — CLOSED"): **the reviewer's pick under the human's
+      delegation** — Chrome 01, 10, 08, 03, 06; Edge the same + 05; AMO 13, 22, 20, 15, 18 — copied as
+      `docs/store/assets/<store>-<n>-<shot>.png`; `tests/storeScreenshots.test.ts` (new) checks every one against its
+      store's rule (seen red twice). Captions in the three listings, ledger rows 593–608 (only AMO publishes them).
+      GO-LIVE names the files and adds 8.5 (the human's review after launch). Necessary ripple, by the human's
+      instruction: `docs/store/{chrome,edge,firefox}.md`, `docs/store/claims.md`, `docs/store/GO-LIVE.md`.*
 - [x] **9.3a The watch baseline at the click (DISCOVERED at the 9.3 finding's investigation; the human's direction).**
       `pollingDetector.start()` reads at once instead of one interval later, so a save made right after pressing Watch
       is shown — every polling route (app page without an observer, the tab reader's relay, the observer's fallback).

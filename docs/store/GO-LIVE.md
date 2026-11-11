@@ -26,7 +26,7 @@ it does not change the step.
   - **Check:** 9.1, 9.2, 9.3, 9.4 and 9.5 are all ticked in tasks.md, and `docs/ai/progress.md` says M13 is closed.
   - **Check:** the release blocker is cleared — the setup guide's Firefox sentence and README row 26 agree and are both
     true (`docs/ai/progress.md`, "FOR M13 TASK 9.2").
-  - **Check:** `docs/store/assets/` holds your screenshot picks (9.3), at least one at 1280×800.
+  - **Check:** `docs/store/assets/` holds the screenshot picks (9.3), at least one at 1280×800 (`tests/storeScreenshots.test.ts`).
   - **If it fails:** stop. Chrome cannot be submitted without a screenshot (Chrome Web Store, [Store listing
     tab](https://developer.chrome.com/docs/webstore/cws-dashboard-listing): "At least one 1280x800 px screenshot").
 - [ ] **0.3 CI is green on the commit you will release.**
@@ -291,8 +291,10 @@ the README), never from an earlier copy, a draft or a screenshot.
     file** → `peekover-0.1.0-chrome.zip` (from step 5.3) → **Upload**
     ([Chrome docs](https://developer.chrome.com/docs/webstore/publish)).
   - **Store Listing tab:** fields from `docs/store/chrome.md` (Description, Category **Workflow & Planning**, Homepage
-    URL, Support URL); store icon `docs/store/assets/cws-icon-128.png`; screenshots from `docs/store/assets/` (step
-    0.2). The summary comes from the package.
+    URL, Support URL); store icon `docs/store/assets/cws-icon-128.png`; screenshots, uploaded in this order, from `docs/store/assets/`:
+    `chrome-1-reading-light.png`, `chrome-2-agent-file-dark.png`, `chrome-3-table-diagram-dark.png`,
+    `chrome-4-math-code-light.png`, `chrome-5-tab-reader-light.png` (`docs/store/chrome.md`, "Screenshots"; the store
+    takes no captions). The summary comes from the package.
   - **Privacy tab:** Single purpose, Permission justification, Remote code ("No, I am not using remote code"), Data
     usage (**Website content** only; all three certifications ticked) and the Privacy policy URL — each from its
     section of `docs/store/chrome.md`.
@@ -317,6 +319,9 @@ the README), never from an earlier copy, a draft or a screenshot.
     Licence **MIT**, Privacy policy (paste the full text of `docs/trust/PRIVACY.md` as it stands now: the UPDATED
     text, after 9.2 changed rows 359, 363, 372 and 373; ledger row 510) — from `docs/store/firefox.md`.
     Support email: leave empty unless step 4 found the address working and the email edit has landed.
+  - **Screenshots:** upload, in this order, `docs/store/assets/amo-1-reading-light.png`, `amo-2-agent-file-dark.png`,
+    `amo-3-table-diagram-dark.png`, `amo-4-math-code-light.png`, `amo-5-tab-reader-light.png`, and give each the
+    description of the same number (`docs/store/firefox.md`, "Screenshot descriptions").
   - **Data collection:** the package declares none (`docs/store/firefox.md`, "Data collection").
   - **Check:** a confirmation page and an email from AMO.
   - **Expect:** AMO publishes no review timeline. The submission page says the add-on "may be subject to further
@@ -331,7 +336,10 @@ the README), never from an earlier copy, a draft or a screenshot.
   - **Privacy:** Single purpose, Permission justification, Remote code, Data usage (**Website content** only; all
     certifications), Privacy policy URL — from `docs/store/edge.md`.
   - **Store listings → Edit details:** Description and Search terms from the file; logo
-    `docs/store/assets/edge-logo-300.png`; screenshots (optional) from `docs/store/assets/`.
+    `docs/store/assets/edge-logo-300.png`; screenshots, uploaded in this order, from `docs/store/assets/`:
+    `edge-1-reading-light.png`, `edge-2-agent-file-dark.png`, `edge-3-table-diagram-dark.png`,
+    `edge-4-math-code-light.png`, `edge-5-tab-reader-light.png`, `edge-6-editor-light.png` (`docs/store/edge.md`,
+    "Screenshots"; the store takes no captions).
   - **Submit:** **Publish** → Notes for certification (optional) → **Publish**.
   - **Check:** the status reads in certification.
   - **Expect:** "The certification process can take up to seven business days"; then the status reads **In the Store**
@@ -365,6 +373,14 @@ the README), never from an earlier copy, a draft or a screenshot.
   - **Check:** no ledger row with status "planned" names attestations or the store listings; `truthPins.test.ts` is
     green; the live site's Planned section and SECURITY.md show the new lines (rerun step 3.2 for the site).
   - **If it fails:** leave the old lines up. They are still true ("planned") until the new ones land.
+- [ ] **8.5 The human reviews the screenshot pick and captions.** The reviewer picked the store screenshots under the
+  human's delegation (2026-11-11: "you check and decide"; `docs/ai/decisions.md`, "M13 TASK 9.3 — CLOSED"), and
+  drafted the captions (ledger rows 593–608; only AMO publishes them).
+  - **Do:** look at each live listing's screenshots and, on AMO, their descriptions.
+  - **Check:** each is kept, or a change is named for an agent task (new files in `docs/store/assets/`, the listing
+    file and the ledger rows updated together, `tests/storeScreenshots.test.ts` and `tests/truthPins.test.ts` green).
+  - **If it fails:** the listings stay up while the replacement is made; a screenshot can be swapped without a new
+    package.
 
 ## 9 · Rollback — if something has to come down
 

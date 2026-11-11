@@ -1,6 +1,36 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.3 — CLOSED: the screenshots picked (THE REVIEWER'S PICK UNDER THE HUMAN'S DELEGATION, not
+  a human verdict), copied, size-tested, listed with captions; 9.3 ticked.** The human first wrote "Chrome: 01, 08, 03,
+  06, 10 / Edge: 01, 08, 03, 06, 10, 05 / AMO: …", which left AMO unfilled. Then **the human delegated the pick to the
+  reviewer** (2026-11-11: "you check and decide"; the human reviews after launch). **The reviewer's pick, which
+  supersedes the first message:** Chrome Web Store, in order, **01, 10, 08, 03, 06**; Edge Add-ons, in order, **01, 10,
+  08, 03, 06, 05**; AMO, in order, **13, 22, 20, 15, 18**.
+  - **Files** (`docs/store/assets/`, copied byte for byte from `D:\Dev\peekover-shots\9.3\`, `3d72e5b`'s build):
+    `chrome-1-reading-light` (01), `chrome-2-agent-file-dark` (10), `chrome-3-table-diagram-dark` (08),
+    `chrome-4-math-code-light` (03), `chrome-5-tab-reader-light` (06); `edge-1` … `edge-5` the same, plus
+    `edge-6-editor-light` (05); `amo-1-reading-light` (13), `amo-2-agent-file-dark` (22), `amo-3-table-diagram-dark`
+    (20), `amo-4-math-code-light` (15), `amo-5-tab-reader-light` (18). All `.png`, all 1280×800. The AMO app-page shots
+    show the folder dragged in with the drag note. `amo-5` is the tab reader on `file://` with "Access local files on
+    your computer" on.
+  - **The size test, `tests/storeScreenshots.test.ts` (new):** it checks every `<store>-<n>-*.png` in the folder
+    against its store's rule (Chrome 1–5 at 1280×800 / 640×400; Edge 0–6 at 1280×800 / 640×480; AMO 1.6:1), numbered
+    1…n. No PNG may fall outside the naming. Its control: the 128×128 icon fits no store. **Seen red:** a 128×128 PNG
+    planted as `amo-1-control.png` failed with "amo-1-control.png is 128×128"; a sixth Chrome shot failed with "chrome
+    count: expected 6 to be less than or equal to 5". Both planted files removed, green.
+  - **Captions (published text, drafted by the reviewer; for the human's review after launch):** the stores' own docs,
+    read today, say **only AMO has a per-screenshot text** ("you can localize their descriptions", Extension Workshop).
+    Chrome's images page and Edge's publish page describe no caption field. So `firefox.md` gains a published section,
+    "Screenshot descriptions — …", and `chrome.md` / `edge.md` gain "Screenshots — upload in this order; not published
+    (… has no caption field)" with the same captions beside the file names. All 16 are ledgered (rows **593–608**,
+    "true now", each citing its file and the features' existing rows). The Firefox tab-reader caption names the
+    setting, as the from-disk guard requires. truthPins 93 / 93 green. **Seen red:** one AMO caption reworded
+    ("highlighted" → "coloured") failed both "every sentence has a row" and the stale-row check. Restored.
+  - **GO-LIVE:** 7.1, 7.2 and 7.3 name the files in upload order (7.2 gives each its description); 0.2's Check cites the
+    size test. New **8.5, "The human reviews the screenshot pick and captions"** (post-launch).
+  - Not packaged: the assets are under `docs/`, which no build reads. Measured on `3d72e5b`'s build for the sample:
+    "Search index rollout" in 0 files per engine, the control in 1. **9.3 ticked.**
 - **2026-11-11 · M13 TASK 9.3 — RE-CAPTURED AT HEAD (24 shots, both engines); Firefox by the drag route and the
   `file://` tab reader; a contact sheet by store. No pick made.** HUMAN RULING, verbatim: "(d) Re-capture: yes, all 22
   at HEAD, both engines, light and dark, same sample. Firefox drag route: YES — extend the capture script (script only,

@@ -11,6 +11,12 @@
 
 ## Now (start here)
 
+**M13 TASK 9.3 CLOSED (2026-11-11): the reviewer's pick under the human's delegation.** Record: `decisions.md`, "M13 TASK
+9.3 — CLOSED". Chrome 01, 10, 08, 03, 06; Edge the same plus 05; AMO 13, 22, 20, 15, 18. They are in
+`docs/store/assets/` as `<store>-<n>-<shot>.png`. New `tests/storeScreenshots.test.ts` checks the size rules (seen red
+twice). Captions are in the three listings, ledger rows 593–608; only AMO publishes them. GO-LIVE names the files, and
+**8.5 is the human's review of the pick and captions after launch.** Tasks: 67, **66 ticked**. Left: 9.5.
+
 **M13 TASK 9.3 RE-CAPTURED AT HEAD (2026-11-11). THE HUMAN'S NEXT STEP: the pick, from
 `D:\Dev\peekover-shots\9.3\contact-sheet.png`.** Record: `decisions.md`, "M13 TASK 9.3 — RE-CAPTURED AT HEAD". 24 / 24
 at 1280×800 from `3d72e5b`'s build. Firefox app-page shots now come by the drag route, with the drag note shown, plus

@@ -91,10 +91,21 @@ All the certifications are ticked: Peekover does not sell or transfer user data,
 
 https://peekover.dev/privacy/
 
+## Screenshots — upload in this order; not published (Edge Add-ons has no caption field)
+
+1. `edge-1-reading-light.png`: A folder open on the app page: the file list, the document and its table of contents.
+2. `edge-2-agent-file-dark.png`: An agent instruction file, CLAUDE.md, with its badge, in the dark theme.
+3. `edge-3-table-diagram-dark.png`: A table you can filter and copy, and a Mermaid diagram, in the dark theme.
+4. `edge-4-math-code-light.png`: Math and highlighted code on the app page.
+5. `edge-5-tab-reader-light.png`: A markdown file opened from disk, formatted in a browser tab.
+6. `edge-6-editor-light.png`: The editor, with a live preview and a Save button.
+
 ## Submission notes — not published
 
 - Package: the Chrome zip, `.output/peekover-<version>-chrome.zip`, from the draft release (gate-1 Q20).
-- Logo: `docs/store/assets/edge-logo-300.png` (1:1, 300×300). Screenshots (optional, 1280×800) come at spec §3.9.
+- Logo: `docs/store/assets/edge-logo-300.png` (1:1, 300×300). Screenshots: the six files above, from
+  `docs/store/assets/`, all 1280×800, uploaded in that order (Edge takes at most 6; M13 task 9.3: the reviewer's pick
+  under the human's delegation, 2026-11-11).
 - The short description is the manifest's `description` (`wxt.config.ts`), read-only in Partner Center.
 - Category: Microsoft's publish page does not list the categories; "Productivity" is the proposal — confirm it is in
   Partner Center's list at submission, or pick the nearest and update this file.

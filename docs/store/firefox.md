@@ -67,6 +67,14 @@ The full text of PRIVACY.md, the same as https://peekover.dev/privacy/, is paste
 
 The manifest declares that Peekover collects no data: data_collection_permissions is required: ["none"].
 
+## Screenshot descriptions — one per screenshot, entered with it, in upload order (amo-1 to amo-5)
+
+1. A folder open on the app page: the file list, the document and its table of contents.
+2. An agent instruction file, CLAUDE.md, with its badge, in the dark theme.
+3. A table you can filter and copy, and a Mermaid diagram, in the dark theme.
+4. Math and highlighted code on the app page.
+5. A markdown file opened from disk in a browser tab, formatted once "Access local files on your computer" is on.
+
 ## Submission notes — not published
 
 - Package: `.output/peekover-<version>-firefox.zip` from the draft release; source: `peekover-<version>-sources.zip`
@@ -75,6 +83,10 @@ The manifest declares that Peekover collects no data: data_collection_permission
   address is confirmed working (`docs/store/GO-LIVE.md`).
 - Licence: MIT. Platforms: Firefox for desktop (Windows, macOS, Linux); Firefox for Android is not supported (the human's
   ruling at M13 task 5.6).
-- Icon and screenshots: AMO's icon is from the package; screenshots (1280×800) come at spec §3.9.
+- Icon and screenshots: AMO's icon is from the package. Screenshots, in order, each with the description of the same
+  number above: `docs/store/assets/amo-1-reading-light.png`, `amo-2-agent-file-dark.png`,
+  `amo-3-table-diagram-dark.png`, `amo-4-math-code-light.png`, `amo-5-tab-reader-light.png` (all 1280×800, 1.6:1). The
+  app-page shots show a folder dragged in, with the drag note a Firefox user sees (M13 task 9.3: the reviewer's pick
+  under the human's delegation, 2026-11-11).
 - Live at release, so submit only after go-live makes them reachable (7.6): the privacy URL, the homepage, the
   repository and its issues page.

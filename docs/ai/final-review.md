@@ -13,7 +13,7 @@ Mozilla to sign the test build:
 | 1 | The Firefox signed install | ~20 min to submit (+ AMO's wait, up to 24 h) + ~5 min to read the result | the release BLOCKER; step 2's item I-3 |
 | 2 | The 8.1 design walk — **DONE 2026-11-11** | ~3–4 h (three sittings) | go-live; may re-open 3 and 4 |
 | 3 | The 9.2 truth sign-off — **DONE 2026-11-11** | ~60–75 min | go-live |
-| 4 | The 9.3 screenshot pick | ~15 min | go-live (Chrome needs ≥ 1 screenshot) |
+| 4 | The 9.3 screenshot pick — **DONE 2026-11-11, by the reviewer under your delegation** | ~15 min | go-live (Chrome needs ≥ 1 screenshot) |
 | 5 | Two proposals from the retro — **DONE 2026-11-11: both adopted for M14+** | ~5 min | nothing; next milestone |
 
 **How any decision is recorded.** Reply to the agent in your own words. The agent banks each one verbatim in
@@ -159,6 +159,11 @@ commit, re-runs `truthPins.test.ts`, and ticks 9.2 when no PENDING row is left.
 ---
 
 ## 4 · The 9.3 screenshot pick (~15 min)
+
+**DONE (2026-11-11): you delegated the pick ("you check and decide"), and 9.3 is ticked.** The reviewer picked Chrome 01, 10,
+08, 03, 06; Edge the same plus 05; AMO 13, 22, 20, 15, 18. They are in `docs/store/assets/`, with a size test and
+captions in the listings (ledger rows 593–608). **You review the pick and the captions after launch** (GO-LIVE 8.5;
+`decisions.md`, "M13 TASK 9.3 — CLOSED").
 
 **RE-CAPTURED 2026-11-11 — pick from the NEW sheet: `D:\Dev\peekover-shots\9.3\contact-sheet.png`** (or `.html`; click
 a card for the full-size file). It holds 24 shots at HEAD, grouped by store, each size checked against its store (all
