@@ -26,6 +26,9 @@ import {
 } from '../../src/app/firefoxFolderSource';
 import { FIREFOX_PICKER_NOTE } from '../../src/watch/watchAvailability';
 import { WATCH_CONTROL_CLASS } from '../../src/watch/watchControl';
+import { CHANGED_IN_EDIT_ATTR } from '../../src/watch/watchController';
+import { stopWatch } from '../../src/watch/watchRegistry';
+import { editorSessionFor } from '../../src/render/editorView';
 
 declare module 'vitest/internal/browser' {
   interface BrowserCommands {
@@ -60,8 +63,8 @@ function fakeStore(): AppStore {
 }
 
 /** A real folder on disk with `notes.md`; returns its path and the file's. */
-async function diskFolder(): Promise<{ dir: string; file: string }> {
-  const dir = await commands.diskFixture('create', { 'notes.md': BEFORE });
+async function diskFolder(text = BEFORE): Promise<{ dir: string; file: string }> {
+  const dir = await commands.diskFixture('create', { 'notes.md': text });
   cleanup.push(() => commands.diskFixture('remove', dir));
   return { dir, file: `${dir}${sep}notes.md` };
 }
@@ -101,8 +104,9 @@ interface Observed {
   updated: boolean;
 }
 
-/** Mount the shell, drop the folder, open notes.md, turn Watch on, append on disk, wait `ms` for the new heading. */
-async function dropWatchAppend(diskPath: string, file: () => File, ms: number): Promise<Observed> {
+/** Mount the shell, drop the folder, open notes.md, turn Watch on, append on disk, wait `ms` for the new heading.
+ *  `before` (M13 9.3d): append BEFORE pressing Watch instead, the race's losing order, forced. */
+async function dropWatchAppend(diskPath: string, file: () => File, ms: number, before = false): Promise<Observed> {
   const container = document.createElement('div');
   document.body.appendChild(container);
   cleanup.push(() => container.remove());
@@ -122,6 +126,7 @@ async function dropWatchAppend(diskPath: string, file: () => File, ms: number): 
   const snapshotNote = container.querySelector('[data-state="read-only-snapshot"]')?.textContent ?? null;
   const control = container.querySelector<HTMLButtonElement>(`.${WATCH_CONTROL_CLASS}`);
   const watchOffered = !!control && !control.disabled && control.getClientRects().length > 0;
+  if (before) await commands.diskFixture('append', diskPath, APPENDED);
   control?.click();
   const watchPressed = control?.getAttribute('aria-pressed') ?? null;
   // NO wait: the edit lands right after pressing Watch — a save made at once must still show. Before the M13
@@ -130,7 +135,7 @@ async function dropWatchAppend(diskPath: string, file: () => File, ms: number): 
   // Yield once so the click's synchronous start (and its immediate baseline read) has begun.
   await new Promise<void>((r) => setTimeout(r, 0));
 
-  await commands.diskFixture('append', diskPath, APPENDED);
+  if (!before) await commands.diskFixture('append', diskPath, APPENDED);
   let updated = false;
   for (let t = 0; t < ms && !updated; t += 100) {
     await new Promise<void>((r) => setTimeout(r, 100));
@@ -142,6 +147,55 @@ async function dropWatchAppend(diskPath: string, file: () => File, ms: number): 
     watchOffered,
     watchPressed,
     updated,
+  };
+}
+
+// M13 9.3d: file shapes whose rendered source and fresh read must compare equal (the detector's normalisation).
+// The byte-order mark is built from its code point so no literal mark byte sits in this file.
+const SEEDED_SHAPES: Array<[string, string]> = [
+  ['CRLF', '# Rollout notes\r\n\r\nWindows line endings.\r\n'],
+  ['BOM', `${String.fromCharCode(0xfeff)}# Rollout notes\n\nA byte-order mark first.\n`],
+  ['no trailing newline', '# Rollout notes\n\nNo newline at the end.'],
+];
+// Two polls and a margin: the polled route reads at the click and then every 1 s (WATCH_INTERVAL_MS).
+const QUIET_MS = 2600;
+
+/** Mount the shell, drop the folder, open notes.md; the watch is stopped at cleanup. */
+async function dropAndOpen(file: () => File): Promise<{ container: HTMLElement; host: HTMLElement }> {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  cleanup.push(() => container.remove());
+  cleanup.push(() => stopWatch());
+  const dropToOutcome = async (): Promise<{ ok: true; source: FolderSource }> => ({
+    ok: true,
+    source: await folderSourceFromDataTransfer(droppedFolder(file)),
+  });
+  mountAppShell(container, { dropToOutcome, store: fakeStore() });
+  container
+    .querySelector<HTMLElement>('.peekover-app')!
+    .dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() }));
+  (await waitFor(() => container.querySelector<HTMLElement>('[role="treeitem"][data-kind="file"]'))).click();
+  const host = await waitFor(() => container.querySelector<HTMLElement>('.peekover-app__reader__host'));
+  await waitFor(() => host.shadowRoot?.querySelector('h1'));
+  return { container, host };
+}
+
+/** Counts how often the reading column is re-mounted (`mount()` replaces the shadow root's children). */
+function countRemounts(host: HTMLElement): () => number {
+  let n = 0;
+  const tally = (batch: MutationRecord[]) => {
+    for (const r of batch) {
+      for (const node of r.removedNodes) {
+        if (node instanceof HTMLElement && node.classList.contains('peekover-reader')) n += 1;
+      }
+    }
+  };
+  const mo = new MutationObserver(tally);
+  mo.observe(host.shadowRoot!, { childList: true });
+  cleanup.push(() => mo.disconnect());
+  return () => {
+    tally(mo.takeRecords());
+    return n;
   };
 }
 
@@ -167,6 +221,45 @@ describe.runIf(isFirefox)('Firefox — a dragged folder: the note, the Watch con
     expect(seen.snapshotNote).not.toBe(READ_ONLY_SNAPSHOT_NOTE);
     // A file entry's File keeps its drop-time size; only its text is read fresh (spec 005's TRAP 2, re-measured).
     expect(disk.size).toBe(BEFORE.length);
+  }, 20000);
+
+  it('(A2) M13 9.3d: a save made BEFORE pressing Watch is shown (the baseline is the rendered source)', async () => {
+    const { file } = await diskFolder();
+    const disk = (await diskBackedFile(file))[0];
+    const seen = await dropWatchAppend(file, () => disk, 8000, true);
+    expect(seen.updated, 'the save made before the click reached the reader through Watch').toBe(true);
+    expect(seen.watchPressed).toBe('true');
+  }, 20000);
+
+  for (const [shape, text] of SEEDED_SHAPES) {
+    it(`(A3) M13 9.3d: an unchanged ${shape} file is not re-rendered; one change re-renders once`, async () => {
+      const { file } = await diskFolder(text);
+      const disk = (await diskBackedFile(file))[0];
+      const { container, host } = await dropAndOpen(() => disk);
+      const remounts = countRemounts(host);
+      container.querySelector<HTMLButtonElement>(`.${WATCH_CONTROL_CLASS}`)!.click();
+      await new Promise<void>((r) => setTimeout(r, QUIET_MS));
+      expect(remounts(), `an unchanged ${shape} file was re-rendered`).toBe(0);
+      await commands.diskFixture('append', file, APPENDED);
+      await waitFor(() => [...(host.shadowRoot?.querySelectorAll('h2') ?? [])].some((h) => h.textContent?.includes('Appended on disk')), 8000);
+      await new Promise<void>((r) => setTimeout(r, QUIET_MS));
+      expect(remounts(), 'one change, one render').toBe(1);
+    }, 25000);
+  }
+
+  it('(E1) M13 9.3d: with UNSAVED edits, the baseline is the loaded text; nothing is held, the buffer is kept', async () => {
+    const { file } = await diskFolder();
+    const disk = (await diskBackedFile(file))[0];
+    const { container, host } = await dropAndOpen(() => disk);
+    container.querySelector<HTMLButtonElement>('.peekover-toolbar__seg [data-mode="edit"]')!.click();
+    await waitFor(() => host.getAttribute('data-mode') === 'edit');
+    const session = editorSessionFor(host)!;
+    session.view.dispatch({ changes: { from: session.view.state.doc.length, insert: '\nUnsaved line.\n' } });
+    const buffer = session.view.state.doc.toString();
+    container.querySelector<HTMLButtonElement>(`.${WATCH_CONTROL_CLASS}`)!.click();
+    await new Promise<void>((r) => setTimeout(r, QUIET_MS));
+    expect(host.hasAttribute(CHANGED_IN_EDIT_ATTR), 'the unsaved buffer was taken for a change on disk').toBe(false);
+    expect(session.view.state.doc.toString(), 'the buffer is kept').toBe(buffer);
   }, 20000);
 
   it('(B) FIRING CONTROL: the same flow over an in-memory File does NOT update — the change in (A) came from disk', async () => {
@@ -431,13 +524,18 @@ describe.runIf(isFirefox)('Firefox — the picker route, claim by claim', () => 
     expect(treeNames(container)).toEqual(['notes.md']);
     await commands.diskFixture('append', `${dir}${sep}added.md`, '# Added later\n');
     itemIn(container, 'notes.md').click();
-    await pause(2500);
+    // CONDITION, NOT A PAUSE (M13 9.3d): the only ways `added.md` could appear are a new pick (counted below) or a
+    // re-read on opening the file, and that read has finished once the opened file has rendered.
+    await waitFor(() => readerOf(container)?.querySelector('h1'));
     expect(treeNames(container)).toEqual(['notes.md']);
     expect(picker.picks()).toBe(1);
 
     const again = await mountAndPick(dir);
     expect(treeNames(again.container).sort()).toEqual(['added.md', 'notes.md']);
-  }, 20000);
+    // BUDGET (M13 9.3d): about 1 s locally. Each pick is one directory upload, which the harness now caps at 10 s
+    // with one retry (`vitest.config.ts`, setInputFromDisk); every wait here is bounded at 5 s. 30 s holds two capped
+    // picks, so a stalled upload fails with Playwright's own message rather than an unnamed test timeout.
+  }, 30000);
 
   it('(p3) a file DELETED after picking stays listed; opening it shows "Couldn\'t read this file"', async () => {
     const { dir, file } = await diskFolder();

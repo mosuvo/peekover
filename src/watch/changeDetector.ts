@@ -44,6 +44,17 @@ export type OnText = (text: string) => void;
 export type OnReadError = (cause: unknown) => void;
 
 /**
+ * The one normalisation every detector compare uses, for fresh reads and a seeded baseline alike: a
+ * leading byte-order mark is dropped and CRLF / lone CR become LF. The rendered source and a fresh
+ * read can differ only there (a tab's text came through the browser's text view, which normalises
+ * line endings; a decoder may or may not keep the mark), and neither difference changes what the
+ * reader shows. The text DELIVERED to the callback is the raw read, untouched.
+ */
+export function normalizeForCompare(text: string): string {
+  return text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+}
+
+/**
  * The detection seam. Two implementations satisfy it — this module's {@link pollingDetector}
  * and the Chromium app page's `observerDetector` (task 1.2) — and no consumer above the factory
  * can tell which one it holds.
@@ -53,8 +64,13 @@ export interface ChangeDetector {
    *
    *  `onError` is OPTIONAL and additive (task 4.3): a detector reports failed reads through it so
    *  the controller can apply its dead-read policy, and every existing caller that omits it gets
-   *  byte-identical behaviour — the read failure is still swallowed and the loop still continues. */
-  start(cb: OnText, onError?: OnReadError): void;
+   *  byte-identical behaviour — the read failure is still swallowed and the loop still continues.
+   *
+   *  `baseline` (M13 discovered task 9.3d) is the SOURCE TEXT the reader rendered from. When it is
+   *  given, the first read is compared against it instead of becoming a silent baseline, so a save
+   *  that lands after the render — before the click, or before the click's own read resolves — is
+   *  shown. Every compare goes through {@link normalizeForCompare}. */
+  start(cb: OnText, onError?: OnReadError, baseline?: string): void;
   /** Stop detecting. Idempotent, and safe to call from within `cb`. */
   stop(): void;
 }
@@ -72,9 +88,11 @@ export interface ChangeDetector {
  *
  * The first read is taken AT START (M13 discovered task, "baseline at the click"): before it, the
  * baseline waited one interval, so a save made in the first second after pressing Watch became
- * the baseline and was never shown. The residual window, stated rather than papered over: a change
- * landing between the RENDER and the click is still absorbed; closing it needs the caller's
- * already-rendered text seeded as the baseline — which the controller (4.2) owns, not this module.
+ * the baseline and was never shown. That left a window: a change landing between the RENDER and
+ * the moment that first read resolved was absorbed — and CI hit it (M13 9.3d: the append landed
+ * while the click's read was in flight). So a caller that knows the rendered source passes it as
+ * `baseline` to `start`, and the first read is compared against it; the window is closed. Without
+ * a baseline the first read is still the silent baseline, as before.
  *
  * ── Why a self-scheduling timeout chain and not `setInterval` ────────────────────────────────
  *
@@ -104,12 +122,13 @@ export function pollingDetector(read: () => Promise<string>, intervalMs: number)
     // stop() may have run while the read was in flight — an in-flight read must not deliver
     // after stop, or a stopped watch re-renders the reader one tick later.
     if (!running) return;
+    const key = normalizeForCompare(text);
     if (lastText === null) {
-      lastText = text; // baseline: nothing to compare against yet
+      lastText = key; // baseline: nothing to compare against yet
       return;
     }
-    if (text === lastText) return; // CONTENT compare — the whole point (see header)
-    lastText = text;
+    if (key === lastText) return; // CONTENT compare — the whole point (see header)
+    lastText = key;
     callback?.(text);
   };
 
@@ -132,12 +151,15 @@ export function pollingDetector(read: () => Promise<string>, intervalMs: number)
   };
 
   return {
-    start(cb, onError) {
+    start(cb, onError, baseline) {
       if (running) return;
       running = true;
       callback = cb;
       errback = onError ?? null;
-      tick(); // the baseline read happens NOW, at the click — not one interval later (M13 9.3a)
+      // M13 9.3d: a seeded baseline is the rendered source, so the read below is a COMPARE, not a
+      // silent baseline — a save that lands before it resolves is shown. Unseeded, as before.
+      if (baseline !== undefined) lastText = normalizeForCompare(baseline);
+      tick(); // the first read happens NOW, at the click — not one interval later (M13 9.3a)
     },
     stop() {
       running = false;

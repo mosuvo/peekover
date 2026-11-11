@@ -256,3 +256,73 @@ describe('pollingDetector — the baseline is taken at start', () => {
     detector.stop();
   });
 });
+
+// M13 9.3d — the RENDERED SOURCE seeds the baseline. The 9.3a read at start stays (the tests above);
+// what changes is what it is compared against. Each case is a file shape a real read can return.
+describe('pollingDetector — a seeded baseline (the rendered source, M13 9.3d)', () => {
+  const CASES: Array<[string, string, string]> = [
+    // [name, the source the reader rendered, what a fresh read returns]
+    ['LF, unchanged', '# Notes\n\nOne.\n', '# Notes\n\nOne.\n'],
+    ['CRLF file, the raw text rendered', '# Notes\r\n\r\nOne.\r\n', '# Notes\r\n\r\nOne.\r\n'],
+    ['CRLF file, rendered through a text view that normalised it to LF', '# Notes\n\nOne.\n', '# Notes\r\n\r\nOne.\r\n'],
+    ['a file with a BOM, rendered without it', '# Notes\n', '\uFEFF# Notes\n'],
+    ['a file with a BOM, rendered with it', '\uFEFF# Notes\n', '\uFEFF# Notes\n'],
+    ['a file without a trailing newline', '# Notes\n\nNo newline at the end.', '# Notes\n\nNo newline at the end.'],
+  ];
+
+  it.each(CASES)('an unchanged first read fires nothing: %s', async (_name, rendered, onDisk) => {
+    useTimers();
+    const read = scriptedRead([onDisk]);
+    const cb = vi.fn();
+    const detector = pollingDetector(read, INTERVAL);
+    detector.start(cb, undefined, rendered);
+    await atStart();
+    await tick(2);
+    expect(read).toHaveBeenCalledTimes(3);
+    expect(cb).not.toHaveBeenCalled();
+    detector.stop();
+  });
+
+  it('a changed first read fires once, with the raw text read', async () => {
+    useTimers();
+    const read = scriptedRead(['# Notes\r\n\r\nSaved before the click.\r\n']);
+    const cb = vi.fn();
+    const detector = pollingDetector(read, INTERVAL);
+    detector.start(cb, undefined, '# Notes\n\nOne.\n');
+    await atStart();
+    await tick(2);
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledWith('# Notes\r\n\r\nSaved before the click.\r\n');
+    detector.stop();
+  });
+
+  it('THE RACE: a save that lands while the read at the click is in flight is shown (unseeded, it was absorbed)', async () => {
+    useTimers();
+    // The read at the click resolves AFTER the save reached disk, so it returns the saved text.
+    for (const [seed, expected] of [['# before\n', 1], [undefined, 0]] as const) {
+      const { fn, pending } = deferredRead();
+      const cb = vi.fn();
+      const detector = pollingDetector(fn, INTERVAL);
+      detector.start(cb, undefined, seed);
+      pending[0].resolve('# before\n\n## saved at once\n');
+      await atStart();
+      expect(cb, seed === undefined ? 'unseeded: the old behaviour, absorbed' : 'seeded: shown').toHaveBeenCalledTimes(expected);
+      detector.stop();
+    }
+  });
+
+  it('a seed replaces what a previous run left as its last text', async () => {
+    useTimers();
+    const read = scriptedRead(['B']);
+    const cb = vi.fn();
+    const detector = pollingDetector(read, INTERVAL);
+    detector.start(cb, undefined, 'A');
+    await atStart();
+    expect(cb).toHaveBeenCalledTimes(1); // A → B
+    detector.stop();
+    detector.start(cb, undefined, 'B'); // re-rendered B, watch again
+    await atStart();
+    expect(cb).toHaveBeenCalledTimes(1);
+    detector.stop();
+  });
+});

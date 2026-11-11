@@ -1909,6 +1909,14 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       contained: true,
       docId,
       render: renderEnhanced,
+      // M13 9.3d: the first read is compared against the last LOADED or SAVED text of this file —
+      // the text this edit session last wrote, else the source the reader rendered. Never the
+      // editor's buffer: the reading column is not touched while a document is edited.
+      baseline: (host) => {
+        const b = editBinding;
+        if (b && !b.ended && b.file === file && b.written !== undefined) return b.written;
+        return readerSourceFor(host);
+      },
     });
     activeWatch = controller;
     registerWatchTarget(controller);

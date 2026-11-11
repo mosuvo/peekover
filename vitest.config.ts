@@ -347,7 +347,15 @@ const setInputFromDisk: BrowserCommand<[selector: string, paths: string | string
   selector,
   paths,
 ) => {
-  await ctx.iframe.locator(selector).setInputFiles(paths);
+  // BOUNDED (M13 9.3d): Playwright's setInputFiles has no timeout of its own here, so a stalled upload used to sit
+  // until the TEST timed out and the failure named nothing (CI run 42871791660, firefoxDragWatch (p2): 20 s, no
+  // phase). Now it fails at 10 s with Playwright's own message, after one logged retry.
+  try {
+    await ctx.iframe.locator(selector).setInputFiles(paths, { timeout: 10_000 });
+  } catch (err) {
+    console.warn(`[setInputFromDisk] ${selector}: first attempt failed, retrying once: ${String(err)}`);
+    await ctx.iframe.locator(selector).setInputFiles(paths, { timeout: 10_000 });
+  }
   return true;
 };
 

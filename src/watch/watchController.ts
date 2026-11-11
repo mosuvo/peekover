@@ -372,6 +372,13 @@ export interface WatchControllerOptions {
    * `mount()` is synchronous, so a reading either side of it IS the block, exactly.
    */
   now?: () => number;
+  /**
+   * The text the detector's first read is compared against (M13 9.3d): the SOURCE the reader
+   * rendered from, never anything derived from the DOM. Defaults to the host's registered source
+   * (`readerSourceFor`, set by `mount` on every render). The app page overrides it so that, after a
+   * save in an edit session, the baseline is the text last WRITTEN, never the editor's buffer.
+   */
+  baseline?: (host: HTMLElement) => string | undefined;
 }
 
 /** The controller: the registry's {@link WatchTarget}, plus the one thing its owner tells it. */
@@ -395,6 +402,7 @@ export function createWatchController(options: WatchControllerOptions): WatchCon
     render = mount,
     signal = signalWatchUpdate,
     now = () => performance.now(),
+    baseline = readerSourceFor,
   } = options;
   let host: HTMLElement | null = null;
   let running = false;
@@ -724,7 +732,7 @@ export function createWatchController(options: WatchControllerOptions): WatchCon
       // Starting clears any previous explanation: the user has just asked to watch THIS file, and
       // a stale "stopped watching" note from the last one would be a lie about the current state.
       setWatchNote(null);
-      detector.start(onText, onReadError);
+      detector.start(onText, onReadError, baseline(next));
       notifyWatchChanged();
     },
     stop: stopSelf,

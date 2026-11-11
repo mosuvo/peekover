@@ -37,7 +37,7 @@
 // the record itself is fabricated. That is the honest maximum here, and it is stated again in
 // `tests/browser/watchDetector.browser.test.ts`.
 
-import { pollingDetector, type ChangeDetector, type OnText } from './changeDetector';
+import { normalizeForCompare, pollingDetector, type ChangeDetector, type OnText } from './changeDetector';
 
 // --- the FileSystemObserver shape (absent from lib.dom) -----------------------------
 
@@ -126,8 +126,9 @@ export function observerDetector(
 
   const deliver = (text: string): void => {
     if (!running) return;
-    if (text === lastText) return; // CONTENT compare, as on the polled path
-    lastText = text;
+    const key = normalizeForCompare(text);
+    if (key === lastText) return; // CONTENT compare, as on the polled path
+    lastText = key;
     callback?.(text);
   };
 
@@ -166,7 +167,9 @@ export function observerDetector(
     if (!running || fallback) return;
     onFallback?.(detail);
     fallback = pollingDetector(readText, fallbackIntervalMs);
-    fallback.start(deliver);
+    // M13 9.3d: the fallback's first read is compared against the last text this detector knows
+    // (the seed, or the last delivery) rather than silently absorbed. Unknown → as before.
+    fallback.start(deliver, undefined, lastText ?? undefined);
     // NOTE the residual window: pollingDetector's first read (taken at once, at start) is a
     // silent baseline, so a change landing between the death and that read is absorbed — one
     // read's latency, only on an already-degraded path.
@@ -227,11 +230,17 @@ export function observerDetector(
   };
 
   return {
-    start(cb) {
+    start(cb, _onError, baseline) {
       if (running) return;
       running = true;
       callback = cb;
-      observe().catch((err: unknown) => {
+      // M13 9.3d: with the rendered source as the baseline, one read once the observation is in
+      // place catches a save made before it was (no record would ever report that one).
+      if (baseline !== undefined) lastText = normalizeForCompare(baseline);
+      const seeded = baseline !== undefined;
+      observe().then(() => {
+        if (seeded && running) readAndDeliver();
+      }, (err: unknown) => {
         if (!running) return;
         // The observation could never be established. Do NOT stop — run the same ladder, which
         // degrades to polling if the file is readable and reports dead if it is not.
