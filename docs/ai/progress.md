@@ -17,6 +17,10 @@ signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, 
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 TASK 8.1k CLOSED (2026-11-11).** Part 2 landed (`1439930`, HUMAN RULING): an empty heading's contents entry
+reads "Untitled section". Content script 350,235 B (−31). Tasks: 67, **64 ticked**. Two by-design limits from the
+hand test are carried POST-RELEASE below (a toolbar on fences with no language; highlighting in the tab reader).
+
 **M13 TASK 8.1k (2026-11-11) — WEIRD NESTING: PARTS 1 AND 3 LANDED, PART 2 HELD.** Record: `decisions.md`, "M13 TASK
 8.1k". (1) A block inside a quote took the quote's italic (and, on the tab surface, its muted colour); fixed by one CSS
 rule (`3bf141d`, content script +149 B). On the app page nested labelled fences already had their toolbar and colours;
@@ -549,6 +553,35 @@ measurement-driven or explicitly deferred.*
   macOS; where a picked File reads stale, the pill would show "Watching" with no update and no warning (the dead-watch
   note fires only on a failed read). **First step when revisited:** measure freshness on 153 ESR, Linux and macOS.
   *Source:* `decisions.md`, "M13 — the picker route, measured" and "M13 TASK 9.3c".
+- **A Copy / Wrap toolbar on fenced code with no language (the human, 2026-11-11, after the weird-nesting walk fix
+  8.1k: agent output often uses a plain ``` for commands).** Today only a fence with a `language-…` class gets the
+  toolbar, at any depth (`CODE_FENCE_SELECTOR` = `pre > code[class^="language-"]`, `src/render/codeEnhancer.ts`); a
+  plain fence gets none on either surface. **Work:** let `codeFencesIn` also take `pre > code` with no language class
+  (still excluding mermaid and math), and build the toolbar with no language label and no highlight request. Keep
+  `hasCodeFence` (`codeEngine.ts`) language-only, so a document whose only fences are plain never loads the highlighter.
+  Point the wrap, line-number and collapse rules (`readerCss.ts`, today `pre.shiki` only) at the plain `<pre>` too.
+  Update the selector-equality pin in `codeEnhancer.test.ts`, and add browser tests: top level and nested; both
+  engines; no engine load for a plain-only document. **Size:** app chunk only, small and unmeasured (the toolbar is
+  already in the chunk); the content script is unchanged while the tab keeps no code enhancer. **Risk:** low. Copy
+  takes the raw text as it does today; the collapse height is measured on the plain `<pre>`, so check a 1 MB plain
+  fence against the 165 ms gate. **The tab reader** gets it only if the toolbar is split from the highlighter (the
+  next item's question); measure that before promising it. *Source:* `decisions.md`, "M13 TASK 8.1k".
+- **Syntax highlighting in the tab reader (README row 20's published limit: "In a tab, … code highlighting … not
+  available"; the human, 2026-11-11).** Highlighting is app-page only, by the code import fence
+  (`src/render/codeImportFence.test.ts`). **Size** (this build): the content script is 350,235 B. The highlighter's
+  core and JavaScript regex engine are one chunk, 111,981 B. The 13 grammars total 854,156 B: TypeScript, TSX and
+  JavaScript are about 175–181 KB each; JSON, diff, YAML, TOML and shell together 63,769 B. The six code themes total
+  63,124 B. Inlining even the core with the five small grammars would add about 176 KB, half the content script again,
+  on every matched page, against G-7's +2 KB stop and the 165 ms first-paint gate. **Ways to do it, each with its cost:**
+  - Load the chunks lazily from the content script. This needs `web_accessible_resources`, a manifest change that
+    exposes the chunks to every web page (a fingerprinting surface), so PERMISSIONS.md and the threat model change.
+  - Highlight in the background or an offscreen document and message tokens back. No manifest change, but a round
+    trip per render and per watch update.
+  - A small-grammar-only build in the tab.
+
+  **Also:** README row 20, CHANGELOG, the site and the three listings change; the code import fence is re-scoped.
+  **Risk:** high (size, first paint, manifest). **First step when revisited:** measure the background-messaging route's
+  first-paint cost against the 165 ms gate. *Source:* `decisions.md`, "M13 TASK 8.1k".
 - **Literata with Latin Extended — Central / Eastern European and Turkish letters in the reading face.** Prefer
   registering the extra subset only when a document contains those characters, so English documents pay nothing;
   measure LOCALLY against the 165 ms gate before shipping. 2.5's numbers: `@fontsource/literata@5.3.0` latin-ext,

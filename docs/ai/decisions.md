@@ -1,6 +1,15 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 8.1k — CLOSED: part 2 landed ("Untitled section").** HUMAN RULING, verbatim: "approve
+  "Untitled section" (drop "(H1 #3)"), as in toc-after-*.png". `src/render/tocModel.ts`'s `labelFor` returns
+  "Untitled section" for a heading with no text (the ordinal parameter removed). Red first: `tocModel.test.ts` (the four
+  untitled labels) and `weirdNesting.browser.test.ts` (the contents list, both engines), then green. Entries stay
+  distinct by position and indent and each still targets its own heading (the same browser test). Verify: lint, build+zip
+  (both engines), unit 1,718 / 1,718, browser 2,788 passed / 82 skipped; all exit 0. Content script 350,266 → 350,235 B
+  (−31), app chunk −31 B; `.output` 6,660,128 / 6,660,114 B. Commit `1439930`. 8.1k ticked. Two post-release items
+  carried (`progress.md`, POST-RELEASE): a toolbar on fences with no language, and highlighting in the tab reader.
+
 - **2026-11-11 · M13 TASK 8.1k — WALK FIX (the human's weird-nesting hand test, Chrome): parts 1 and 3 landed, part 2 HELD
   for the human.** Fixture `tests/fixtures/weird-nesting.md`, used as the human supplied it. Local; not pushed.
   - **CI on the pushed head `c58b49f`:** CI 42957971841 success (verify, reproducible); Supply chain 42957971899 success.
