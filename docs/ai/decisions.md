@@ -1,6 +1,78 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 CLOSED — a truthful, on-design first release, ready for go-live.** All 67 tasks ticked (40 at
+  gate 3 + 27 discovered: 1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a, 7.2a, 7.3a, 7.4a; 8.1a–8.1k from the walk; 9.2b,
+  9.3a–9.3d from group 9). **Ships:** CI on Linux; the claims ledger (608 rows, `truthPins.test.ts`); tokens, contrast,
+  fonts and icons from one source; the toolbar from an approved mock; every surface restyled; the setup guide on both
+  engines, including Firefox's local-file setting; reproducible builds, the release workflow, licence notices and an
+  SBOM; the site; three store listings with screenshots. The human ran the 8.1 walk, signed off 9.2, and adopted the
+  retro's (a) and (b) for M14+; the 9.3 pick was delegated to the reviewer. **Figures:** 9.5's close entry below.
+  **Not done here, by design:** going live (`docs/store/GO-LIVE.md`, from 0 Gates). **Left open:** the retro's
+  "ADDENDUM AFTER THE 8.1 WALK" (`retro.md`) is not written; 9.4 was ticked before the walk with the addendum reserved.
+  It is carried to M14's first session, with this entry's walk facts as its source. Push: `main` is ahead of
+  `origin/main` (`2b85b68`, the last CI-green commit) by the close commits, and the human pushes.
+- **2026-11-11 · M13 TASK 9.5 — CLOSED: the close figures re-run at HEAD after the walk fixes; 9.5 ticked.** The
+  2026-11-07 partial (items 1–3: the narrative move, the D-value audit, the spec-coverage rows) stands. Re-run now:
+  - **(4) The byte ledger, continued from 9.5's own last row.** Every product-affecting commit since `b926ce6` was rebuilt
+    in a scratch worktree, both engines, with a frozen install. That is 26 commits, plus the control and HEAD: every
+    commit whose diff touches anything outside docs, specs, tests, site, `.github`, the walk / capture scripts and
+    markdown. **Control: `b926ce6` rebuilt to 9.5's recorded figures exactly**: 6,645,510 / 6,645,366 B, content
+    script 345,049 B `ee9f9279` / `317c6c51`. **Every delta below equals its own task's record** (e.g. 8.1i's held
+    parts sum to its named G-7 exception, +4,152 B; 8.1g's +33 = +254 onboarding −221 app; 9.2's copy −2 per engine).
+    `permissions: []` and no `host_permissions`, both engines, in all 28 builds.
+    | Task | Commit | Δ `.output` Cr | Δ Fx | `.output` after (Cr / Fx) | Δ content script | content script after, md5 Cr / Fx | manifest |
+    | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
+    | 9.5 (2026-11-07) — control | `b926ce6` | | | 6645510 / 6645366 | | 345,049 `ee9f9279` / `317c6c51` | 864 / 978 |
+    | 9.3 finding (test) | `31f99b5` | 0 | 0 | 6645510 / 6645366 | 0 | 345,049 `ee9f9279` / `317c6c51` | |
+    | 9.3a | `9659765` | 0 | 0 | 6645510 / 6645366 | 0 | 345,049 `bc2232f4` / `73443061` | |
+    | 9.3b | `f3684c4` | +362 | +362 | 6645872 / 6645728 | 0 | 345,049 `bc2232f4` / `73443061` | |
+    | 8.1a | `25f8732` | +1 | +1 | 6645873 / 6645729 | 0 | 345,049 `bc2232f4` / `73443061` | |
+    | 8.1b | `24b14b9` | +42 | +42 | 6645915 / 6645771 | +21 | 345,070 `4fbe5390` / `73b45ec2` | |
+    | 8.1c | `b03a680` | +724 | +724 | 6646639 / 6646495 | +362 | 345,432 `60069bae` / `9c3c6473` | |
+    | 9.3c | `76415d0` | +45 | +45 | 6646684 / 6646540 | -8 | 345,424 `ff67c713` / `aa45b1c3` | |
+    | 9.2b | `224e711` | +993 | +1,123 | 6647677 / 6647663 | 0 | 345,424 `ff67c713` / `aa45b1c3` | |
+    | 8.1d | `21cbcd2` | +634 | +634 | 6648311 / 6648297 | 0 | 345,424 `ff67c713` / `aa45b1c3` | |
+    | 8.1e | `ceb1834` | +9 | +9 | 6648320 / 6648306 | 0 | 345,424 `ff67c713` / `aa45b1c3` | |
+    | 8.1f | `bdcc418` | +1,659 | +1,659 | 6649979 / 6649965 | 0 | 345,424 `ff67c713` / `aa45b1c3` | |
+    | 8.1g | `ddbafec` | +33 | +33 | 6650012 / 6649998 | 0 | 345,424 `ff67c713` / `aa45b1c3` | |
+    | 8.1h | `6888a98` | -92 | -92 | 6649920 / 6649906 | -46 | 345,378 `391caf0f` / `b386acc7` | |
+    | 8.1i (e) | `7c4f978` | -96 | -96 | 6649824 / 6649810 | -48 | 345,330 `a8e8d6ec` / `ff3a262b` | |
+    | 8.1i (c) | `c59a0a7` | +240 | +240 | 6650064 / 6650050 | +120 | 345,450 `fa709543` / `0fd8136e` | |
+    | 8.1i (b) | `1916cc3` | +774 | +774 | 6650838 / 6650824 | +387 | 345,837 `1da50b3f` / `b59df692` | |
+    | 8.1i (g) | `b98b79b` | +168 | +168 | 6651006 / 6650992 | 0 | 345,837 `1da50b3f` / `b59df692` | |
+    | 8.1i (a)+(d) | `13d7792` | +5,776 | +5,776 | 6656782 / 6656768 | +2,817 | 348,654 `d197885d` / `3174f947` | |
+    | 8.1i (f) | `f86a01e` | +1,753 | +1,753 | 6658535 / 6658521 | +876 | 349,530 `6a1b0166` / `c0dbdc10` | |
+    | 8.1j | `70a7d01` | 0 | 0 | 6658535 / 6658521 | 0 | 349,530 `dbf7ab4d` / `0b5822a8` | |
+    | 8.1i follow-up | `0ea5c6d` | +913 | +913 | 6659448 / 6659434 | +460 | 349,990 `4f2e9a82` / `25b7e09f` | |
+    | 8.1j follow-up | `fc02f4d` | 0 | 0 | 6659448 / 6659434 | 0 | 349,990 `4f2e9a82` / `25b7e09f` | |
+    | 9.2 copy | `58d196a` | -2 | -2 | 6659446 / 6659432 | 0 | 349,990 `4f2e9a82` / `25b7e09f` | |
+    | 9.3d | `4b84584` | +446 | +446 | 6659892 / 6659878 | +127 | 350,117 `3d92ecc8` / `b4f82732` | |
+    | 8.1k part 1 | `3bf141d` | +298 | +298 | 6660190 / 6660176 | +149 | 350,266 `567abd01` / `07f4cce3` | |
+    | 8.1k part 2 | `1439930` | -62 | -62 | 6660128 / 6660114 | -31 | 350,235 `3eb9a205` / `093beff4` | |
+    | records → HEAD | `416b6da` | 0 | 0 | 6660128 / 6660114 | 0 | 350,235 `3eb9a205` / `093beff4` | |
+    | **sum** | | **+14,618** | **+14,748** | | **+5,186** | 345,049 → **350,235** | |
+    **The milestone, closed:** `.output` 5,830,859 / 5,830,975 B (M12) → **6,660,128 / 6,660,114 B** (+829,269 /
+    +829,139), so **54.9%** of the 1,509,173 / 1,509,057 B starting headroom is spent. Headroom under 7 MiB:
+    **679,904 / 679,918 B**. **Content script 344,195 → 350,235 B (+6,040):** +854 through 9.3's build (the 2026-11-07
+    table) and **+5,186** after it, the walk fixes (+21 +362 −8 −46 −48 +120 +387 +2,817 +876 +460 +127 +149 −31). The
+    one task over G-7's +2 KB stop is 8.1i (a)+(d), +2,817, inside 8.1i's named exception ("M13 TASK 8.1i — CLOSED").
+    Manifests 864 / 978 B (unchanged since 7.1). **Zips at HEAD:** Chrome and Firefox 2,035,046 B each; the sizes are
+    equal by chance, the SHA-256 differ (`2740c20a…` / `3d1d3930…`). The sources zip is 6,563,555 B, up from
+    4,802,703 B at I-10; it now carries 1,718,857 B of `docs/store/assets/` PNGs (9.3's picks; WXT zips the working
+    tree). **Seen, not changed:** excluding `docs/store/assets/**` from the sources zip is a one-line `wxt.config.ts`
+    change for a later task. AMO's reviewer does not need the images.
+  - **Task count, by counting `tasks.md`:** 67 task lines, 67 ticked.
+  - **Golden:** `tests/golden/` OUTPUTS unchanged since M12's close (`3ad539a`). Its one diff is `golden.test.ts`, 1.4's
+    ruled timeout, named at 2026-11-07, not "EMPTY".
+  - **`spec-coverage.md`:** one row re-scored at the close. F11 "Detects … file URLs grant" ~ → ✓ (the Firefox half
+    settled by the signed install and 9.2b). F11 39% → 44%, §5 35% → 36%, whole spec 39% → **40%** (37% at M12).
+  - **(1) at the close:** `progress.md`'s remaining M13 narrative (§ Now and § Up next, verbatim) is moved to
+    `progress-archive.md`; the M13 close summary is in § Closed milestones; `AGENTS.md`'s milestone line reads closed.
+  - **Suites:** lint EXIT 0; unit EXIT 0 (1,723 / 1,723). The last full browser run is 8.1k's (2,788 passed / 82
+    skipped, EXIT 0). It was not re-run at the close: no product file changed since `1439930`, as the rebuild shows
+    (HEAD's row = 8.1k part 2's, bytes and md5s). Last CI green: `2b85b68` (CI 42969020543, Supply chain
+    42969020558).
 - **2026-11-11 · M13 TASK 9.3 — CLOSED: the screenshots picked (THE REVIEWER'S PICK UNDER THE HUMAN'S DELEGATION, not
   a human verdict), copied, size-tested, listed with captions; 9.3 ticked.** The human first wrote "Chrome: 01, 08, 03,
   06, 10 / Edge: 01, 08, 03, 06, 10, 05 / AMO: …", which left AMO unfilled. Then **the human delegated the pick to the

@@ -132,10 +132,11 @@ default — this is the brand, not a preference. Full product spec: `docs/produc
 - **Pushing.** Locally, an agent never pushes; the human pushes. In a cloud session (M13 onward) the agent MAY push
   its OWN working branch — never `main` — so the human can review and merge it through a pull request (which runs
   `ci.yml`). Merging to `main` is always the human's. Never force-push. (`decisions.md`, 2026-10-31 HUMAN RULING.)
-- Current milestone: **M13 (`specs/013-first-release/`) in flight — a truthful, on-design first release.** 67 tasks
-  (40 at gate 3 + 27 discovered); 65 ticked (9.2 signed off and 8.1 closed, 2026-11-11); open, pending the human's
-  end-of-round review (`docs/ai/final-review.md`): 9.3's pick (after the re-capture at HEAD) and 9.5's close figures. Where tasks stand and what is next: `docs/ai/progress.md`. M12 (Editor Mode) CLOSED 2026-10-30 — `decisions.md`'s "M12 CLOSED", `retro.md`'s "M12
-  retro". Spec, plan and tasks status lines stay sealed/"draft" per the M7–M12 precedent.
+- Current milestone: **none — M13 (`specs/013-first-release/`), a truthful, on-design first release, CLOSED 2026-11-11**
+  (67 / 67 tasks; `decisions.md`'s "M13 CLOSED"; summary in `progress.md` § Closed milestones). **Next: go live,
+  `docs/store/GO-LIVE.md`** (human-led), then M14, whose first session places the two adopted retro rules and writes
+  the M13 retro's walk addendum (`progress.md` § Carried items). M12 (Editor Mode) CLOSED 2026-10-30. Spec, plan and
+  tasks status lines stay sealed/"draft" per the M7–M12 precedent.
 
 ## Windows/Git-Bash local environment (does not apply to a Linux cloud session)
 

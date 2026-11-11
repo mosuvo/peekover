@@ -1478,7 +1478,7 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       pre-existing misses in 371 rows; C the ledger: one pass for the texts, not in-app copy). One rule placed in
       `AGENTS.md` (the font-fallback trap). **An "addendum after the 8.1 walk" is reserved** in the entry — written
       after the walk, not a reason to re-open this task.
-- [ ] **9.5 Records reconcile.** `progress.md`'s M13 narrative to `progress-archive.md`; every D-value (D-1…D-17)
+- [x] **9.5 Records reconcile.** `progress.md`'s M13 narrative to `progress-archive.md`; every D-value (D-1…D-17)
       audited against the commit that landed its `decisions.md` entry; `spec-coverage.md` re-scored (F7, F11, §6-9,
       §6-10, §6-13); the byte ledger decomposed across every task against the 1,509,173 / 1,509,057 B starting headroom
       and the content script's per-task deltas summing to its close figure; `AGENTS.md`'s current-milestone line.
@@ -1494,6 +1494,12 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       deltas summing to it; `permissions: []` in all 40 builds; golden's OUTPUTS unchanged (its one diff is 1.4's ruled
       timeout in `golden.test.ts` — named, not "EMPTY"); 51 tasks by count; `AGENTS.md`'s line. **Open, so not ticked:**
       the close figures after any walk fix, the M13 close summary — pending end review (`docs/ai/final-review.md`).*
+      ★ *2026-11-11 — CLOSED (`decisions.md`, "M13 TASK 9.5 — CLOSED" and "M13 CLOSED"): the byte ledger continued
+      from its own last row, 26 product commits + control + HEAD rebuilt, both engines (control exact; every delta
+      = its task's record); `.output` 6,660,128 / 6,660,114 B (≤ 7,340,032), content script 350,235 B (+6,040 over the
+      milestone, per-task deltas summing to it); `permissions: []` in every build; golden outputs unchanged; 67 / 67
+      tasks by count; spec-coverage F11 re-scored (40% whole spec); the rest of the narrative archived; the close
+      summary; `AGENTS.md`'s line.*
 
 ---
 

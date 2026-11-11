@@ -93,6 +93,8 @@
   (b) A claim-bearing in-app string gets a test that pins it to the state it is shown in. Both are placed in
   `WORKFLOW.md` or `AGENTS.md` at M14's start (`decisions.md`, "M13 — THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+").
   That entry flags one question for the placement: whether (b) also ledgers the string or only pins it.
+  **★ 2026-11-11 — M13 CLOSED without the addendum below.** It is carried to M14's first session (`progress.md` §
+  Carried items), with `decisions.md`'s "M13 CLOSED" and the 8.1 / 9.x entries as its source.
   **THE NUMBERS** are 9.5's (the byte ledger decomposed against the 1,509,173 / 1,509,057 B starting headroom). At
   this writing: `.output` 6,645,510 B (Cr) / 6,645,366 B (Fx) of 7,340,032; content script 345,049 B; unit 1,678.
   Metrics: tasks=51 (40 + 11 discovered) · commits=89 · first-try verification pass=no — CI went red after local

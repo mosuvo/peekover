@@ -169,6 +169,8 @@ count is corrected to **19** here, which moves §5's item total **197 → 198** 
 **226 → 227**. This changes no other section's marks and no rule; it makes F2's denominator larger,
 i.e. its coverage figure *lower*, which is the direction this document's own tie-break prefers.
 
+***★ RE-AUDITED 2026-11-11 (M13 9.5, at the close)** — one row: F11 "Detects … file URLs grant" ~ → ✓ (the Firefox half settled by the signed install and 9.2b). F11 39% → **44%**, §5 35% → **36%**, whole spec 39% → **40%**. Nothing else re-scored.*
+
 ***★ RE-AUDITED 2026-11-07 · HEAD `b926ce6`** (M13 / spec 013 task 9.5, the records reconcile — tasks.md 9.5 names the rows). **Targeted re-verification of F7, F11, §6-9, §6-10 and §6-13 ONLY**, against shipped code and its tests. F7 1 → 2 ✓ (contrast-checked); F11 1 → 3 ✓ + 1 ~ (the setup guide, the deep link; detection ~ until the Firefox signed install); §6-10 ✗ → ~; §6-13 ✗ → ✓; §6-9 stays ~ (its note updated). **Seen, not re-scored** (outside 9.5's list): §6-7's "no `CHANGELOG.md`" is now false (M13 7.1), and F5 / §7 rows the restyle touched. Rows marked **pending end review** wait on the human's end-of-round review (the signed install, the walk).*
 
 **Status legend.** `✓ SHIPPED` — implementation exists and is either test-covered or demonstrably
@@ -189,12 +191,12 @@ the bottom with the question a human walk would settle.
 | F8 Editor mode *(re-audited 2026-10-30, M12 close)* | 21 | 1 | 5 | 15 | 0 | 3.5 | **17%** |
 | F9 Export & publishing *(re-audited 2026-09-06, M10 close)* | 13 | 4 | 2 | 7 | 0 | 5.0 | **38%** |
 | F10 AI features | 16 | 0 | 1 | 15 | 0 | 0.5 | **3%** |
-| F11 Setup & onboarding *(re-audited 2026-11-07, M13 9.5)* | 9 | 3 | 1 | 5 | 0 | 3.5 | **39%** |
+| F11 Setup & onboarding *(re-audited 2026-11-11, M13 9.5 close)* | 9 | 4 | 0 | 5 | 0 | 4.0 | **44%** |
 | F12 i18n & accessibility | 7 | 1 | 2 | 4 | 0 | 2.0 | **29%** |
-| **§5 total** | **198** | **57** | **26** | **115** | **0** | **70.0** | **35%** |
+| **§5 total** | **198** | **58** | **25** | **115** | **0** | **70.5** | **36%** |
 | §6 Security & privacy *(items 9, 10, 13 re-audited 2026-11-07, M13 9.5)* | 17 | 8 | 7 | 2 | 0 | 11.5 | **68%** |
 | §7 UI/UX | 12 | 6 | 4 | 2 | 0 | 8.0 | **67%** |
-| **Whole spec** | **227** | **71** | **37** | **119** | **0** | **89.5** | **39%** |
+| **Whole spec** | **227** | **72** | **36** | **119** | **0** | **90.0** | **40%** |
 
 *Every row except F2, F3, F5 and F6 is the `d470ab2` / `d7f424c` reading, carried forward unverified at
 HEAD `174b94a`. §6 and §7's own totals are unmoved — M7 touched §7-6's diagram sub-surface (note updated
@@ -520,7 +522,7 @@ feature-detection, no WebCrypto usage (0 `webcrypto` hits).
 | Item | ✅/⭐ | Status | Evidence | Notes |
 | --- | :---: | :---: | --- | --- |
 | Auto-opening interactive setup guide on install | ✅ | ✓ | `entrypoints/background.ts` (`runtime.onInstalled`, reason "install" only — never an update; M13 6.2), at most once (6.2a, a mark in the settings store); `onboarding.html` / `src/app/onboarding.ts` (6.1); `tests/browser/onboarding.browser.test.ts` | *Re-audited 2026-11-07 (M13 9.5):* ✗ → ✓. Seen on a command-line Chromium (6.2); on a real Firefox install **pending end review** (the AMO 0.0.9 signed-install test). |
-| Detects "Allow access to file URLs" grant | ✅ | ~ | `src/app/onboarding.ts` (Chromium: `extension.isAllowedFileSchemeAccess()`, re-read on focus — no permission; M13 6.1); `tests/browser/onboarding.browser.test.ts` | *Re-audited 2026-11-07 (M13 9.5):* ✗ → ~. Chromium ✓. The Firefox branch ("nothing needs setting up") is the open release BLOCKER — **pending end review** (the signed install decides it; a temporary add-on did not render `file://` at 8.1 prep). |
+| Detects "Allow access to file URLs" grant | ✅ | ✓ | `src/app/onboarding.ts`, `entrypoints/onboarding/main.ts` (both engines: `extension.isAllowedFileSchemeAccess()`, re-read on focus — no permission; Chromium also asks `permissions.contains` for site access, M13 8.1f); `src/app/onboarding.test.ts`, `tests/browser/onboarding.browser.test.ts` | *Re-audited 2026-11-11 (M13 9.5, at the close):* ~ → ✓. The Firefox half settled: the signed install showed `file://` needs "Access local files on your computer" (Firefox 153+), and the guide now detects it and gives the steps (9.2b; ledger rows 580–585). Was: ✗ → ~ at 2026-11-07, Firefox pending the signed install. |
 | Deep-links to the exact toggle | ✅ | ✓ | `src/app/onboarding.ts` (a button to `chrome://extensions/?id=…`, verified on a real Chromium at 6.1); Firefox has no toggle to link to | *Re-audited 2026-11-07 (M13 9.5):* ✗ → ✓ (Chromium; the only engine with the toggle). |
 | Zero-config: remote `.md` works before any permission | ✅ | ✓ | `wxt.config.ts:18` (`permissions: []`, CI-pinned by `tests/manifest.test.ts`); `peekover.content.ts:35-39` | Structurally true — the four raw hosts render with no grant at all. |
 | Demo document showcasing every feature | ✅ | ✗ | `tests/fixtures/hello.md` and `tests/golden/fixtures/*` are test inputs, not a demo doc; no bundled `.md` asset | Spec calls this the visual QA page **and** the marketing screenshot (§7 process req 3). |

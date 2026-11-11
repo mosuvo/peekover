@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-11 (M13 TASK 8.1 CLOSED - the ten dispositions; I-4 and III-6 are the human's walk A6 / A7 / C16 verdicts, banked now; the retro's (a) and (b) adopted for M14+; 65 of 67 ticked. Before that: 2026-11-10 (M13 walk section E - the human's verdicts: III-1 / III-2 / III-4 accepted by name, III-5 accepted, III-3 FIXED as 8.1j (light --faint #8F91A0, 3.01:1), IV-1 / IV-2 closed, I-8 and I-5 accepted as tested-only (macOS not checked). Before that: 2026-11-10 (M13 TASK 8.1i CLOSED - the human approved the held looks; all seven parts on main; reviewer decisions under the human's delegation: a named G-7 exception (+4,152 B content script) and II-1 ... II-10 closed. Before that: 2026-11-10 (M13 TASK 8.1i - walk D's fixes: the human's verdicts recorded; (b) raw box, (c) narrow lightbox, (e) collapsed code scrolls LANDED; (a)+(d) narrow contents sheet + editor gap, (f) pills at rest, (g) active-line cell HELD on local/8.1i-approval for the human's look and a byte ruling (G-7 passed: +4,152 B). Before that: 2026-11-10 (M13 TASK 8.1h - walk fix, HUMAN RULING option A: the can't-watch notes are a quiet footnote after the last line. Before that: 2026-11-10 (M13 TASK 8.1g - walk fixes: the Firefox drag note names the refresh; the guide's off-state site line is conditional; the launcher's Edge notes. Before that: 2026-11-10 (M13 TASK 8.1f - walk fix: the setup guide checks site access, not only the file-URL toggle. Before that: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
+*Updated: 2026-11-11 (M13 CLOSED - 67 / 67 tasks; 9.5 close figures at HEAD: .output 6,660,128 / 6,660,114 B, content script 350,235 B; the 9.3 pick made by the reviewer under the human's delegation; M13's narrative moved to progress-archive.md. Next: docs/store/GO-LIVE.md. Earlier bylines: progress-archive.md, M13.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,521 +11,24 @@
 
 ## Now (start here)
 
-**M13 TASK 9.3 CLOSED (2026-11-11): the reviewer's pick under the human's delegation.** Record: `decisions.md`, "M13 TASK
-9.3 — CLOSED". Chrome 01, 10, 08, 03, 06; Edge the same plus 05; AMO 13, 22, 20, 15, 18. They are in
-`docs/store/assets/` as `<store>-<n>-<shot>.png`. New `tests/storeScreenshots.test.ts` checks the size rules (seen red
-twice). Captions are in the three listings, ledger rows 593–608; only AMO publishes them. GO-LIVE names the files, and
-**8.5 is the human's review of the pick and captions after launch.** Tasks: 67, **66 ticked**. Left: 9.5.
+**M13 CLOSED (2026-11-11). Next: go live, `docs/store/GO-LIVE.md`, from section 0 (Gates).** Record: `decisions.md`,
+"M13 CLOSED" and "M13 TASK 9.5 — CLOSED"; the summary is under § Closed milestones below; the narrative is in
+`progress-archive.md`. Nothing in M13 is open. **The human pushes `main`** (ahead of `origin/main`, `2b85b68`, by the
+close commits), then CI and Supply chain on the new head; GO-LIVE 0.3 needs CI green on the release commit.
 
-**M13 TASK 9.3 RE-CAPTURED AT HEAD (2026-11-11). THE HUMAN'S NEXT STEP: the pick, from
-`D:\Dev\peekover-shots\9.3\contact-sheet.png`.** Record: `decisions.md`, "M13 TASK 9.3 — RE-CAPTURED AT HEAD". 24 / 24
-at 1280×800 from `3d72e5b`'s build. Firefox app-page shots now come by the drag route, with the drag note shown, plus
-the Firefox `file://` tab reader. The sheet is grouped by store (Chrome 1–5, Edge 0–6, AMO), all sizes fit, the earlier
-suggestion is marked, and nothing is picked. Script only: `capture-screenshots.ts`, plus `walk-shots.ts`
-`Engine.dragFolder`. After the pick: copy the picks into `docs/store/assets/` and add the unit size check; then 9.5.
-
-**M13 TASK 8.1 CLOSED (2026-11-11): the walk is done and ticked.** Record: `decisions.md`, "M13 TASK 8.1 — CLOSED", with
-the ten dispositions. Brave is accepted by name from Chrome + Edge, and I-6 / I-7's remainders as tested only. I-4 (the
-icon) and III-6 (focus) are the human's own verdicts from walk A6 / A7 / C16 (2026-11-10). They had never been banked
-because no agent session received them. The retro's proposals (a) and (b) are **adopted for M14+** (placed at M14's
-start, § Carried items). Tasks: 67, **65 ticked**. Left: **9.3**, a full re-capture at HEAD (both engines; Firefox by
-the drag route and the `file://` tab reader), then the human's pick; and **9.5**, the close figures.
-
-**THE HUMAN'S NEXT STEP: `docs/ai/final-review.md`** — every remaining human step in one sitting order: (1) the Firefox
-signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, (3) the 9.2 sign-off (DONE 2026-11-11), (4) the 9.3 pick,
-(5) what the agent does after. About 4¾–6 h of the human's time, plus AMO's wait. **An agent does nothing on M13 until
-then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
-and record it.
-
-**M13 TASK 8.1k CLOSED (2026-11-11).** Part 2 landed (`1439930`, HUMAN RULING): an empty heading's contents entry
-reads "Untitled section". Content script 350,235 B (−31). Tasks: 67, **64 ticked**. Two by-design limits from the
-hand test are carried POST-RELEASE below (a toolbar on fences with no language; highlighting in the tab reader).
-
-**M13 TASK 8.1k (2026-11-11) — WEIRD NESTING: PARTS 1 AND 3 LANDED, PART 2 HELD.** Record: `decisions.md`, "M13 TASK
-8.1k". (1) A block inside a quote took the quote's italic (and, on the tab surface, its muted colour); fixed by one CSS
-rule (`3bf141d`, content script +149 B). On the app page nested labelled fences already had their toolbar and colours;
-the tab has no highlighter, by design. (3) The fixture pinned (`b1b8376`). **THE HUMAN'S NEXT STEP:** part 2, the empty
-heading's label "Untitled section (H1 #3)" → "Untitled section"? Shots in `D:\Dev\peekover-shots\8.1k\`. Tasks: 67, 63
-ticked.
-
-**M13 TASK 9.3d LANDED (2026-11-11) — the watch baseline is the rendered source.** Record: `decisions.md`, "M13 TASK
-9.3d". CI's `firefoxDragWatch` (A) red on `fc02f4d` was a product race: a save that reached disk before the first read at
-the click resolved was absorbed. Now the first read is compared against the rendered source (one normalisation: BOM,
-CRLF); edit mode uses the last saved text, never the buffer. The p2 flake is bounded. Red first, then green; 20 / 20 on
-Firefox; full suites exit 0. Content script 350,117 B (+127). Tasks: 66, **63 ticked**. Next: the weird-nesting walk fix.
-
-**M13 TASK 9.2 — SIGNED OFF (2026-11-11).** Record: `decisions.md`, "M13 TASK 9.2 — SIGNED OFF" and the batch entries
-above it; the pack `docs/ai/truth-signoff-9.2.md`. The human's words: "I sign off the 9.2 truth re-check: every published
-sentence has a verdict, the copy changes I approved are landed, and the remaining 'live at release' rows are checked at
-go-live." 12 batches, 93 entries, all with a status. Landed copy: site setup step (Firefox's setting), PRIVACY (both
-settings, the Stored-data mark, what keeps file content, the contact line), the Firefox listing, the setup guide's "a
-browser setting" (onboarding chunk -2 B per engine), "isn't offered" for the picker route, and the go-live tense
-(SECURITY 47 cut, 48 / 339; README 36; site 434). New: `tests/extensionSize.test.ts` (fails above 6,900,000 B), GO-LIVE
-0.5, 6.2–6.4, 8.3 (a store install), 8.4 (flip the planned lines after the first attested release). `.output` 6,659,446
-/ 6,659,432 B. Tasks: 65, **62 ticked**. Left: the 8.1 walk, 9.3's pick, 9.5's figures.
-
-**M13 — I-10 MEASURED (2026-11-10).** Record: `decisions.md`, "M13 — I-10 MEASURED". On `a2ddc67`: CI 42866301850 and
-Supply chain 42866301860 green (EXIT 0); the release dry run 42868591628 green — build passed, attestation skipped
-(private), no draft release, no tag; "REPRODUCIBLE". The Chrome / Firefox zips' SHA-256 equal the local builds; the
-sources zip differs only by this Windows copy's CRLF and later records. GO-LIVE 0.3's Done note written (box left for the
-release commit).
-
-**M13 TASK 8.1i FOLLOW-UP (2026-11-10) — CI RED ON `1af79a7`, FIXED AT `0ea5c6d`; I-10 STILL OPEN.** Record:
-`decisions.md`, "M13 TASK 8.1i FOLLOW-UP". CI run 42857163617: every unit test passed, vitest exited 1 on an unhandled
-error from 8.1i (f)'s frame callback (`f86a01e`); the dry run was not dispatched. Fixed: the band's tracker and the
-narrow-sheet listener are guarded, cancelled on a new render and stopped on teardown. `pnpm test` EXIT 0 (1,703),
-`pnpm test:browser` EXIT 0 (2,747 / 65 skipped); content script +460 B (349,990). Earlier unit claims corrected in
-place. **THE HUMAN'S NEXT STEP:** push `main`; then I-10 is re-run (CI + Supply chain green on the new hash → the dry
-run).
-
-**M13 — WALK SECTION E DECIDED (2026-11-10, the human) + TASK 8.1j LANDED.** Record: `decisions.md`, "M13 TASK 8.1j".
-III-1, III-2, III-4 accepted by name; III-5 accepted (decorative); **III-3 fixed as 8.1j**: light `--faint` #9A9DAC →
-#8F91A0 (2.60 → 3.01:1; dark unchanged), source and every pinned copy, content script ±0 B. IV-1 / IV-2 closed (empty,
-both engines, current main). I-8 and I-5 accepted as tested-only, **macOS not checked**. Post-release: borders' non-text
-contrast (III-1). Tasks: 65, 61 ticked. Left in the walk: I-10 (push, CI, the release dry run — the human's commands are
-in the review chat) and what `walk-8.1.md` still lists for items I.
-
-**M13 TASK 8.1i CLOSED (2026-11-10) — ALL SEVEN PARTS ON `main`.** Record: `decisions.md`, "M13 TASK 8.1i — CLOSED".
-The human approved the four held looks ((a) + (d), (f), (g)) and surface 36's Firefox cells, and delegated the rest; the
-**reviewer** decided a **named G-7 exception** (content script 349,530 B, +4,152 over 345,378) and **closed II-1 … II-10**
-(ok by the human's surface verdicts). The branch rebased and fast-forwarded (`b98b79b`, `13d7792`, `f86a01e`), deleted.
-`main` green: lint, unit 1,697 (**CORRECTED 2026-11-10:** the unit tests passed but vitest exited 1 (an unhandled error from `f86a01e`); corrected at `0ea5c6d`.), browser 2,747 / 65 skipped (census in it), truthPins, compareBuilds. `.output`
-6,658,535 / 6,658,521 B. Tasks: 64, **60 ticked**. Open in the walk: what `walk-8.1.md`'s checklist still lists (items I,
-III, IV); then 9.2's sign-off, 9.3's pick, 9.5's figures.
-
-*(Before the close:)* **M13 TASK 8.1i (2026-11-10) — WALK D'S FIXES: THREE LANDED, FOUR HELD FOR THE HUMAN.** Record: `decisions.md`, "M13
-TASK 8.1i". The human's walk-D verdicts are in `walk-8.1.md` (surfaces 5, 6, 7, 17, 25, 29 = fix; the rest matches /
-differs by ruling; CC flags 1–6 → fix; items II still open). **Landed:** (e) a collapsed code block scrolls sideways
-(`7c4f978`); (c) the lightbox fills a narrow viewport (`c59a0a7`); (b) the Raw view takes the column's box (`1916cc3`).
-Content script +459 B. **Held on the local branch `local/8.1i-approval` (not pushed):** (g) the active line and its gutter
-cell one token band (`507cfb7`, 0 B); (a) + (d) the narrow opener in the flow, a full-screen contents sheet, the editor
-under the toolbar (`a9a0ae0`, +2,817 B); (f) a paper band behind the pills at rest (`dbbb088`, +876 B). **THE HUMAN'S
-NEXT STEP:** the before / after rows on `D:\Dev\peekover-shots\8.1\D\index.html`; approve the looks and rule on the
-bytes (+4,152 B on the content script passes G-7's +2 KB stop). On approval the branch is rebased onto `main` and lands. Tasks: 64,
-59 ticked.
-
-**M13 TASK 8.1h LANDED (2026-11-10) — WALK FIX (C13), HUMAN RULING option A: the "can't watch here" notes are a
-quiet footnote after the last line.** Record: `decisions.md`, "M13 TASK 8.1h". The approved short wording ("Watching
-isn't available here. To watch, open the folder in Peekover's app page." / "Watching isn't available for files on the
-web."), one muted line whose text starts with the paragraphs (8.1c's margin had ignored the contents rail: x = 298 vs
-173 at 1280), no box, border, bar or shadow. Red 2 unit, 16 / 16 per engine → green; census 64, AA both themes.
-Content script −46 B. Shots `D:\Dev\peekover-shots\8.1\firefox\8.1h-{before,after}-file-bottom-{light,dark}.png`.
-Tasks: 63, 59 ticked. **The human re-checks:** a Firefox `file://` tab and a raw GitHub file, scrolled to the end.
-
-**M13 TASK 8.1g LANDED (2026-11-10) — WALK FIXES (Firefox walk C14; CC's Edge B10): the drag note, the guide's
-conditional site line, the launcher's Edge notes.** Record: `decisions.md`, "M13 TASK 8.1g". (2) The drag note now
-says "To see new or removed files, drag it in again." — verified first on Firefox 159.0.1 with the built extension,
-a real Gecko drag session: the second drag showed the added files and dropped the removed one. (3) Step 2: "blocked"
-keeps the direct site step ("in Chrome and Edge"); "off" says "If site access for file:///* is off, turn it on too".
-(4) `walk-profiles.ps1`: Edge disables Peekover on a `-Keep` relaunch unless Developer mode is on (Brave does not);
-Edge signs a fresh profile into the machine's Microsoft account and no flag stops it; the four `b10d` Edge shots
-cropped (originals in `_originals-with-account\` for the human to delete). Content script identical; onboarding
-chunk +254 B, app chunk −221 B; `.output` 6,650,012 / 6,649,998 B. Tasks: 63, 58 ticked then. **The human re-checks:**
-Firefox drag → change the folder → drag again; Chrome / Edge guide with only the file-URL toggle off.
-
-**M13 TASK 8.1f LANDED (2026-11-10) — WALK FIX (I-2): the setup guide checks site access, not only the file-URL
-toggle.** Record: `decisions.md`, "M13 TASK 8.1f". Measured on the kept Chrome 157 profile: the toggle was ON (the API
-said so truthfully); SITE ACCESS was off, so the `file://` tab stayed plain text. The guide now also asks
-`permissions.contains` (no permission): a "site access off" state, both-off steps, and the raw-hosts line on both
-engines (HUMAN COPY APPROVAL). Red 10 unit + 4 / 4 browser per engine → green. Onboarding chunk +1,659 B both engines,
-content script identical; `.output` 6,649,979 / 6,649,965 B. Tasks: 61, 57 ticked. **The human re-checks:** the guide
-in the kept Chrome profile, then turn site access back on.
-
-**M13 TASK 8.1e LANDED (2026-11-10) — WALK FIX (found at 8.1d): Copy as rich text pastes no control labels.**
-Record: `decisions.md`, "M13 TASK 8.1e". The strip step moved into `serializeReaderDocument`, shared by all three exits
-(HUMAN RULING: one function). Red 4 / 4 → green. App chunk +9 B (`84574dea`), content script identical; `.output`
-6,648,320 / 6,648,306 B. Tasks: 60, 56 ticked. **The human re-checks:** Copy as rich text, paste into Docs / Word.
-
-**M13 TASK 8.1d LANDED (2026-11-10) — WALK FIX (I-9, the re-check of 8.1a): the exported HTML scrolls, hides its
-math source, ships no controls.** Record: `decisions.md`, "M13 TASK 8.1d". The body carried the reader's
-`position:fixed` (cause confirmed: `scrollHeight` = the viewport); now `body{position:static}`; `MATH_CSS` rides with
-math; controls stripped (sort buttons to header text, checklist kept — HUMAN RULING). Red 4 / 4 → green 16 / 16. App
-chunk +634 B (`369153fa`), content script identical; `.output` 6,648,311 / 6,648,297 B. Copy as HTML shares it; Copy as
-rich text did not (8.1e, landed). Tasks: 59, 55 ticked. **The human re-checks:** export, open, scroll, Ctrl+P.
-
-**M13 — WALK PREP (2026-11-10, records only): the human's walk notes banked; the table one verdict per surface.**
-Record: `decisions.md`, "M13 — walk prep". `docs/ai/walk-8.1.md` now holds the notes (Chrome 1–15, Edge E1–E4,
-Firefox), the items they cover, a 36-row table (17 surfaces walked on Chromium by the notes, 19 not), and **the
-remaining checklist in walking order (~2½–3 h)**. **THE HUMAN'S NEXT STEP:** that checklist, A → E.
-
-**M13 TASK 9.2b LANDED (2026-11-10) — the Firefox local-file setting; floor 153. THE 9.2 RELEASE BLOCKER IS
-CLOSED.** Record: `decisions.md`, "M13 TASK 9.2b". The setup guide's Firefox branch reads "Access local files on your
-computer" and gives the steps; `strict_min_version` 153.0 (the current ESR); README / CHANGELOG / the Firefox listing /
-PERMISSIONS.md say it; ledger rows re-worded, 580–585 added. Content script and app chunk identical; the guide's chunk
-9,257 / 9,129 B; `.output` 6,647,677 / 6,647,663 B. Tasks: 58, 54 ticked. (Walk prep then ran from the notes in the review chat — the block above.)
-
-**M13 TASK 9.3c LANDED (2026-11-10) — the picker-route wording (HUMAN RULING, approved with one change).** Record:
-`decisions.md`, "M13 TASK 9.3c". `FIREFOX_PICKER_NOTE`, `READ_ONLY_SNAPSHOT_NOTE` and the drag note's picker clause
-now say what p1–p4 measured; Watch is still not offered for a picked folder (carried, POST-RELEASE). Rows 25 / 334 /
-498 unchanged, evidence re-pointed. Content script −8 B, app chunk +53 B; `.output` 6,646,684 / 6,646,540 B. 9.3
-screenshots not affected. Tasks: 57, 53 ticked. **Item 1 (Firefox setting, floor 153) is STASHED, not landed:** row
-477's approved sentence makes the AMO Summary 298 characters (limit 250) — back to the human.
-
-**M13 TASK 8.1c LANDED (2026-11-10) — WALK FIX (OPTION A): the "can't watch here" notes are an aside after the
-document.** Record: `decisions.md`, "M13 TASK 8.1c". On raw web pages and Firefox `file://` the watch note now flows
-after the last line instead of floating over the text; the stopped-watch note stays by the control. Red 24 / 24 → green
-26 / 26 (`watchNoteAside.browser.test.ts`). Content script and app chunk +362 B each; `.output` 6,646,639 / 6,646,495 B.
-9.3 screenshots not affected. Tasks: 56, 52 ticked. **Waiting on the human:** row 477's sentence (item 1 then lands as
-one task) and the picker-route wording.
-
-**M13 — THE PICKER ROUTE, MEASURED (2026-11-10; final-review step 1(c)/(d) closed by the human's hand check).**
-Record: `decisions.md`, "M13 — the picker route, measured". A picked Firefox folder reads files fresh (the human;
-test p1); files added later are not listed (p2); deleted ones stay listed and open to "Couldn't read this file" (p3);
-after a reload the folder is offered through the picker (p4). `FIREFOX_PICKER_NOTE` and `READ_ONLY_SNAPSHOT_NOTE`
-are false in their "frozen" / "platform limitation" clauses; **corrected wording PROPOSED, waiting on the human**;
-rows 25 / 334 / 498 stay true. Making the picker route watchable: scoped, not built.
-
-**M13 TASK 8.1b LANDED (2026-11-10) — WALK FIX (the human's "item 13", at I-6): a hovered link stays readable in
-dark.** Record: `decisions.md`, "M13 TASK 8.1b". The dark thin-underline rule out-specified the hover fill, leaving
-`#191504` on the dark page (1.01:1, every link, both reader surfaces, both engines); the dark hover rule now repeats
-`background:var(--hl)`. Red 4 / 8 → green 8 / 8 (`linkHoverContrast.browser.test.ts`). Content script and app chunk
-+21 B each; `.output` 6,645,915 / 6,645,771 B. The 9.3 screenshots are not affected (no capture hovers a link).
-Tasks: 55, 51 ticked. **Waiting on the human:** item 1's sentences (Firefox setting, floor 153), item 2's picker
-result (the kickoff's placeholder was not filled), 8.1c's placement choice.
-
-**M13 TASK 8.1a LANDED (2026-11-10) — WALK FIX (8.1 item I-9): the exported HTML prints whole.** Record:
-`decisions.md`, "M13 TASK 8.1a". The export wrote `@mediaprint` / `@mediascreen …` (the space lost), so its print rule
-was dropped and the file printed one page; now `@media ${condition}`. Copy as HTML shares the fix; the app page's PDF
-(`window.print()`) never used this CSS. "A light export comes out dark" did NOT reproduce (tested, green before the
-fix). App chunk +1 B (`2156293e`), content script identical; `.output` 6,645,873 / 6,645,729 B. READER_CSS unchanged, so
-the 9.3 screenshots are not affected. Tasks: 54, 50 ticked. The walk continues from `walk-8.1.md`.
-
-**M13 — THE SIGNED INSTALL, RUN (2026-11-10; AMO kit step 11): the BLOCKER is settled — `file://` does NOT render out
-of the box on Firefox 159; the fix waits on the human's wording (STOPPED).** Record: `decisions.md`, "the AMO-signed
-0.0.9 on a real Firefox". The `.xpi` is our 0.0.9 + Mozilla's signature (manifest re-serialized, equal when parsed).
-(a) Since Firefox 153, local-file access is a separate, default-off permission ("Access local files on your computer",
-about:addons → Peekover → Permissions and data); turned on, the reader renders. (b) The guide opens once, not again
-across 2 restarts — TRUE. (c)/(d) The real picker and the real drag could not be automated — **a ~3-min hand check for
-the human** (final-review step 1). Ledger: 296 / 304 FALSE; 26 / 335 / 500 FALSE ("not yet checked"); the Firefox half
-of 2, 8, 112, 185, 209, 312 true once the setting is on; 25 / 334 / 498 still pending (c). **Next, after the human's
-wording:** a discovered task — the guide's Firefox branch (`isAllowedFileSchemeAccess()`, no new permission) + those rows.
-
-**M13 TASK 9.3b LANDED (2026-11-07) — DISCOVERED: the drag-route note (HUMAN RULING "drag note: approve
-corrected").** Record: `decisions.md`, "M13 TASK 9.3b". A dragged Firefox folder now shows the approved note (Watch
-works there); the picker note is unchanged. Its "a picked folder can't be watched" waits on final-review step 1(c) —
-if the real picker reads fresh files, the note, README row 25, rows 334 / 498 and `FIREFOX_PICKER_NOTE` change
-together. App chunk +362 B (`3e57f97e`), content script identical; `.output` 6,645,872 / 6,645,728 B. Tasks: 53, 49
-ticked.
-
-**M13 TASK 9.3a LANDED (2026-11-07) — DISCOVERED: the watch baseline at the click.** Record: `decisions.md`, "M13 TASK
-9.3a". A save made right after pressing Watch is now shown on every polling route (`pollingDetector.start()` reads at
-once). Red → green: Firefox drag test (no wait), Chromium polling route, two unit tests. Content script and app chunk
-+0 B, md5s moved (`bc2232f4` / `73443061`; app `8503fa07`). Tasks: 52 (40 + 12), 48 ticked.
-
-**M13 — 9.3 FINDING INVESTIGATED (2026-11-07): Firefox drag-folder watch.** Record: `decisions.md`, "M13 — 9.3
-finding: Firefox drag-folder watch". Measured (`tests/browser/firefoxDragWatch.browser.test.ts`, firing control):
-on a dragged folder Watch is offered and an on-disk edit reaches the reader — **row 25 true, the pane note false**.
-The human's wording was checked clause by clause: (a) true; (b) deleted files stay listed (not "won't appear");
-(c) FALSE — the folder's file is remembered in Recent and reopens through the picker. The corrected sentence was
-approved and LANDED as task 9.3b (above).
-Second finding: the picker route also read fresh bytes in Playwright's Firefox — to confirm with a real picker
-(final-review step 1(c)).
-
-**M13 TASK 9.5 — PARTIAL (2026-11-07): records reconciled.** Record: `decisions.md`, "M13 TASK 9.5". Local, on `main`;
-not pushed. Not ticked: the close figures after any walk fix and the close summary — **pending end review**.
-- **Archive:** every landed M13 task block (1.1 … 9.4) and the old byline chain → `progress-archive.md`, "M13 · … ·
-  IN FLIGHT". Kept here: the open items below.
-- **D-1…D-17:** each with its landing commit; gap named (D-17's entry came with 4.1's commit).
-- **Bytes (39 product commits rebuilt, both engines; M12's close reproduced as the control):** `.output` 6,645,510 /
-  6,645,366 B of 7,340,032 (headroom 694,522 / 694,666; 54.0% of M13's starting headroom spent); content script
-  344,195 → 345,049 B (+854, per task, summed); manifests 864 / 978 B; `permissions: []` in all 40 builds.
-- **spec-coverage:** F7 12%, F11 39%, §6 68%, whole spec 39%. **Golden:** outputs unchanged; one ruled timeout in
-  `golden.test.ts` (1.4). **Tasks:** 51 by count (40 + 11), 47 ticked; open 8.1, 9.2, 9.3, 9.5.
-
-**M13 TASK 9.3 — PARTIAL, CAPTURES ONLY (2026-11-07): store screenshots.** Record: `decisions.md`, "M13 TASK 9.3 —
-captures". Local, on `main`; not pushed. Not ticked: **the human picks at the end-of-round review** (HUMAN RULING).
-- **Where:** `D:\Dev\peekover-shots\9.3\contact-sheet.png` (+ `.html`, `manifest.json`) — 22 PNGs, 1280×800 each,
-  from HEAD's build (`5ac0112`; the walk is after 9.x, so a walk fix re-captures what it touches).
-- **Candidates:** 12 Chromium (01–12) → Chrome Web Store (1–5) · Edge Add-ons (0–6). **Not for a store:** the 10
-  Firefox app-page captures (13–22; the harness's live handle is a Chromium-only state — no read-only-snapshot note).
-  **Not captured:** the Firefox tab reader (PENDING SIGNED INSTALL). AMO: no candidate yet.
-- **FOUND (code reading; for the walk's I-11(b)):** a Firefox folder opened by drag shows `READ_ONLY_SNAPSHOT_NOTE`
-  ("Watch mode … also unavailable here") while Watch is offered for that route (row 25 says it works).
-- **Files:** `scripts/capture-screenshots.ts`, `docs/store/assets/sample.md` (new); `scripts/walk-shots.ts` (exports
-  + run guard). **Verify:** lint 0 · unit 1,678 / 1,678 · not packaged (both engines) · package bytes identical to 7.6.
-
-**M13 TASK 9.2 — PARTIAL (2026-11-07): the truth re-check, agent side done.** Record: `decisions.md`, "M13 TASK 9.2".
-Local, on `main`; not pushed. Not ticked: rows still open, and the human's sign-off is the gate.
-- **Done:** all 579 rows' evidence re-verified at HEAD (0 problems; firing control 3 / 3); stale evidence fixed (33, 59,
-  407, 429, 432); REPRODUCING, SOURCE_CODE_REVIEW (rows 557–567) and the setup guide (rows 568–579) checked sentence by
-  sentence; every live row still on its surface (#301 withdrawn, #554 fixed); `externally_connectable` pinned (ablation
-  3 arms); PERMISSIONS.md and CHANGELOG.md reworded for the notices mark ("Approve both as written"); in-app copy checked,
-  not ledgered ("Checked, not ledgered").
-- **OPEN — PENDING SIGNED INSTALL (the AMO 0.0.9 test):** rows **26, 296, 304, 335, 500**, and the Firefox half of rows
-  **2, 8, 112, 185, 209, 312**. **The release BLOCKER stays open** (§ Carried items, "FOR M13 TASK 9.2").
-- **OPEN — the human's 9.2 sign-off:** read README, site, SECURITY, PRIVACY, THREAT-MODEL, CHANGELOG and the three
-  listings against `docs/store/claims.md`; sign off or name cuts.
-- **Verify:** lint 0 · unit 1,678 / 1,678 · package bytes identical to 7.6.
-
-**AMO 0.0.9 TEST KIT READY (2026-11-07) — the human's step.** `D:\Dev\peekover-amo-test\AMO-STEPS.md`: sign the
-throwaway 0.0.9 unlisted (branch `amo-test-0.0.9`, local, never merged), save the signed `.xpi` there, then tell an agent
-— it tests `file://`, guide-once across a restart and both folder routes (settles the 9.2 Firefox BLOCKER).
-
-**HUMAN RULING (2026-11-07): the 8.1 walk moves to the very end, after group 9** ("I will walk at the very end, after
-group 9.") — `decisions.md`, "M13 RULING — the 8.1 walk moves after group 9". Next: **the human's end-of-round review**, `docs/ai/final-review.md` (9.2, 9.3, 9.5 partial; 9.4 landed). What a
-walk fix would re-run: "Up next".
-
-**M13 TASK 8.1 PREP LANDED (2026-11-07) — the walk is ready (now walked LAST, after group 9).** Record:
-`decisions.md`, "M13 TASK 8.1 — preparation". Local, on `main` (from `67ce7b9`); not pushed.
-- **Start here:** `docs/ai/walk-8.1.md` — the one-page guide (3–4 h, three sittings), what the prep found, the items
-  (I live × 11, II × 10, III contrast × 6, IV pending lists × 2) and the table (36 surfaces × 16 cells; 169 "proposed").
-- **CI (`gh`):** `67ce7b9` green — CI 42217671355 (verify, reproducible), Supply chain 42217671570. Commit email now noreply.
-- **Builds:** clean, both engines, at `67ce7b9`: 326 / 327 = CI's reproducible job (Chrome zip `9ed349c2…`, Firefox
-  `d74715ca…`); the working folder's sources zip differs (fresh-clone rule); a fresh-clone `--twice` = 327 / 327.
-- **Browsers here:** Chrome 156 (Load unpacked by hand — `--load-extension` removed in 137), Edge 157 and Brave 157
-  (`--load-extension` works), Firefox 159 (temporary add-on, or the signed file). No Opera / Vivaldi.
-  `scripts/walk-profiles.ps1 -Browser <name>` — a fresh throwaway profile each.
-- **Store-style install: HUMAN RULING "AMO unlisted only (Recommended)".** The human signs one unlisted build on AMO
-  (steps in the record; the sources zip from a FRESH clone, `d285b162…`); Chrome / Edge store installs wait for go-live.
-- **Screenshots:** `D:\Dev\peekover-shots\8.1\` (`scripts/walk-shots.ts`): 532 cells captured, 20 n/a, 16 failed (Firefox
-  harness limits), 112 mock frames, 204 side-by-side — 864 PNGs.
-- **Found (to judge in the walk, nothing fixed):** an unpacked Chromium install starts with file access ON; the Firefox
-  temporary add-on did not render a `file://` `.md`; the harness is not a Firefox folder route; Recent repeats a file;
-  the editor search panel's CodeMirror-default controls; the diff view's plainer document.
-- **Verify:** lint 0 · unit 1,652 / 1,652 (a first run red: `thirdPartyLicences` timed out after lint — the known
-  flake, now named) · no product bytes.
+**Current numbers (HEAD):** `.output` 6,660,128 B (Cr) / 6,660,114 B (Fx) of 7,340,032 — headroom 679,904 / 679,918 B ·
+content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,563,555 B · manifests
+864 / 978 B, `permissions: []` · lint 0 · unit 1,723 · browser 2,788 passed / 82 skipped (8.1k, the last product
+change) · `pnpm audit --prod` EXIT 0 (1 low, ignored) · tasks 67 / 67.
 
 ## Up next
 
-**HUMAN RULING (2026-11-07), verbatim: "I will walk at the very end, after group 9."** Order now: **9.1 → 9.2 → 9.3 →
-9.4 → 9.5 → 8.1's walk → its fixes (8.1a …) → go-live.** The walk still gates go-live (GO-LIVE.md section 0
-unchanged). In parallel, the human signs a throwaway **0.0.9** unlisted on AMO (branch `amo-test-0.0.9`, never pushed
-or merged; files in `D:\Dev\peekover-amo-test\`) — its install test can settle the Firefox `file://` BLOCKER (§ Carried
-items) before 9.2, without the walk.
-
-**Accepted cost — what a walk fix could invalidate (re-run it when a fix lands):**
-- **9.1 (the site):** any site sentence or ledger row about the surface the fix changes — above all the Firefox
-  `file://` lines (ledger rows 26 / 296 / 304) and anything describing onboarding, the toolbar or the reader's look; the
-  privacy page only if a fix changes PRIVACY.md (the pin re-checks it).
-- **9.2 (the truth re-check):** the human's sign-off for every ledger row whose evidence is a surface or behaviour the
-  fix touches (re-run the evidence, re-sign those rows), and the three store listings' matching sentences.
-- **9.3 (store screenshots):** every picked PNG that shows a surface the fix changes; a token / font / toolbar-wide fix
-  re-captures ALL of them and the human picks again.
-- **9.4 (the retro):** an addendum for the walk's findings (written before the walk).
-- **9.5 (records reconcile):** the byte ledger and the close figures (a fix adds bytes), the task count (each 8.1x is
-  a task), golden's milestone diff, `spec-coverage.md` rows the fix moves, and AGENTS.md's milestone line.
-
-**8.1 — the human's design walk** (HUMAN-ONLY, now LAST), from **`docs/ai/walk-8.1.md`** (the prep landed 2026-11-07;
-the table, guide and items live there — HUMAN RULING 2 at prep). Each "fix" becomes 8.1a, 8.1b … before go-live. The
-script below is the source walk-8.1.md expands; its "the table goes in this file" is superseded by walk-8.1.md.
-
-**Next: the human's end-of-round review, `docs/ai/final-review.md`** — 9.5 PARTIAL 2026-11-07 (records reconciled; close figures pending end review). 9.4 landed 2026-11-07. 9.3 PARTIAL 2026-11-07 (captures in `D:\Dev\peekover-shots\9.3\`; the pick is the human's, at the end-of-round review). 9.2 PARTIAL 2026-11-07 (open: the signed-install rows 26 / 296 / 304 / 335 / 500 and the Firefox half of 2, 8, 112, 185, 209, 312; the human's sign-off). When the signed 0.0.9 `.xpi` is saved, its install test comes first and closes those rows (and the blocker, if Firefox renders).
-
-#### THE 8.1 WALK SCRIPT (consolidated at 7.6 from tasks.md 8.1, its three ★ notes, spec §3.6 and § Carried items "FOR M13 TASK 8.1")
-
-**How to record.** The agent's prep puts a table in this file: one row per surface below, one column per cell
-(light / dark × Chromium / Firefox × 1440 / 1280 / 1080 / 414 — 16 cells). Write one verdict per cell: **matches**,
-**differs by ruling** (name the ruling), or **fix** (one line: what, where, which cell). Never leave a cell blank or
-write "looked fine" for a group. Each **fix** becomes a numbered discovered task (8.1a, 8.1b …) run before group 9.
-A screenshot of a fix goes in `D:\Dev\peekover-shots\8.1\` (not committed), named `<surface>-<theme>-<engine>-<width>.png`.
-
-**0 · Prep (agent session, not the walk).** Clean `pnpm build` and `pnpm exec wxt build -b firefox`, both zips; the
-table filled with surfaces and blank verdicts; tree and background processes clean (WORKFLOW §7.4). Load the built
-extension in Chromium (`chrome://extensions`, Load unpacked `.output/chrome-mv3`) and Firefox (`about:debugging` → This Firefox →
-Load Temporary Add-on → `.output/firefox-mv3/manifest.json`). Window sizes: 1440×900, 1280×800, 1080×800, 414×896.
-
-**1 · Install and setup guide (Chromium, then Edge / Brave / Opera / Vivaldi where available, then Firefox).**
-- *Look at:* a store-style install (the zip, not `--load-extension`): does the setup guide open once on first install,
-  and not after a browser restart or a toggle flip? The "Allow access to file URLs" toggle's default and label in each
-  Chromium browser; typing `chrome://extensions`; "Open Peekover's details" opening the Details page; toggle off → on
-  with the guide updating on focus. *Good:* the guide opens exactly once; each step's words match what the browser
-  shows; flipping the toggle does not leave Peekover unusable until a restart. *Record:* per browser, the default, the
-  label as shown, and what the flip did (6.1 / 6.2's open question, verbatim in § Carried items).
-- *Look at:* the guide by eye — step circles in the toolbar file name's colour pair, the guide following the saved
-  theme. *Good:* matches `design/toolbar-mock.html`'s colours; light and dark both.
-- **Firefox `file://` (§9-6):** a FRESH Firefox profile with the built extension; open a local `.md` by `file://`
-  directly (not the app page). *Good:* it renders with no setup. *Record:* "renders" or what Firefox asked for. If
-  access must be granted → a discovered task (detection or instructions, no new permission — or STOP if one would be
-  needed). This verdict decides ledger rows 26 / 296 / 304 and the Firefox listing's "not yet been checked" line (9.2).
-
-**2 · The toolbar icon.** *Look at:* Peekover's icon in both browsers' toolbars, light and dark browser themes.
-*Good:* crisp at toolbar size, legible on both. *Record:* per engine × theme.
-
-**3 · App page — toolbar and chrome** (judge against `design/toolbar-mock.html`, not `mockup.html` — plan §7-2).
-- The full toolbar at 1440 / 1280 / 1080; the compact toolbar at ≤ 863 px (the "⋯" menu) at 414.
-- An agent file at 1280 px: a two-row toolbar (C061 ruling) — judge the real thing.
-- **Named check (3.1 gate):** Editing (Read / Edit / Raw while editing), the Watching pill, the one-time snapshot
-  notice, the Compare picker, the Files overlay — WORKING, both engines, both themes.
-- The Files overlay from 1189 px down; a 1280 px window keeps the pane in the row (the human's 5.1 ruling).
-- The no-folder state: the mock draws an ink-primary "Open a folder" in the toolbar and no Read / Edit / Raw; 5.5 built
-  the body card only. *Record:* matches / differs by ruling / fix.
-- Folder pane: picker, granted state, pins, search, tree, recents, empty and denied states (spec §3.6).
-- Status line, network indicator, agent badge, remote-media badges and load button, render-failure banner.
-
-**4 · App page — the reader and its parts.**
-- TOC rail: open card, rows, "here" highlighter; at narrow widths the collapsed opener stays over the text's top-right
-  (at 414 it spans 252 → 374, text to 358); the short-document card.
-- Code blocks: the Peekover code theme by eye (the constants colour on `const` names; the synthesised italic); the
-  long-code "Show all" button (kept its 009 look); the in-flow code toolbar against the mock's floating copy button.
-- Math actions (display math without the code toolbar); table tools (filter, sort, Clear / Copy).
-- Diff view and snapshot picker: added text is told from unchanged text by fill alone (removed also has
-  line-through) — judge whether a non-colour marker is needed (WCAG 1.4.1).
-- Panels and dialogs: Stored data, Export, Code theme, the unsaved-changes guard; the dark scrims (guard, lightbox);
-  the lightbox's card for diagrams; popover radius 12 (the mock) against `.panelbox`'s 14; the mock's `.go` size
-  against the primaries' 11.5 px.
-- The editor: bar, Save, status, source, preview, search panel. The save bar sits inside the split's border (the mock
-  draws it above); Save has no hover change and no disabled state.
-
-**5 · The tab reader** (the content script, on a `file://` `.md` and on a raw GitHub / GitLab / Bitbucket file).
-- The system stacks by eye on Windows (and macOS if available — D-3); once on a machine WITHOUT the design faces
-  installed (CI's case — the chrome draws in the system face).
-- The floating pills at 1080 and 414: the bottom-left stack (Theme, watch, network) floats over body text while
-  reading ("no chrome over text" was ruled at rest); the contents button sits 17 px lower while the card is open
-  (73 vs 52 collapsed). *Record:* matches the ruling, or fix.
-- The reader's own untouched surfaces in both themes (WORKFLOW §7.4).
-
-**6 · Non-text contrast (WCAG 1.4.11), both themes.** Measured below 3:1 and carried by text, weight,
-`aria-current` or a shadow instead: borders `--line` on `--paper` 1.21 / 1.29 (buttons, fields, cards, panels, the
-editor bar's rule, the tab reader's pills); fills 1.03–1.25 (hover `--accent-soft`, the open row, alert fills, the
-pills' `--panel`); `--faint` 2.60 / 3.70 (scrollbar thumbs, the tree's twisty, hovered borders, a pressed toggle); the
-TOC "here" bar `--hl` 1.19 in light; the decorative ticks. Control boundaries and focus indicators on every surface.
-*Good:* each control is findable and its state readable without the low-contrast edge. *Record:* accept by name, or fix.
-
-**7 · The pending lists (gate-3 Q4).** 2.2's contrast census and 5.1's native-control sweep: both EMPTY at group 5's
-close (5.7) — confirm still empty on the walked build, or accept each remaining row BY NAME. Nothing leaves M13 silently.
-
-**8 · Release dry run and CI (G-9; Q6).** Record what already ran: Release 42171130695 and 42171186611 on `14c274f`
-(build green; attest and release skipped; artifacts complete; `sha256sum -c` OK), and the first CI on `main` (1.1).
-*Record:* the run ids and "as expected", or a discovered task.
-
-**Close of the walk:** every cell has its own verdict; engines and viewports recorded; every "fix" a numbered task;
-Golden EMPTY; `permissions: []`.
-
-*(Earlier, done:)* the human pushed 7.4a + 7.5 (CI green on `ae02561`); task 7.6 (GO-LIVE.md, the history scan).
-*(Earlier, done:)* task 7.5 (store listing text). Carried to 7.6: "make the repository public" comes before "run pages.yml" (Pages is public-only on Free).
-*(Earlier, done:)* the human pushed 7.4 and ran the dry run (green, `14c274f`); task 7.4a (SHA pins, the flake checked).
-*(Earlier, done:)* the human pushed 7.3a + 7.3 (CI green on `89deef8`, 327 / 327 hashes); the CI check out of "Planned"; task 7.4.
-*(Earlier, done:)* task 7.3 (reproducible builds, REPRODUCING.md).
-*(Earlier, done:)* the human pushed 7.2a + 7.2 (CI green on `254e271`); task 7.3a (code-theme fallback, SBOM from the build).
-*(Earlier, done:)* task 7.2 (PRIVACY, THREAT-MODEL, SECURITY).
-*(Earlier, done:)* the human pushed 6.2a + 7.1 (CI green on `288a6a8`); task 7.2a (third-party licences, REQUIRED).
-*(Earlier, done:)* task 7.1 (version, CHANGELOG, minimum versions).
-*(Earlier, done:)* the human pushed 6.2 (CI green on `da5af53`); task 6.2a (the guide at most once).
-*(Earlier, done:)* the human pushed 6.1 (CI green on `ba14a5e`); task 6.2.
-*(Earlier, done:)* the human pushed 5.10 and 5.11 (CI green on `805a358`); task 6.1.
-*(Earlier, done:)* the human pushed 5.9 (CI green, `0dece28`); the human ruled R1 and R2; task 5.10 (the short stacks).
-*(Earlier, done:)* the human pushes 5.7 (CI green, `618d37b`); task 5.9 (first paint re-measured after the 5.6 FIX).
-*(Earlier, done:)* the human pushes 5.6 FIX (CI green, `da5a077`); task 5.7. the human pushes 5.5; task 5.6 (5.5's two copy flags resolved there). The human pushes 5.4; task 5.5 (the no-document ruling). The human pushes 5.8; task 5.4.
-*(Earlier, done:)* the human pushes 5.3; task 5.8. Carried for 7.1: the minimum browser versions (§ Carried items).
-*(Earlier, done:)* the human pushes 5.2 / 5.2a; task 5.3. The app-page TOC rail (5.2's "Found") was fixed by 5.2a.
-*(Earlier, done:)* the human pushes 5.1; task 5.2. Read CI with `gh` when a task asks.
-**Proposed before the 8.1 walk: a "flake pass"** over the four known flakes (`pipeline.perf`, `watchRemount`'s Raw
-place, `editorPreview`'s keystroke count, the contrast-census inventory) plus what local runs keep showing (Firefox
-`uiFonts`' local-font red; `diagramEnhancer`'s unit timeouts under load) — the human rules on scheduling it.
-*(Earlier pointer, done:)* task 4.8 — ≤ 1080 px: the folder pane becomes an overlay behind "Files" (D-10; gate-1 Q12) — re-measure
-the breakpoint on the shipped layout first and state it — plus app-page first-paint timing, judged on same-session
-differences per the 2.5 ruling (interleaved A-B-A); absolute figures need a local run by the human. On 8.1's walk list
-(tasks.md ★ note): an agent file at 1280 px gets a two-row toolbar (C061 ruling). Timing gates on same-session differences (ruling 3). Font parity at the start of each session (`rm -f
-/etc/fonts/conf.d/56-prefer-inter.conf && fc-cache -f`). 1.1–1.4, 2.1–2.6, 3.1 and 4.0–4.4 have landed. Task 5.8 (the Peekover code theme) is queued in group 5, after 5.3; its mapping is approved at 3.1. Per `specs/013-first-release/tasks.md` (read its gate-3 notes first; 1.1 landed 2026-10-31). The kickoff restates the byte snapshot below and re-runs `pnpm audit --prod` with its exit and date. The first human gate after that is 3.1, the static toolbar mock. The M12-close guidance below stays as background. **M12 is closed.** Where the M13 scope came from:
-`docs/ai/progress.md` § Carried items (the POST-M12 CONSOLIDATED LIST, each item with its source, evidence pointer and a
-proposed home) and `docs/product/spec.md` / `spec-coverage.md` (F8 is at 17%; the 15 unbuilt rows and the §6 deferrals are
-the next F8 pass). The reader-polish task (the left file sidebar and the unstyled native buttons, the code toolbar on math,
-the snapshot notice, the 130 px band) is the one `decisions.md` names. Per the new rule, the next kickoff's preflight runs
-`pnpm audit --prod` and states its exit and date.
-**Byte snapshot — M13 task 1.1 (2026-10-31): `.output`, content script, manifests and unit RE-MEASURED (unit 1417 → 1422, the rest identical to the M12 close); zip, app chunk, SBOM and browser CARRIED from the M12 close, carry to the next kickoff:** `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx) against
-≤ 7 MiB (7,340,032 B) — headroom 1,509,173 / 1,509,057 B · zip 1,842,763 / 1,842,822 B · content script **344,195 B** both
-engines, md5 `b0ff62df…` (Cr) / `3413dae0…` (Fx) · app chunk 532,048 B · manifest 654 / 770 B, `permissions: []` ·
-`dependencies` 11 · SBOM 191 · lint 0 · unit 1422 · browser 1961 / 51 skipped (188 files, about 395 s alone) · golden empty ·
-`pnpm audit --prod` EXIT=0 (one ignore, GHSA-238p-pmpm-9mq7).
-**Linux baseline beside it — the cloud environment check (2026-11-01, Ubuntu 24.04, Node 22.23.4, pnpm 10.33.0; neither is
-chosen as the right one):** `.output` 5,830,859 B (Cr) / 5,830,975 B (Fx), 139 files each · zip 1,842,763 / 1,842,822 B ·
-content script 344,195 B, md5 `b0ff62df…` / `3413dae0…` · app chunk 532,048 B · manifest 654 / 770 B — **identical to the
-Windows figures above**. Lint 0 · unit 1420 / 1422 (2 timing reds on this host) · browser 1950 passed / 3 failed / 59
-skipped of 2012 (188 files, 351 s alone; the 8 extra skips are build-gated — they run when `.output` exists) · golden
-empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
-**Byte snapshot — M13 task 1.4 (2026-11-01, Linux cloud, clean two-engine build), carry to the next kickoff:** `.output`
-5,831,017 B (Cr) / 5,831,133 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,509,015 / 1,508,899 B · zip 1,842,849 /
-1,842,907 B · content script **344,266 B** both engines (+71), md5 `2ef5a824…` (Cr) / `47017c73…` (Fx) · app chunk 532,135 B
-(+87) · every other shipped file the same size and content as a same-session HEAD rebuild (chunk-name hashes aside) ·
-manifest 654 / 770 B, `permissions: []` · `dependencies` 11 · lint 0 · unit 1421 / 1422 (the perf flake) · browser 1967 passed /
-2 failed (diagramActions reveal, pre-existing, unruled) / 51 skipped of 2020 (190 files, 344 s alone) · golden empty ·
-`pnpm audit --prod` EXIT=0, 2026-11-01.
-**Byte snapshot — M13 task 5.3 (2026-11-04, Windows local, clean two-engine build) — carry THESE to the next kickoff:**
-`.output` 5,976,980 B (Cr) / 5,977,096 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,363,052 / 1,362,936 B · content
-script **346,714 B** both engines (+1,496), md5 `531775a3…` (Cr) / `f061a105…` (Fx) · app chunk 555,872 B (+1,583) ·
-manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1499 · browser 2,306 passed / 0 failed / 52 skipped of 2,358 ·
-golden empty · `pnpm audit --prod` EXIT=0, 2026-11-04. Zip not re-measured.
-**Byte snapshot — M13 task 5.1 (2026-11-04, Windows local, clean two-engine build), superseded by 5.3's above:**
-`.output` 5,971,139 B (Cr) / 5,971,255 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,368,893 / 1,368,777 B · content
-script **343,900 B** both engines (identical to 4.7–5.0), md5 `23b30cde…` (Cr) / `b14eee5c…` (Fx) · app chunk 552,845 B
-(+527) · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1499 · browser 2,246 passed / 0 failed / 52 skipped of
-2,298 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-04. Zip not re-measured.
-**Byte snapshot — M13 task 4.8 (2026-11-04, Windows local, clean two-engine build), superseded by 5.1's above:**
-`.output` 5,970,612 B (Cr) / 5,970,728 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,369,420 / 1,369,304 B · zip
-1,960,502 / 1,960,558 B · content script **343,900 B** both engines (identical to 4.7), md5 `23b30cde…` (Cr) /
-`b14eee5c…` (Fx) · app chunk 552,318 B (+2,609) · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1499 · browser
-2,209 passed / 1 failed (Firefox `uiFonts`, local-font) / 52 skipped of 2,262 · golden empty · `pnpm audit --prod` EXIT=0,
-2026-11-04.
-**Superseded by 4.8 — the 4.7 figures (2026-11-03, Linux cloud, clean two-engine build):**
-`.output` 5,968,003 B (Cr) / 5,968,119 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,372,029 / 1,371,913 B · zip
-1,959,785 / 1,959,841 B · content script **343,900 B** both engines (identical to 4.6), md5 `23b30cde…` (Cr) /
-`b14eee5c…` (Fx) · app chunk 549,709 B (+2,291) · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1499 (the perf
-flake known) · browser 2,158 passed / 52 skipped of 2,210 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-03.
-**Superseded by 4.7 — the 4.6 figures:**
-`.output` 5,965,712 B (Cr) / 5,965,828 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,374,320 / 1,374,204 B · zip
-1,959,050 / 1,959,106 B · content script **343,900 B** both engines (+74, the CONTAINED_CSS rule), md5 `23b30cde…` (Cr) /
-`b14eee5c…` (Fx) · app chunk 547,418 B (+158) · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1488 (the perf
-flake known) · browser 2,136 passed / 52 skipped of 2,188 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-03.
-**Superseded by 4.6 — the 4.5 figures:**
-`.output` 5,965,480 B (Cr) / 5,965,596 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,374,552 / 1,374,436 B · zip
-1,958,988 / 1,959,044 B · content script **343,826 B** both engines (−736, the `CONTAINED_CSS` / seat-sheet deletion), md5
-`75e5831d…` (Cr) / `ab095612…` (Fx) · app chunk 547,260 B (+2,209) · manifest 833 / 949 B, `permissions: []` · lint 0 ·
-unit 1488 (two diffChrome unit rows retired; the perf flake known) · browser 2,096 passed / 52 skipped of 2,148 · golden
-empty · `pnpm audit --prod` EXIT=0, 2026-11-03.
-**Superseded by 4.5 — the 4.4 figures:**
-`.output` 5,964,007 B (Cr) / 5,964,123 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,376,025 / 1,375,909 B · content
-script **344,562 B** both engines (+49, the 4.4 addendum's `storeSnapshot` fix), md5 `fcfe06c1…` (Cr) / `20de200b…` (Fx) ·
-app chunk 545,051 B · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1490 (the perf flake known) · browser 2,129
-passed / 51 skipped of 2,180 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-03. (Before the addendum: `.output`
-5,963,907 / 5,964,023, zips 1,958,529 / 1,958,585, content script 344,513 `b72a093c…` / `c3c4b102…`, app chunk 545,000.)
-**Superseded by 4.4 — the 4.3 figures:**
-`.output` 5,960,062 B (Cr) / 5,960,178 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,379,970 / 1,379,854 B · zip
-1,957,728 / 1,957,784 B · content script **344,513 B** both engines, md5 `b72a093c…` (Cr) / `c3c4b102…` (Fx) (identical to
-4.2) · app chunk 541,155 B (+44) · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1490 (the perf flake known) ·
-browser 2,073 passed / 51 skipped of 2,124 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-02.
-**Superseded by 4.3 — the 4.2 figures:**
-`.output` 5,960,018 B (Cr) / 5,960,134 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,380,014 / 1,379,898 B · zip
-1,957,538 / 1,957,594 B · content script **344,513 B** both engines, md5 `b72a093c…` (Cr) / `c3c4b102…` (Fx) (identical to
-4.1) · app chunk 541,111 B (+3,544) · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1490 (the perf flake known) ·
-browser 2,059 passed / 51 skipped of 2,110 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-02.
-**Superseded by 4.2 — the 4.1 figures:**
-`.output` 5,956,474 B (Cr) / 5,956,590 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,383,558 / 1,383,442 B · zip
-1,956,656 / 1,956,712 B · content script **344,513 B** both engines, md5 `b72a093c…` (Cr) / `c3c4b102…` (Fx) · app chunk
-537,567 B · manifest 833 / 949 B, `permissions: []` · lint 0 · unit 1487 (the perf flake known) · browser 2,041 passed / 51
-skipped of 2,092 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-02.
-**Superseded by 4.1 — the 2.6 figures:**
-`.output` 5,952,638 B (Cr) / 5,952,754 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,387,394 / 1,387,278 B · zip
-1,955,430 / 1,955,487 B · content script **344,495 B** both engines, md5 `5b241f93…` (Cr) / `8506e382…` (Fx) · app chunk
-533,749 B · **manifest 833 / 949 B**, `permissions: []` · lint 0 · unit 1476 (the perf flake known) · browser 2.4's
-2017 passed / 51 skipped stands · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-02.
-**Superseded by 2.6 — the 2.4 figures (unchanged by 2.5):**
-`.output` 5,944,407 B (Cr) / 5,944,523 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,395,625 / 1,395,509 B · zip
-1,946,848 / 1,946,907 B · content script **344,495 B** both engines, md5 `5b241f93…` (Cr) / `8506e382…` (Fx) · app chunk
-533,749 B · manifest 654 / 770 B, `permissions: []` · lint 0 · unit 1467 (the perf flake known) · browser 2017 passed / 0 failed / 51 skipped (2068, 198 files, 391 s), EXIT 0 ·
-golden empty · `pnpm audit --prod` EXIT=0, 2026-11-02.
-**Superseded by 2.4 — the 2.3 figures:**
-`.output` 5,849,199 B (Cr) / 5,849,315 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,490,833 / 1,490,717 B · zip
-1,851,337 / 1,851,396 B · content script **344,342 B** both engines, md5 `12cdc950…` (Cr) / `bf0108c8…` (Fx) · app chunk
-532,530 B · manifest 654 / 770 B, `permissions: []` · lint 0 · unit 1456 (the perf flake known) · browser not re-run (2.2's
-2003 passed / 51 skipped stands; no production change) · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-02.
-**Superseded by 2.3 — the 2.2 figures:**
-`.output` 5,831,488 B (Cr) / 5,831,604 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,508,544 / 1,508,428 B · zip
-1,842,879 / 1,842,938 B · content script **344,342 B** both engines, md5 `12cdc950…` (Cr) / `bf0108c8…` (Fx) · app chunk
-532,530 B · manifest 654 / 770 B, `permissions: []` · lint 0 · unit 1452 (the perf flake known) · browser 2003 passed / 0 failed / 51 skipped (2054, 194 files, 388 s), EXIT 0 ·
-golden empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
-**Superseded by 2.2 — the 2.1 figures:**
-`.output` 5,831,438 B (Cr) / 5,831,554 B (Fx) against ≤ 7 MiB (7,340,032 B) — headroom 1,508,594 / 1,508,478 B · zip
-1,842,948 / 1,843,006 B · content script **344,317 B** both engines, md5 `71b096fd…` (Cr) / `b2f85bb0…` (Fx) · app chunk
-532,505 B · manifest 654 / 770 B, `permissions: []` · lint 0 · unit 1452 (the perf flake known) · browser 1981 passed / 0 failed / 51 skipped (2032, 192 files, 380 s), EXIT 0 ·
-golden empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
-**Superseded by 2.1 — the 1.4 SECOND ADDENDUM's figures:** `.output` 5,831,081 B (Cr) /
-5,831,197 B (Fx) — headroom 1,508,951 / 1,508,835 B · zip 1,842,676 / 1,842,734 B · content script **344,278 B** both engines
-(unchanged), md5 `b27e0c8b…` / `16cd9bd7…` · app chunk 532,187 B (+40) · manifest 654 / 770 B, `permissions: []` · lint 0 ·
-unit 1423 / 1424 (the perf flake) · browser 1971 passed / 0 failed / 51 skipped (2022, 190 files, 374 s), EXIT 0 · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
-**The 1.4 ADDENDUM's figures (superseded above):** `.output` 5,831,041 B (Cr) / 5,831,157 B
-(Fx) — headroom 1,508,991 / 1,508,875 B · zip 1,842,739 / 1,842,797 B · content script **344,278 B** both engines (+12), md5
-`b27e0c8b…` (Cr) / `16cd9bd7…` (Fx) · app chunk 532,147 B (+12) · manifest 654 / 770 B, `permissions: []` · lint 0 · unit
-1422 / 1423 (the perf flake) · browser 1969 passed / 0 failed / 51 skipped of 2020 (190 files, 357 s alone) · golden empty · `pnpm audit --prod` EXIT=0, 2026-11-01.
+1. **GO-LIVE** (`docs/store/GO-LIVE.md`): 0 Gates → 1 Accounts → 2 the repository public → 3 the site → 4 the email
+   (optional) → 5 the release v0.1.0 → 6 the dashboards read against the files → 7 the stores → 8 after approval
+   (8.5: the human reviews the screenshot pick and captions) → 9 rollback if needed.
+2. **M14's first session** (§ Carried items, POST-RELEASE): place the two adopted retro rules (ask first whether (b)
+   ledgers the string); write the retro's "ADDENDUM AFTER THE 8.1 WALK" (`retro.md`; source: `decisions.md` "M13
+   CLOSED" and the 8.1 / 9.x entries); read CI history with `gh` for each named flake (the M13 retro's carried action).
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either
@@ -558,6 +61,10 @@ measurement-driven or explicitly deferred.*
   Engine-only human checks happen in the group that needs them. (b) A claim-bearing in-app string gets a test that pins
   it to its state. They go into `WORKFLOW.md` or `AGENTS.md`. Ask first whether (b) also ledgers the string or only
   pins it. *Source:* `decisions.md`, "M13 — THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+".
+- **M14's first session: write the M13 retro's "ADDENDUM AFTER THE 8.1 WALK"** (`retro.md`; reserved at 9.4, not
+  written at the close). For: the walk's verdicts, each fix (8.1a–8.1k, 9.2b, 9.3c) and what it re-ran in 9.x, the
+  signed-install result, the 9.2 sign-off, the delegated 9.3 pick, whether batching the gates cost more than it
+  saved, and the A6–A8 all-OK items that no session banked. *Source:* `decisions.md`, "M13 CLOSED".
 - **Non-text contrast of borders — inputs first (the human, walk item III-1, 2026-11-10: "accept by name", with this
   item).** `--line` on `--paper` is 1.21 light / 1.29 dark (WCAG 1.4.11 asks 3:1 for a control's boundary). For 3:1
   the token would be about #929291 light / #5F626E dark — every border heavier. Start with inputs (the search field,
@@ -1661,6 +1168,23 @@ carried), gate score 12/12 unmoved, retro banked, records reconciled at 9.3 — 
   worked instances alongside the now-live rule.**
 
 ## Closed milestones
+
+**M13 · spec 013 — A truthful, on-design first release · CLOSED 2026-11-11.** Ships what a first public release needs
+and says only what is true: CI on Linux; the claims ledger (608 rows) pinned by `truthPins.test.ts`, so every published
+sentence has evidence; tokens, contrast, fonts and icons from one source; the toolbar from an approved mock and every
+surface restyled; a setup guide on both engines, including Firefox's "Access local files on your computer" (found by the
+signed AMO install, 9.2b); reproducible builds, the release workflow, licence notices and an SBOM; the site; three store
+listings with screenshots and captions. **67 tasks: 40 at gate 3 + 27 discovered** (11 in groups 1–7; 8.1a–8.1k from the
+human's walk; 9.2b, 9.3a–9.3d). The walk ran last by HUMAN RULING (2026-11-07) and its findings became 13 fix tasks (8.1a–8.1k, 9.2b, 9.3c), all landed. 9.2 was
+signed off by the human; 9.3's pick was delegated to the reviewer (the human reviews it after launch, GO-LIVE 8.5).
+**Byte ledger, closed:** `.output` 5,830,859 / 5,830,975 → **6,660,128 / 6,660,114 B** (+829,269 / +829,139; 54.9% of the
+starting headroom; 679,904 / 679,918 B left under 7 MiB). The big four are 5.11's grammars on demand (+459,874), 7.2a's
+licence notices (+199,006), 2.4's fonts (+95,208) and 2.3's font assets (+17,711). **Content script 344,195 → 350,235 B
+(+6,040),** every move a named task's; 8.1i's +4,152 is a named G-7 exception. `permissions: []` in all 68 rebuilt
+builds; golden outputs unchanged. Spec coverage 37% → **40%**. **Retro headline: the environment was the biggest source
+of wrong greens, and the human steps piled up at the end.** The human adopted both proposals for M14+: engine-only human
+checks in the group that needs them, and in-app claim strings pinned by tests. Its post-walk addendum is carried to M14.
+Full narrative in `progress-archive.md`; decisions in `decisions.md`, "M13 CLOSED" and "M13 TASK 9.5 — CLOSED".
 
 **M12 · spec 012 — Editor Mode (focused core): edit → live preview → save-back via CodeMirror 6, lazy-loaded · CLOSED
 2026-10-30.** Ships F8's focused core on both engines: a dedicated Edit control (not the `\` key) enters a third reader

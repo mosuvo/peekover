@@ -198,6 +198,9 @@ picked surface re-captures it, and you confirm the new file.
 
 ## 5 · After all four: what the agent does next
 
+**DONE (2026-11-11): M13 CLOSED** (`decisions.md`, "M13 CLOSED" and "M13 TASK 9.5 — CLOSED"). Items 1–4 below are
+done. The one exception is 9.4's walk addendum, which is carried to M14's first session. Next is item 5, going live.
+
 1. **Bank your words.** Step 1's result, the walk's verdicts, the 9.2 sign-off, the 9.3 pick: each a HUMAN RULING in
    `decisions.md`.
 2. **Fix tasks.** Each walk "fix" becomes **8.1a, 8.1b, …** in `tasks.md`, run one by one with the full Verify
