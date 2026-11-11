@@ -105,12 +105,13 @@ describe('buildTocModel — pure nested heading model', () => {
       for (const e of model) {
         expect(e.label.trim().length).toBeGreaterThan(0);
       }
-      // Deterministic chosen form: "Untitled section (H<level> #<doc-order ordinal>)".
+      // The label is "Untitled section" (M13 8.1k part 2, HUMAN RULING 2026-11-11: the "(H1 #3)" suffix dropped).
+      // Entries stay distinct by position and indent; each still targets its own heading (weirdNesting.browser.test.ts).
       expect(model.map((e) => e.label)).toEqual([
-        'Untitled section (H1 #1)',
-        'Untitled section (H2 #2)',
-        'Untitled section (H3 #3)',
-        'Untitled section (H4 #4)',
+        'Untitled section',
+        'Untitled section',
+        'Untitled section',
+        'Untitled section',
       ]);
     });
   });

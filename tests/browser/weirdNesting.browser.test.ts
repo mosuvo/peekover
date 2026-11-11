@@ -141,20 +141,20 @@ function tabSurface(): ShadowRoot {
 const HEADING_LABELS = [
   'Weird nesting test',
   '1. The exact combo',
-  'Untitled section (H1 #3)',
+  'Untitled section',
   '2. Same, but the table is inside the list item',
   '3. Empty and odd headings',
-  'Untitled section (H1 #6)',
-  'Untitled section (H2 #7)',
-  'Untitled section (H3 #8)',
-  'Untitled section (H1 #9)',
-  'Untitled section (H2 #10)',
+  'Untitled section',
+  'Untitled section',
+  'Untitled section',
+  'Untitled section',
+  'Untitled section',
   'Duplicate',
   'Duplicate',
   '4. Lazy continuation and tight spacing',
   '5. Deep nesting',
   '6. Unclosed fence inside a quote in a list',
-  'Untitled section (H1 #16)',
+  'Untitled section',
 ];
 
 describe('the weird-nesting fixture, pinned as rendered now (M13 8.1k)', () => {

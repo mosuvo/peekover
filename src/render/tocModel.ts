@@ -37,16 +37,16 @@ const HEADING_SELECTOR = 'h1,h2,h3,h4,h5,h6';
  * or media-policy placeholder contributes no text), or an emoji-rendered-as-image heading —
  * fall back to a DESIGNED, deterministic label so the TOC is never blank and never a crash.
  *
- * Chosen fallback form: `Untitled section (H<level> #<ordinal>)`, where `<ordinal>` is the
- * heading's 1-based position in document order — pure ASCII, deterministic, and distinct per
- * heading so multiple untitled sections stay tellable apart. Real duplicate label TEXTS are
- * kept verbatim (no slug/id/dedup suffix — that is the deferred permalink feature); the
- * ordinal here is only for headings that produced no text at all.
+ * The fallback is `Untitled section` (M13 walk fix 8.1k, HUMAN RULING 2026-11-11 — the earlier
+ * `(H<level> #<ordinal>)` suffix read as noise in the human's hand test). Several untitled
+ * sections share the label and stay apart by position and indent; each entry still targets its
+ * own heading element. Real duplicate label TEXTS are kept verbatim (no slug/id/dedup suffix —
+ * that is the deferred permalink feature).
  */
-function labelFor(heading: Element, docOrderIndex: number): string {
+function labelFor(heading: Element): string {
   const text = (heading.textContent ?? '').trim();
   if (text) return text;
-  return `Untitled section (${heading.tagName} #${docOrderIndex + 1})`;
+  return 'Untitled section';
 }
 
 /**
@@ -69,11 +69,11 @@ export function buildTocModel(root: ParentNode): TocEntry[] {
   // Ancestor chain of currently-open entries, shallowest → deepest by level.
   const stack: TocEntry[] = [];
 
-  headings.forEach((heading, i) => {
+  headings.forEach((heading) => {
     const entry: TocEntry = {
       headingRef: heading,
       level: Number(heading.tagName.charAt(1)),
-      label: labelFor(heading, i),
+      label: labelFor(heading),
       children: [],
     };
 
