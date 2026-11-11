@@ -47,7 +47,7 @@ It asks for no browser permissions and makes no network requests unless you ask 
 
 For the first public release:
 
-- Listings in the Chrome, Firefox and Edge stores.
+- Listings in the Chrome and Firefox stores (Edge Add-ons later).
 - Attestations on release files.
 
 Later, not yet scheduled:

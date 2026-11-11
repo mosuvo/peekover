@@ -14,6 +14,12 @@ Facts about Peekover cite the file or record they come from. Facts about GitHub 
 read on 2026-11-06; if a page now says something different, the page wins — note the difference and carry on only if
 it does not change the step.
 
+**Edge Add-ons is DEFERRED (HUMAN RULING 2026-11-11).** The Edge Add-ons listing is not part of the v0.1.0 launch:
+Edge's developer registration publishes a postal address; revisit after launch. Peekover still supports Edge (the
+Chromium build; Edge users can install it from the Chrome Web Store). Steps marked **DEFERRED** below are skipped on
+release day and kept, unticked, for the later Edge submission, with `docs/store/edge.md` and the `edge-*.png`
+screenshots in `docs/store/assets/` (`docs/ai/progress.md`, POST-RELEASE).
+
 ---
 
 ## 0 · Gates — do not start until every box here is ticked
@@ -87,7 +93,8 @@ it does not change the step.
     since 15 March 2021 ([Mozilla Add-ons blog](https://blog.mozilla.org/addons/2021/03/11/two-factor-authentication-required-for-extension-developers)).
     Save the recovery codes: Mozilla cannot restore a locked-out account (same post).
   - **Check:** the Developer Hub shows **Submit a New Add-on**.
-- [ ] **1.6 Microsoft Edge Add-ons (Partner Center) account.**
+- [ ] **1.6 Microsoft Edge Add-ons (Partner Center) account.** **DEFERRED** (HUMAN RULING 2026-11-11, top of this
+  file) — skip on release day; do not register yet.
   - **Where:** [Partner Center](https://partner.microsoft.com/dashboard/microsoftedge/public/login) with a Microsoft
     account → **Microsoft Edge Developer Account Registration** → account type **Individual** → publisher display name
     → contact info → **I accept the terms and conditions** → **Finish**. "There is no registration fee"
@@ -259,16 +266,19 @@ Pages works on public repositories only on this plan, so this comes after step 2
 - [ ] **6.1 Compare the wording.** Each store's data and certification questions were written from the stores'
   public docs (`docs/ai/decisions.md`, "M13 TASK 7.5"). On each dashboard, read the real question text against the
   listing file before answering.
-  - **Check:** the questions match `docs/store/chrome.md`, `docs/store/firefox.md` and `docs/store/edge.md`.
+  - **Check:** the questions match `docs/store/chrome.md` and `docs/store/firefox.md` (and `docs/store/edge.md` when
+    the deferred Edge submission happens).
   - **If it fails:** a question asks something the file does not answer, or its wording changes the answer → stop
     that store and bring it to an agent session to re-check the file. Do not improvise an answer about data.
-- [ ] **6.2 Edge: the data-usage answer against Edge's own form.** `docs/store/edge.md`'s Data usage text (ledger row
+- [ ] **6.2 Edge: the data-usage answer against Edge's own form.** **DEFERRED** (HUMAN RULING 2026-11-11, with 7.3)
+  — skip on release day. `docs/store/edge.md`'s Data usage text (ledger row
   549) was written from the Chrome Web Store's user-data FAQ, not from Partner Center (9.2 sign-off, flag 8).
   - **Where:** Partner Center → the extension → **Privacy** → Data usage.
   - **Check:** Partner Center offers a "Website content" choice and the certifications that `docs/store/edge.md` says
     are ticked, in words that keep its answer true.
   - **If it fails:** stop the Edge submission and bring the form's exact wording to an agent session.
-- [ ] **6.3 Edge: the category exists.** `docs/store/edge.md` proposes **Productivity** (ledger row 515), not yet seen
+- [ ] **6.3 Edge: the category exists.** **DEFERRED** (HUMAN RULING 2026-11-11, with 7.3) — skip on release day.
+  `docs/store/edge.md` proposes **Productivity** (ledger row 515), not yet seen
   in Partner Center.
   - **Check:** **Productivity** is in Partner Center's category list.
   - **If it fails:** pick the nearest category, carry on, and note it for an agent to update `docs/store/edge.md`.
@@ -326,7 +336,8 @@ the README), never from an earlier copy, a draft or a screenshot.
   - **Check:** a confirmation page and an email from AMO.
   - **Expect:** AMO publishes no review timeline. The submission page says the add-on "may be subject to further
     review" with the outcome sent later ([Extension Workshop](https://extensionworkshop.com/documentation/publish/submitting-an-add-on/)).
-- [ ] **7.3 Microsoft Edge Add-ons.**
+- [ ] **7.3 Microsoft Edge Add-ons.** **DEFERRED** (HUMAN RULING 2026-11-11, top of this file) — not submitted at
+  v0.1.0; kept as written for the later Edge submission (after 1.6, 6.2 and 6.3).
   - **Where:** [Partner Center](https://partner.microsoft.com/dashboard/microsoftedge/public/login) → **Create new
     extension** → upload `peekover-0.1.0-chrome.zip` — Edge takes the Chrome zip (`docs/store/edge.md`)
     ([Microsoft docs](https://learn.microsoft.com/en-us/microsoft-edge/extensions/publish/publish-extension)).
@@ -347,21 +358,25 @@ the README), never from an earlier copy, a draft or a screenshot.
 
 ## 8 · After the stores approve
 
-- [ ] **8.1 Record each listing's URL** (Chrome item page, AMO add-on page, Edge listing URL from the extension's
-  **Overview**).
+- [ ] **8.1 Record each listing's URL** (Chrome item page, AMO add-on page). The Edge listing URL, from the
+  extension's **Overview**, is **DEFERRED** with 7.3.
 - [ ] **8.2 Replace the "not in stores" lines.** An agent task (carried from the human's 1.3 review —
   `docs/ai/progress.md`, "FOR M13 TASK 7.6"): every "Not in stores yet — build from source" line on the site (ledger
   rows marked UPDATE AT GO-LIVE), the site's Setup step "Build", and README's "not in any browser store yet" / "build
   it from source" lines become the real store links. Then run step 3.2 again.
-  - **Check:** the live site and README name the three store links, and each opens its listing.
+  - **Check:** the live site and README name the two store links (Chrome Web Store, Firefox Add-ons), and each opens
+    its listing. The Edge Add-ons link is **DEFERRED** with 7.3.
+  - **Decide (the human, at this step):** the site's top banner reads "Chrome · Edge · Firefox" (ledger row 71). It
+    is true (Peekover works in Edge), but beside two store links "Edge" could read as a third store. Keep it, or
+    re-word it — a re-word is a published-copy change for an agent, with your approval, in the same commit as 8.2.
 - [ ] **8.3 A store install, once per store.** The walk could only use unpacked and temporary installs; three
   sentences are evidenced as "store install checked at go-live" (ledger rows 303 and 325, and the install note in
   `docs/trust/PERMISSIONS.md`; 9.2 sign-off, flag 5).
-  - **Do:** in a fresh browser profile, install Peekover from each live listing (Chrome, Edge, Firefox). Close the
-    browser and start it again. In Chrome and Edge, then turn on "Allow access to file URLs" on Peekover's Details
-    page while the setup guide is open.
+  - **Do:** in a fresh browser profile, install Peekover from each live listing (Chrome, Firefox). Close the
+    browser and start it again. In Chrome, then turn on "Allow access to file URLs" on Peekover's Details
+    page while the setup guide is open. The Edge Add-ons install is **DEFERRED** with 7.3.
   - **Check:** the setup guide opens once, on install, and not again after the restart (rows 325 and PERMISSIONS.md).
-    In Chrome and Edge, flipping the toggle may restart Peekover and close the guide, and nothing else breaks (row 303).
+    In Chrome, flipping the toggle may restart Peekover and close the guide, and nothing else breaks (row 303).
   - **If it fails:** a guide that opens again, or anything else that breaks, is an agent task. Leave the listings up
     unless the failure is serious enough for section 9.
 - [ ] **8.4 Flip the "planned for the first public release" lines.** Once step 5.4 has verified the attestations and
@@ -370,7 +385,8 @@ the README), never from an earlier copy, a draft or a screenshot.
     rewrite its ledger row (status "true now", the 5.2 run id and 5.4's verify as evidence): attestations, SECURITY
     row 59 (its section "Planned for the first public release", with row 339), THREAT-MODEL row 407, README row 432 (and
     its list label row 32, with row 33 for the listings) and site row 434. The same commit runs `tests/truthPins.test.ts`.
-  - **Check:** no ledger row with status "planned" names attestations or the store listings; `truthPins.test.ts` is
+  - **Check:** no ledger row with status "planned" names attestations or the Chrome and Firefox listings (an "Edge
+    Add-ons later" line stays planned until the deferred 7.3); `truthPins.test.ts` is
     green; the live site's Planned section and SECURITY.md show the new lines (rerun step 3.2 for the site).
   - **If it fails:** leave the old lines up. They are still true ("planned") until the new ones land.
 - [ ] **8.5 The human reviews the screenshot pick and captions.** The reviewer picked the store screenshots under the
@@ -392,7 +408,7 @@ the README), never from an earlier copy, a draft or a screenshot.
   earlier version.
 - [ ] **9.2 Firefox:** the add-on → **Manage Status & Versions** → **Listing Visibility** → **Invisible**. It stops
   new installs; existing installs stay ([Extension Workshop](https://extensionworkshop.com/documentation/manage/retiring-your-extension/)).
-- [ ] **9.3 Edge:** Partner Center → the listing → **Extension Overview** → **Unpublish**. "Users who already
+- [ ] **9.3 Edge:** **DEFERRED** with 7.3 — nothing to unpublish at v0.1.0. Partner Center → the listing → **Extension Overview** → **Unpublish**. "Users who already
   installed your extension can continue to use it, but the extension isn't available to new users"
   ([Microsoft docs](https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/update-extension)).
 - [ ] **9.4 The GitHub release:** `gh release delete v0.1.0 --repo mosuvo/peekover --yes` keeps the tag; add

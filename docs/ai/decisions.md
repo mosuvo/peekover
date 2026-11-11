@@ -1,6 +1,17 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 GO-LIVE — EDGE ADD-ONS LISTING DEFERRED (docs only, under the release freeze).** HUMAN RULING: the
+  Edge Add-ons listing is not part of the v0.1.0 launch. Why: Edge's developer registration publishes a postal
+  address. Peekover still supports Edge (the Chromium build; Edge users can install it from the Chrome Web Store).
+  Revisit: after launch (`progress.md` § Carried items, POST-RELEASE, "Edge Add-ons listing").
+  - **GO-LIVE:** 1.6, 6.2, 6.3, 7.3 and 9.3 and the Edge parts of 6.1 and 8.1–8.4 marked DEFERRED, not deleted; the
+    run sheet follows. 8.2 gains a human decision on the site banner "Chrome · Edge · Firefox" (row 71).
+    `docs/store/edge.md`, the `edge-*.png` screenshots and the ledger's `edge` rows kept for later.
+  - **HUMAN COPY APPROVAL 2026-11-11:** README row 33 and site row 434 read "listings in the Chrome and Firefox stores
+    (Edge Add-ons later)", one line each; both stay "planned", evidence re-pointed to this ruling. Sentences saying
+    Peekover works in Edge stay.
+
 - **2026-11-11 · M13 — RELEASE FREEZE until the `v0.1.0` tag; the second user fixture's `<br>` copy finding carried.**
   HUMAN RULING: after this records commit, no product or test changes before the `v0.1.0` tag; new ideas go to a
   "post-launch ideas" list in `progress.md`; only GO-LIVE steps commit from now on. Revisit: at the tag (GO-LIVE 5.1).

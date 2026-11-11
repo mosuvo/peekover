@@ -3,6 +3,9 @@
 *One-screen order of `GO-LIVE.md` (the source of truth: its Check / If it fails lines win). Tick boxes there, not here.
 Who: **H** human · **A** agent session. ⛔ = point of no return. ⏳ = a wait. Commands in Git Bash, `D:\Dev\peekover`.*
 
+*~~Struck~~ = **DEFERRED**: the Edge Add-ons listing is not part of v0.1.0 (HUMAN RULING 2026-11-11, top of GO-LIVE.md). Skip;
+kept for the later Edge submission.*
+
 **0 · Gates (release day, ~30 min, stop on any red)**
 - 0.1–0.2 · H · tasks.md: 8.1, 9.1–9.5 ticked; `docs/store/assets/` holds the picks · 2 min · all `[x]`.
 - 0.3 · A/H · `git log -1 --format=%h` then `gh run list --branch main --limit 4` · 1 min (+~15 min if a push is
@@ -18,7 +21,7 @@ Who: **H** human · **A** agent session. ⛔ = point of no return. ⏳ = a wait.
 - 1.4 · H · Chrome dev console: agreement, fee, Google 2-Step on · 15 min · **Add new item** shows. Publishing email
   cannot be changed later.
 - 1.5 · H · AMO Developer Hub, Mozilla 2FA on · 10 min · **Submit a New Add-on** shows.
-- 1.6 · H · Edge Partner Center, Individual · 15 min ⏳ verification email · enrolled. Country and type are permanent.
+- ~~1.6 · H · Edge Partner Center, Individual · 15 min ⏳ verification email · enrolled. Country and type are permanent.~~ DEFERRED.
 
 **2 · Repo public (~15 min)**
 - 2.1 · A · `gitleaks git . --log-opts="--all" --report-format json --redact=50` (8.30.1) on the release commit · 5 min · no leaks.
@@ -48,8 +51,8 @@ A task before it appears anywhere; doesn't → nothing changes (AMO email empty,
   · 2 min · all verify, no `FAILED:`.
 - 5.5 · H · ⛔ `gh release edit v0.1.0 --repo mosuvo/peekover --draft=false` · 1 min · signed out, Releases shows 0.1.0.
 
-**6 · Read each dashboard against the files (~15 min, during 7)** · H · 6.1 questions match `chrome.md` / `firefox.md` /
-`edge.md`; 6.2 Edge offers "Website content" + the certifications; 6.3 Edge has **Productivity**; 6.4 AMO summary ≤ 250
+**6 · Read each dashboard against the files (~10 min, during 7)** · H · 6.1 questions match `chrome.md` / `firefox.md`;
+~~6.2 Edge offers "Website content" + the certifications; 6.3 Edge has **Productivity**~~ DEFERRED; 6.4 AMO summary ≤ 250
 (only if edited after 2026-11-11). A mismatch on data → stop that store, bring it to A.
 
 **7 · Store submissions (~30 min each; ⏳ review)**
@@ -57,12 +60,13 @@ A task before it appears anywhere; doesn't → nothing changes (AMO email empty,
   Review** (untick auto-publish to choose the moment) · status pending review · ⏳ a few days, up to weeks.
 - 7.2 · H · ⛔ AMO: listed, desktop only, `peekover-0.1.0-firefox.zip`, source **Yes** + `peekover-0.1.0-sources.zip`,
   reviewer note from GO-LIVE 7.2, PRIVACY.md full text, 5 `amo-*.png` + descriptions · confirmation email · ⏳ no timeline.
-- 7.3 · H · ⛔ Edge: Chrome zip, Public / all markets, fields + 6 `edge-*.png`, **Publish** · in certification ·
-  ⏳ up to 7 business days.
+- ~~7.3 · H · ⛔ Edge: Chrome zip, Public / all markets, fields + 6 `edge-*.png`, **Publish** · in certification ·
+  ⏳ up to 7 business days.~~ DEFERRED.
 
-**8 · After approval** · 8.1 H record the 3 listing URLs · 8.2 A store links replace "Not in stores yet", then H re-runs
-3.2 · 8.3 H fresh-profile install per store, restart: guide opens once only · 8.4 A flip the "planned" lines (one commit,
-truthPins green) · 8.5 H review screenshots + AMO captions.
+**8 · After approval** · 8.1 H record the 2 listing URLs (Chrome, AMO) · 8.2 A the 2 store links replace "Not in stores
+yet", then H re-runs 3.2 · 8.3 H fresh-profile install from Chrome and AMO, restart: guide opens once only · 8.4 A flip the
+"planned" lines (one commit, truthPins green; "Edge Add-ons later" stays planned) · 8.5 H review screenshots + AMO
+captions. ~~Edge parts of 8.1–8.3~~ DEFERRED.
 
-**9 · Rollback** — GO-LIVE §9. Unpublish per store; `gh release delete v0.1.0 --repo mosuvo/peekover --yes`; DNS records
+**9 · Rollback** — GO-LIVE §9. Unpublish per store (Chrome, AMO; ~~Edge~~ DEFERRED); `gh release delete v0.1.0 --repo mosuvo/peekover --yes`; DNS records
 off **before** removing the domain or making the repo private.

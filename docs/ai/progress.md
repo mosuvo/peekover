@@ -102,6 +102,14 @@ measurement-driven or explicitly deferred.*
   HTML string — which this module does not produce", AGENTS.md #3); a `<br>` in clipboard text is not DOM, so the
   rule's reading needs a ruling first. Excel and Sheets read a quoted multi-line field; a plain-text paste shows the
   break. *Source:* the human's kickoff, 2026-11-11; found writing `tablePipeCopy.browser.test.ts` (`ab5ae6e`).
+- **Edge Add-ons listing (HUMAN RULING 2026-11-11: DEFERRED, not part of the v0.1.0 launch).** Reason: Edge's
+  developer registration (Partner Center) publishes a postal address; revisit after launch. Peekover still supports
+  Edge (the Chromium build; Edge users can install it from the Chrome Web Store). GO-LIVE 1.6, 6.2, 6.3, 7.3, 9.3 and
+  the Edge parts of 8.1–8.4 are marked DEFERRED, not deleted (`docs/store/GO-LIVE.md`, the run sheet). Kept for
+  later: `docs/store/edge.md`, the `edge-*.png` screenshots and `edge-logo-300.png` in `docs/store/assets/`, and the
+  ledger's `edge` rows. **Work, when revisited:** register (1.6), check Edge's form (6.2, 6.3), submit (7.3), then
+  the Edge store link and install (8.1–8.3) and flip the "Edge Add-ons later" lines to true. The published copy
+  says "(Edge Add-ons later)" (README row 33, site row 434; HUMAN COPY APPROVAL 2026-11-11). *Source:* the human's ruling, 2026-11-11.
 - **Exclude `docs/store/assets/` from the sources zip (the human's call, 2026-11-11: leave as is for 0.1.0).** The
   0.1.0 sources zip carries 1,718,857 B of store PNGs (6,563,555 B in all) that AMO's reviewer does not need. A
   one-line `wxt.config.ts` change; re-check that the sources zip still rebuilds the identical Firefox zip.
