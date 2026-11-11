@@ -23,6 +23,11 @@ commit that follows the second user fixture (`82776f4`'s tests; `decisions.md`, 
 
 **History rewritten 2026-11-11 (the personal email out of commit metadata):** hashes cited above and in older records are pre-rewrite; resolve them with `docs/ai/commit-map.txt` (`decisions.md`, "HISTORY REWRITTEN").
 
+**Where go-live stands (2026-11-12):** `7aafb96` pushed. CI 43043430194 green on attempt 3 (attempts 1 and 2 on
+2026-11-11 were the runner's apt/DNS at "Install Playwright browsers"; `ci.yml` unchanged); browser 2,802 / 90 skipped,
+the same as the last pre-rewrite green. Supply chain green (43043430290). GO-LIVE 0.3 and 2.1 Done notes written
+(gitleaks 8.30.1 clean on the new history, control fired); boxes left for the release commit.
+
 **Current numbers (HEAD):** `.output` 6,660,128 B (Cr) / 6,660,114 B (Fx) of 7,340,032 — headroom 679,904 / 679,918 B ·
 content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,563,555 B · manifests
 864 / 978 B, `permissions: []` · lint 0 · unit 1,723 (`pnpm test`: unit 1,722 + unit-perf 1) · browser 2,810 passed / 82 skipped (`c43865f`, EXIT 0, 2026-11-11; +22 from
