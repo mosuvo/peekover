@@ -79,7 +79,8 @@
     settled by the signed install and 9.2b). F11 39% → 44%, §5 35% → 36%, whole spec 39% → **40%** (37% at M12).
   - **(1) at the close:** `progress.md`'s remaining M13 narrative (§ Now and § Up next, verbatim) is moved to
     `progress-archive.md`; the M13 close summary is in § Closed milestones; `AGENTS.md`'s milestone line reads closed.
-  - **Suites:** lint EXIT 0; unit EXIT 0 (1,722 / 1,722; corrected 2026-11-11 from "1,723 / 1,723", re-run on clean `3937023`). The last full browser run is 8.1k's (2,788 passed / 82
+  - **Suites:** lint EXIT 0; unit EXIT 0 (1,723 / 1,723 — `pnpm test`, i.e. the `unit` project 1,722 + `unit-perf` 1; a same-day "correction"
+    to 1,722 counted `--project unit` alone and is withdrawn). The last full browser run is 8.1k's (2,788 passed / 82
     skipped, EXIT 0). It was not re-run at the close: no product file changed since `1439930`, as the rebuild shows
     (HEAD's row = 8.1k part 2's, bytes and md5s). Last CI green: `2b85b68` (CI 42969020543, Supply chain
     42969020558).

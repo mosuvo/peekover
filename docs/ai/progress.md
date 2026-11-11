@@ -18,7 +18,7 @@ close commits), then CI and Supply chain on the new head; GO-LIVE 0.3 needs CI g
 
 **Current numbers (HEAD):** `.output` 6,660,128 B (Cr) / 6,660,114 B (Fx) of 7,340,032 — headroom 679,904 / 679,918 B ·
 content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,563,555 B · manifests
-864 / 978 B, `permissions: []` · lint 0 · unit 1,722 · browser 2,788 passed / 82 skipped (8.1k, the last product
+864 / 978 B, `permissions: []` · lint 0 · unit 1,723 (`pnpm test`: unit 1,722 + unit-perf 1) · browser 2,788 passed / 82 skipped (8.1k, the last product
 change) · `pnpm audit --prod` EXIT 0 (1 low, ignored) · tasks 67 / 67.
 
 ## Up next
