@@ -26,8 +26,8 @@ change) · `pnpm audit --prod` EXIT 0 (1 low, ignored) · tasks 67 / 67.
 1. **GO-LIVE** (`docs/store/GO-LIVE.md`): 0 Gates → 1 Accounts → 2 the repository public → 3 the site → 4 the email
    (optional) → 5 the release v0.1.0 → 6 the dashboards read against the files → 7 the stores → 8 after approval
    (8.5: the human reviews the screenshot pick and captions) → 9 rollback if needed.
-2. **M14's first session** (§ Carried items, POST-RELEASE): place the two adopted retro rules (ask first whether (b)
-   ledgers the string); write the retro's "ADDENDUM AFTER THE 8.1 WALK" (`retro.md`; source: `decisions.md` "M13
+2. **M14's first session** (§ Carried items, POST-RELEASE): place the two adopted retro rules ((b) is test-pinned,
+   not ledgered — answered 2026-11-11); write the retro's "ADDENDUM AFTER THE 8.1 WALK" (`retro.md`; source: `decisions.md` "M13
    CLOSED" and the 8.1 / 9.x entries); read CI history with `gh` for each named flake (the M13 retro's carried action).
 
 ### Carried items
@@ -59,8 +59,15 @@ measurement-driven or explicitly deferred.*
 #### POST-RELEASE (after M13) — FIRST ON THE LIST
 - **M14's first session: place the two adopted retro rules (HUMAN RULING 2026-11-11, "YES to both").** (a)
   Engine-only human checks happen in the group that needs them. (b) A claim-bearing in-app string gets a test that pins
-  it to its state. They go into `WORKFLOW.md` or `AGENTS.md`. Ask first whether (b) also ledgers the string or only
-  pins it. *Source:* `decisions.md`, "M13 — THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+".
+  it to its state. They go into `WORKFLOW.md` or `AGENTS.md`. **(b) is test-pinned, NOT ledgered** (the human's
+  answer, 2026-11-11: it keeps the 9.2 ruling "Checked, not ledgered"); the question is closed, do not ask again.
+  *Source:* `decisions.md`, "M13 — THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+" and "M13 — TWO HUMAN ANSWERS FROM THE
+  REVIEW CHAT".
+- **Exclude `docs/store/assets/` from the sources zip (the human's call, 2026-11-11: leave as is for 0.1.0).** The
+  0.1.0 sources zip carries 1,718,857 B of store PNGs (6,563,555 B in all) that AMO's reviewer does not need. A
+  one-line `wxt.config.ts` change; re-check that the sources zip still rebuilds the identical Firefox zip.
+  *Source:* `decisions.md`, "M13 TASK 9.5 — CLOSED" ("Seen, not changed") and "M13 — TWO HUMAN ANSWERS FROM THE REVIEW
+  CHAT".
 - **M14's first session: write the M13 retro's "ADDENDUM AFTER THE 8.1 WALK"** (`retro.md`; reserved at 9.4, not
   written at the close). For: the walk's verdicts, each fix (8.1a–8.1k, 9.2b, 9.3c) and what it re-ran in 9.x, the
   signed-install result, the 9.2 sign-off, the delegated 9.3 pick, whether batching the gates cost more than it

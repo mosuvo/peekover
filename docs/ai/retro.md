@@ -93,6 +93,8 @@
   (b) A claim-bearing in-app string gets a test that pins it to the state it is shown in. Both are placed in
   `WORKFLOW.md` or `AGENTS.md` at M14's start (`decisions.md`, "M13 — THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+").
   That entry flags one question for the placement: whether (b) also ledgers the string or only pins it.
+  **Answered (the human, 2026-11-11, in the review chat): test-pinned, NOT ledgered** — the 9.2 ruling "Checked, not
+  ledgered" stands (`decisions.md`, "M13 — TWO HUMAN ANSWERS FROM THE REVIEW CHAT").
   **★ 2026-11-11 — M13 CLOSED without the addendum below.** It is carried to M14's first session (`progress.md` §
   Carried items), with `decisions.md`'s "M13 CLOSED" and the 8.1 / 9.x entries as its source.
   **THE NUMBERS** are 9.5's (the byte ledger decomposed against the 1,509,173 / 1,509,057 B starting headroom). At

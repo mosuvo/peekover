@@ -1,6 +1,16 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 — TWO HUMAN ANSWERS FROM THE REVIEW CHAT, RECORDED AFTER THE CLOSE (records only).** Both given on
+  2026-11-11 in the review chat and not relayed until now.
+  - **Retro rule (b): test-pinned, NOT ledgered.** It keeps the 9.2 ruling "Checked, not ledgered". A claim-bearing
+    in-app string gets a test that pins it to the state it is shown in; it gets no claims-ledger row. This answers the
+    question "THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+" (below) left for M14's placement: that question is closed,
+    and M14's first session places (b) in this reading without asking again.
+  - **The sources zip keeps the screenshots for 0.1.0.** The human's call: leave it as is (6,563,555 B, carrying
+    1,718,857 B of `docs/store/assets/` PNGs; 9.5's close entry, "Seen, not changed"). Excluding `docs/store/assets/**`
+    from the sources zip is carried to M14 as a post-release item (`progress.md` § Carried items).
+
 - **2026-11-11 · M13 CLOSED — a truthful, on-design first release, ready for go-live.** All 67 tasks ticked (40 at
   gate 3 + 27 discovered: 1.4, 5.0, 5.2a, 5.8, 5.9, 5.10, 5.11, 6.2a, 7.2a, 7.3a, 7.4a; 8.1a–8.1k from the walk; 9.2b,
   9.3a–9.3d from group 9). **Ships:** CI on Linux; the claims ledger (608 rows, `truthPins.test.ts`); tokens, contrast,
