@@ -1,6 +1,69 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.3d — DISCOVERED (CI run 42943681675 on `fc02f4d`): the watch baseline is the RENDERED SOURCE,
+  so a save that lands before the first read is shown. The p2 flake bounded.** HUMAN RULING: "Approve the baseline fix,
+  with these conditions." Code at `4b84584`; local, not pushed.
+  - **The race and its cause:** `firefoxDragWatch` (A) failed on CI with "the appended heading reached the reader through
+    Watch: expected false to be true"; `fc02f4d` touched nothing in watching. The first read at the click was a silent
+    baseline. A save that reached disk BEFORE that read resolved became the baseline and was never shown; the reader kept
+    the older text indefinitely. Forcing that order (append before the click) reproduced CI's exact message
+    deterministically. Locally (A) passed 20 / 20 (exit 0 on 19 runs; one passed, then hung while closing Firefox until the
+    200 s cap, exit 124). History: (A) failed once in about seven CI runs since it existed. Product, not test timing:
+    (A) already waited on a condition for 8 s against a ~1 s poll.
+  - **9.3a reconciled (condition 1).** 9.3a's reason, quoted: "`pollingDetector.start()` only SCHEDULED its first read, one
+    interval (1 s) later, and that read is the silent baseline. A save made in that first second became the baseline and
+    was never shown." It protected one property: a save made right after pressing Watch is shown. 9.3d keeps the read at
+    the click (`tick()` at start, unchanged) and changes only what it is compared against: the rendered source, instead
+    of nothing. 9.3a's own Revisit-when named this step: "seeding the rendered text as the baseline, if the
+    render-to-click window ever matters". No conflict.
+  - **The fix:**
+    - `ChangeDetector.start(cb, onError?, baseline?)`: with a baseline, the first read is a compare, not a silent
+      baseline. One normaliser, `normalizeForCompare` (a leading BOM dropped; CRLF and lone CR to LF), is used for
+      fresh reads and the baseline alike. The callback still receives the raw text.
+    - `observerDetector`: seeded the same way, plus one read once the observation is in place (a save before that has
+      no record). Its polling fallback starts from the last known text.
+    - `watchController`: a `baseline(host)` option, defaulting to `readerSourceFor(host)`, the source `mount()`
+      registered (never the DOM).
+    - `appShell` (condition 3): the text this edit session last WROTE to the file, else the reader's source. Never the
+      editor buffer: the reading column is not touched while editing, and the preview mounts on its own nested host.
+  - **Tests, red first (condition 4):**
+    - Unit, `changeDetector.test.ts`:
+      - Against HEAD's detector, 3 of the new tests were red: a changed first read fires once with the raw text; THE
+        RACE (an in-flight read returning the saved text: shown when seeded, absorbed unseeded); a seed replaces a
+        previous run's last text.
+      - Unchanged first reads fire nothing for LF, CRLF (raw, and rendered as LF), BOM (with and without) and no
+        trailing newline. With the normaliser ablated, the CRLF-as-LF and BOM cases go red.
+    - Chromium, new `watchSeededBaseline.browser.test.ts`, on both detector routes:
+      - S1 (save before the click): red against HEAD on both routes, including the engine's observer route.
+      - S2 (CRLF / BOM / no-newline: no re-render; one change, one render).
+      - E1 (unsaved edits: nothing held, buffer kept): red when the baseline is anything but the loaded text.
+      - E2 (after a save: not taken for an external change): red with the saved-text override removed.
+    - Firefox, `firefoxDragWatch`: A2 (save before the click, red against HEAD with CI's message), A3 (the three
+      shapes), E1. (A) unchanged.
+  - **The p2 flake (condition 5; run 42871791660, "Test timed out in 20000ms" at 20,119 ms):**
+    - What happened: about 2.7 s locally, with the 2.5 s fixed pause as most of it. On CI one await hung past 17 s. The
+      unbounded awaits were the two directory uploads (`setInputFromDisk`, Playwright's `setInputFiles` with no
+      timeout); every `waitFor` is capped at 5 s. CI kept no artifact, so the hung step cannot be named.
+    - Fix:
+      - `vitest.config.ts`'s `setInputFromDisk` is bounded at 10 s, with one logged retry.
+      - p2 waits on a condition (the opened file has rendered) instead of the 2.5 s pause: the only ways the added
+        file could appear are a new pick, which is counted, or a re-read on open, which has finished by then.
+      - Budget 30 s: two capped picks plus 5 s waits.
+    - Now about 0.2 s of test time locally.
+  - **Repeats (Firefox, exit codes):** (A), A2 and p2 together, 20 runs: 20 / 20 exit 0, 3 passed each time.
+  - **Verify:**
+    - `pnpm lint` exit 0.
+    - `wxt zip` both engines exit 0.
+    - `pnpm test` exit 0, 1,718 / 1,718.
+    - `pnpm test:browser` exit 0, both engines: 2,780 passed / 98 skipped. That run included a leftover timing-probe copy
+      of `firefoxDragWatch` (16 passed / 16 skipped), deleted after and never committed: 2,764 / 82 without it.
+  - **Bytes** (against the build of HEAD's production code):
+    - Content script 349,990 → 350,117 B (+127), both engines.
+    - App chunk 556,640 → 556,959 B (+319).
+    - Every other file is the same size, only renamed by its hash. Manifests unchanged, `permissions: []`.
+    - `.output` 6,659,892 / 6,659,878 B, under the 6,900,000 B guard.
+
 - **2026-11-11 · M13 TASK 9.2 — SIGNED OFF.** HUMAN RULING, verbatim: **"I sign off the 9.2 truth re-check: every
   published sentence has a verdict, the copy changes I approved are landed, and the remaining 'live at release' rows are
   checked at go-live."** 9.2 ticked; tasks 65, 62 ticked.

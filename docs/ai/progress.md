@@ -17,6 +17,12 @@ signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, 
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 TASK 9.3d LANDED (2026-11-11) — the watch baseline is the rendered source.** Record: `decisions.md`, "M13 TASK
+9.3d". CI's `firefoxDragWatch` (A) red on `fc02f4d` was a product race: a save that reached disk before the first read at
+the click resolved was absorbed. Now the first read is compared against the rendered source (one normalisation: BOM,
+CRLF); edit mode uses the last saved text, never the buffer. The p2 flake is bounded. Red first, then green; 20 / 20 on
+Firefox; full suites exit 0. Content script 350,117 B (+127). Tasks: 66, **63 ticked**. Next: the weird-nesting walk fix.
+
 **M13 TASK 9.2 — SIGNED OFF (2026-11-11).** Record: `decisions.md`, "M13 TASK 9.2 — SIGNED OFF" and the batch entries
 above it; the pack `docs/ai/truth-signoff-9.2.md`. The human's words: "I sign off the 9.2 truth re-check: every published
 sentence has a verdict, the copy changes I approved are landed, and the remaining 'live at release' rows are checked at
