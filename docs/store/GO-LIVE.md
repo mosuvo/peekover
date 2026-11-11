@@ -93,6 +93,10 @@ it does not change the step.
 
 ## 2 · The repository goes public
 
+*Accepted (HUMAN COPY APPROVAL, 2026-11-11, 9.2): from step 2.2 until section 3 puts the site live, the public
+repository's SECURITY.md names a privacy policy URL that does not open yet. These are minutes, not days: go
+straight on to section 3.*
+
 - [ ] **2.1 The history scan's ruling stands.**
   - **Check:** `docs/ai/decisions.md`, "M13 TASK 7.6": scan done with gitleaks 8.30.1, no secrets; your ruling
     "Proceed as is". Commits have landed since (groups 8 and 9), so ask an agent session to run the same scan again on
@@ -157,8 +161,8 @@ Pages works on public repositories only on this plan, so this comes after step 2
 
     | URL or channel | What "good" looks like | Ledger rows |
     |---|---|---|
-    | https://peekover.dev | The Peekover site | #36, #434, #465, #508, #542 |
-    | https://peekover.dev/privacy/ | The privacy policy, the same text as `docs/trust/PRIVACY.md` | #36, #339, #434, #463, #475, #506, #510, #540, #552 |
+    | https://peekover.dev | The Peekover site | #465, #508, #542 |
+    | https://peekover.dev/privacy/ | The privacy policy, the same text as `docs/trust/PRIVACY.md` | #339, #463, #475, #506, #510, #540, #552 |
     | https://github.com/mosuvo/peekover | The repository, signed out | #63, #64, #187, #196, #464, #507, #541 |
     | https://github.com/mosuvo/peekover#build-from-source | The README, scrolled to "Build from source" | #70 |
     | https://github.com/mosuvo/peekover/blob/main/docs/trust/SECURITY.md | SECURITY.md | #197 |

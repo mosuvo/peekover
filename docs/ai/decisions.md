@@ -1,6 +1,23 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.2 — go-live tense and batch 5 (copy).** HUMAN COPY APPROVAL ("as the reviewer suggested"):
+  - **SECURITY.md:** row 47 cut ("That channel opens when … the repository is private."); row 48 now "For anything that
+    is not a security problem, open a [GitHub issue](https://github.com/mosuvo/peekover/issues).", linked like 373; row
+    339 now "The privacy policy, published at https://peekover.dev/privacy/."
+  - **README row 36 and site row 434:** the privacy-policy / website item is removed from "Planned". The README list
+    keeps its two bullets. The site's line now reads "For the first public release: listings in the Chrome, Firefox and
+    Edge stores, and attestations on release files." (two items, so a comma and "and" replace the semicolons).
+  - **Ledger:** 47 and 36 withdrawn; 48 and 339 rewritten and still "live at release"; 434 rewritten and now "planned"
+    (it names no URL now). GO-LIVE 3.6 no longer names #36 or #434 (the test allows only live rows there). truthPins is
+    green.
+  - **The window is accepted:** a new note at the top of GO-LIVE section 2 says that from 2.2 until section 3 the public
+    SECURITY.md names a privacy URL that does not open yet: minutes, so go straight on.
+  - **414 px check (site, the Planned section):** no sideways scroll (scrollWidth 414) and nothing in the section crosses
+    the viewport. The page's 439 px with the clip lifted is the marquee strip, the same at HEAD (a control). Shot:
+    `D:\Dev\peekover-shots\9.2\planned-site-414.png`.
+  - No shipped file changed (README, SECURITY.md and the site are not in the extension package), so no browser suite.
+
 - **2026-11-11 · M13 TASK 9.2 — batch 4 (PRIVACY.md), records and one copy change.** HUMAN RULING, verbatim: "343 OK
   (flag 9); 359, 363, 372 OK in place (landed today, read well); 362 OK; 373 HUMAN COPY APPROVAL: "For a question about
   privacy, open an issue on Peekover's GitHub repository." (drop "once it is public" — the policy publishes at go-live,

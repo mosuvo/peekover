@@ -3,8 +3,7 @@
 ## Reporting a vulnerability
 
 Report security problems through GitHub private vulnerability reporting on this repository.
-That channel opens when the repository becomes public at the first release; until then the repository is private.
-For anything that is not a security problem, open a GitHub issue once the repository is public.
+For anything that is not a security problem, open a [GitHub issue](https://github.com/mosuvo/peekover/issues).
 
 ## What is true today
 
@@ -23,4 +22,4 @@ For anything that is not a security problem, open a GitHub issue once the reposi
 ## Planned for the first public release
 
 - Build attestations on release files.
-- The privacy policy published at https://peekover.dev/privacy/, which is not online yet.
+- The privacy policy, published at https://peekover.dev/privacy/.

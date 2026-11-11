@@ -49,7 +49,6 @@ For the first public release:
 
 - Listings in the Chrome, Firefox and Edge stores.
 - Attestations on release files.
-- A privacy policy at https://peekover.dev/privacy/ and a website at https://peekover.dev, neither online yet.
 
 Later, not yet scheduled:
 
