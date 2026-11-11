@@ -1,6 +1,15 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.2 — batch 2 (the Firefox listing), records.** HUMAN RULING, verbatim: **"as you suggest"**
+  on the copy drafts and batch 2. Verdicts, the human's: 477 OK (unchanged; 247 / 250); 479 / 480 OK; 482 via C-3; 491
+  OK (the human's drag check); 498 via C-7a; 500 OK; 506–510 OK, live at release, and GO-LIVE's AMO step must paste the
+  UPDATED PRIVACY.md text; the firefox.md submission note: tidy. Each verdict is recorded in the row's evidence in
+  `docs/store/claims.md` and in `docs/ai/truth-signoff-9.2.md`'s Status column. Done: the stale submission note is
+  removed from `docs/store/firefox.md` (unpublished). `GO-LIVE.md` section 7 now says every store text is copied from the
+  post-9.2 files, and step 7.2 pastes the UPDATED PRIVACY.md (rows 359, 363, 372). Row 110 is re-measured after the copy
+  landed (`58d196a`): 6,659,446 / 6,659,432 B. Batches 3–11 are still open. 9.2 is not ticked.
+
 - **2026-11-11 · M13 TASK 9.2 — the copy (HUMAN COPY APPROVAL: "as you suggest" on the copy drafts and batch 2).**
   Landed exactly as approved, from the pack's "Drafts for your approval" (`docs/ai/truth-signoff-9.2.md`):
   - **C-1** (row 183, `site/index.html`, the Setup card): "For files on your disk, turn on “Allow access to file URLs”

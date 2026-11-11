@@ -272,7 +272,9 @@ Pages works on public repositories only on this plan, so this comes after step 2
 ## 7 · Submit to the stores
 
 Paste each field exactly as written under its heading in the listing file; the "Submission notes" at the end of each
-file are for you, not the store.
+file are for you, not the store. Copy every store text from the files as they stand at the release commit: the
+post-9.2 versions (9.2's HUMAN COPY APPROVAL, 2026-11-11, changed the Firefox description, PRIVACY.md, the site and
+the README), never from an earlier copy, a draft or a screenshot.
 
 - [ ] **7.1 Chrome Web Store.**
   - **Where:** [developer dashboard](https://chrome.google.com/webstore/devconsole) → **Add new item** → **Choose
@@ -302,7 +304,8 @@ file are for you, not the store.
     for reviewers**, write: "Build steps: SOURCE_CODE_REVIEW.md at the root of the sources zip (Node 22, pnpm
     10.33.0, x64)."
   - **Describe:** Name, Summary, Categories (**Web Development**, **Other**), Description, Homepage, Support site,
-    Licence **MIT**, Privacy policy (paste the full text of `docs/trust/PRIVACY.md`) — from `docs/store/firefox.md`.
+    Licence **MIT**, Privacy policy (paste the full text of `docs/trust/PRIVACY.md` as it stands now: the UPDATED
+    text, after 9.2 changed rows 359, 363 and 372; ledger row 510) — from `docs/store/firefox.md`.
     Support email: leave empty unless step 4 found the address working and the email edit has landed.
   - **Data collection:** the package declares none (`docs/store/firefox.md`, "Data collection").
   - **Check:** a confirmation page and an email from AMO.
