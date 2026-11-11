@@ -38,6 +38,12 @@ it does not change the step.
   - **Where:** `pnpm audit --prod`
   - **Check:** it ends with no vulnerabilities found (exit 0).
   - **If it fails:** stop; a dependency bump is an agent task (the M12 retro's rule, AGENTS.md).
+- [ ] **0.5 The "under 7 MB" sentence still holds.** The site says "The whole extension is under 7 MB." (ledger row 110),
+  and a guard fails above 6,900,000 B (9.2, HUMAN RULING 2026-11-11). CI runs the unit tests before it builds, so run
+  the guard here, on the release commit.
+  - **Where:** `pnpm build && pnpm exec wxt build -b firefox && pnpm exec vitest run --project unit tests/extensionSize.test.ts`
+  - **Check:** 4 tests pass, none skipped (a skip means `.output` was not built).
+  - **If it fails:** stop; trimming the build or re-wording the sentence is an agent task, with your approval.
 
 ## 1 · Accounts — can be done days before release day
 

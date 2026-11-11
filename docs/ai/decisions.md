@@ -1,6 +1,19 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.2 — batch 6 (the website), records; the size guard.** HUMAN RULING: "all OK. 183 OK (C-1,
+  414 passed); 82 / 112 / 185 / 209 OK; 110 OK (6,659,446 B under 7,000,000; add a guard …); 77 OK (framing, not a
+  product claim); 138 / 172 groups OK (flag 9); 161 group OK (GO-LIVE 8.2 swaps them); 434 link group OK, live at
+  release; 129 group OK." Recorded per row in `docs/store/claims.md` and the pack.
+  - **The guard (row 110):** new `tests/extensionSize.test.ts` fails when either built engine in `.output` passes
+    6,900,000 B. It skips an engine whose build is missing, and checks that the site still says "The whole extension is
+    under 7 MB.". Its instrument test plants 6,900,001 B. Fired on the real output: with the threshold lowered to
+    6,600,000 B, both engines went red (6,659,446 and 6,659,432 B), then green at 6,900,000. CI runs the unit tests
+    before it builds, so the guard only checks a build in CI if one is present. New GO-LIVE step 0.5 builds both engines
+    on the release commit and runs this file (4 pass, none skipped).
+  - From here the human answers batches together (7 + 8, then 9 + 10 + 11), each reply opening with per-batch lists of
+    rows that need a verdict and rows that only need a confirm.
+
 - **2026-11-11 · M13 TASK 9.2 — batch 5 (the setup guide, both builds), records.** HUMAN RULING ("as the reviewer
   suggested"): 5a and 5b all OK, with this evidence, now in each row of `docs/store/claims.md` and the pack's Status:
   - **5a:** 586 / 588 / 589: the human read them on the built page (walk A4 screenshot, Chrome 157, 2026-11-10). 587:
