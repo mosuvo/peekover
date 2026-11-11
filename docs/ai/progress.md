@@ -11,6 +11,13 @@
 
 ## Now (start here)
 
+**M13 TASK 9.3 RE-CAPTURED AT HEAD (2026-11-11). THE HUMAN'S NEXT STEP: the pick, from
+`D:\Dev\peekover-shots\9.3\contact-sheet.png`.** Record: `decisions.md`, "M13 TASK 9.3 — RE-CAPTURED AT HEAD". 24 / 24
+at 1280×800 from `3d72e5b`'s build. Firefox app-page shots now come by the drag route, with the drag note shown, plus
+the Firefox `file://` tab reader. The sheet is grouped by store (Chrome 1–5, Edge 0–6, AMO), all sizes fit, the earlier
+suggestion is marked, and nothing is picked. Script only: `capture-screenshots.ts`, plus `walk-shots.ts`
+`Engine.dragFolder`. After the pick: copy the picks into `docs/store/assets/` and add the unit size check; then 9.5.
+
 **M13 TASK 8.1 CLOSED (2026-11-11): the walk is done and ticked.** Record: `decisions.md`, "M13 TASK 8.1 — CLOSED", with
 the ten dispositions. Brave is accepted by name from Chrome + Edge, and I-6 / I-7's remainders as tested only. I-4 (the
 icon) and III-6 (focus) are the human's own verdicts from walk A6 / A7 / C16 (2026-11-10). They had never been banked

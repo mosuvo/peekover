@@ -246,6 +246,13 @@ export interface Engine {
   flipFileAccess?(): Promise<void>;
   /** Firefox only: set "Access local files on your computer" by its toggle on about:addons; returns what it read. */
   setFileAccess?(on: boolean): Promise<string>;
+  /**
+   * Firefox only: drop a REAL folder on disk onto the app page (`/app.html`, the working tab), the user's drag route.
+   * A Gecko drag session started in the parent process carries the folder as an nsIFile to the tab's `<browser>`:
+   * the cross-process path an OS drag takes; only the mouse gesture is synthetic (8.1g, `decisions.md`).
+   * Returns the events fired and their results.
+   */
+  dragFolder?(dir: string): Promise<string>;
   /** The browser's own version string. */
   version?: string;
   close(): Promise<void>;
@@ -499,6 +506,44 @@ export async function firefoxEngine(theme: Theme, width: number, port: number): 
       } finally {
         await call('browsingContext.close', { context: tab }).catch(() => undefined);
       }
+    },
+    async dragFolder(dir) {
+      const chromeTree = await call<{ contexts: { context: string }[] }>('browsingContext.getTree', { 'moz:scope': 'chrome' });
+      const chromeCtx = chromeTree.contexts[0]?.context;
+      if (!chromeCtx) throw new Error('no chrome window context');
+      const r = await evalIn<{ fired: string[]; isDir: boolean } | { error: string }>(
+        chromeCtx,
+        `(async () => {
+          const win = window;
+          const tab = [...win.gBrowser.tabs].find((t) => /^moz-extension:\\/\\/[^/]+\\/app\\.html/.test(t.linkedBrowser.currentURI.spec));
+          if (!tab) return { error: 'no app.html tab' };
+          win.gBrowser.selectedTab = tab;
+          const browser = tab.linkedBrowser;
+          await new Promise((ok) => win.setTimeout(ok, 300));
+          const dir = Cc['@mozilla.org/file/local;1'].createInstance(Ci.nsIFile);
+          dir.initWithPath(${JSON.stringify(dir)});
+          const ds = Cc['@mozilla.org/widget/dragservice;1'].getService(Ci.nsIDragService);
+          ds.startDragSessionForTests(win, Ci.nsIDragService.DRAGDROP_ACTION_COPY);
+          const session = ds.getCurrentSession(win);
+          const dt = new win.DataTransfer();
+          dt.mozSetDataAt('application/x-moz-file', dir, 0);
+          session.dataTransfer = dt;
+          const b = browser.getBoundingClientRect();
+          const x = Math.round(b.left + b.width / 2), y = Math.round(b.top + b.height / 2);
+          const fired = [];
+          for (const type of ['dragenter', 'dragover', 'drop']) {
+            const ev = win.document.createEvent('DragEvent');
+            ev.initDragEvent(type, true, true, win, 0, x, y, x, y, false, false, false, false, 0, null, dt);
+            fired.push(type + ':' + win.windowUtils.dispatchDOMEventViaPresShellForTesting(browser, ev));
+            await new Promise((ok) => win.setTimeout(ok, 150));
+          }
+          try { session.endDragSession(true); } catch (e) { fired.push('end:' + e.message); }
+          return { fired, isDir: dir.isDirectory() };
+        })()`,
+      );
+      if ('error' in r) throw new Error(`dragFolder: ${r.error}`);
+      if (!r.isDir) throw new Error(`dragFolder: not a directory: ${dir}`);
+      return r.fired.join(' ');
     },
     async ext(p) {
       current = extCtx;

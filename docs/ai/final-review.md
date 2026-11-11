@@ -160,6 +160,13 @@ commit, re-runs `truthPins.test.ts`, and ticks 9.2 when no PENDING row is left.
 
 ## 4 · The 9.3 screenshot pick (~15 min)
 
+**RE-CAPTURED 2026-11-11 — pick from the NEW sheet: `D:\Dev\peekover-shots\9.3\contact-sheet.png`** (or `.html`; click
+a card for the full-size file). It holds 24 shots at HEAD, grouped by store, each size checked against its store (all
+fit). Chromium 01–12 keep their numbers, so the suggestion below still names the same shots. **Firefox 13–24 are now
+store candidates for AMO:** the folder opened by dragging it in (the drag note shown) and the `file://` tab reader with
+the setting on (18, 24). Nothing is picked (`decisions.md`, "M13 TASK 9.3 — RE-CAPTURED AT HEAD"). The text below is the
+2026-11-07 plan, kept as the record. Its "13–22 are … not for a store" and "AMO: none of these" no longer apply.
+
 **Open `D:\Dev\peekover-shots\9.3\contact-sheet.png`** (or `contact-sheet.html` in a browser for the full-size files).
 22 captures at 1280×800 from HEAD's build, the sample `docs/store/assets/sample.md` (a neutral "Search index rollout"
 plan, with no sentence about Peekover). **01–12 are candidates** (Chromium). **13–22 are Firefox drawing references,

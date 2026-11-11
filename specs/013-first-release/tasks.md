@@ -1401,6 +1401,12 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       app-page captures are NOT store candidates (the harness's live handle is a Chromium-only state); no Firefox tab
       capture (PENDING SIGNED INSTALL). Not packaged (both engines). **Open, so not ticked:** the human's picks →
       `docs/store/assets/`. Necessary ripple: `scripts/walk-shots.ts` (exports + a run guard, the shared engine seam).
+      ★ *2026-11-11 — RE-CAPTURED AT HEAD (`decisions.md`, "M13 TASK 9.3 — RE-CAPTURED AT HEAD"; HUMAN RULING):* 24
+      PNGs, all 1280×800, from `3d72e5b`'s build (both engines). Chromium 01–12 as before. Firefox 13–24 open the folder
+      by the **drag route** with the drag note shown (the capture fails without it), plus the Firefox tab reader on
+      `file://` with "Access local files on your computer" on (18, 24). The contact sheet is grouped by store, with
+      sizes checked per store (all fit) and the earlier suggestion marked. Necessary ripple: `walk-shots.ts`
+      `Engine.dragFolder`. Not packaged (both engines). **Open:** the human's picks.
 - [x] **9.3a The watch baseline at the click (DISCOVERED at the 9.3 finding's investigation; the human's direction).**
       `pollingDetector.start()` reads at once instead of one interval later, so a save made right after pressing Watch
       is shown — every polling route (app page without an observer, the tab reader's relay, the observer's fallback).

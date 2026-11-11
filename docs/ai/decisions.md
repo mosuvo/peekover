@@ -1,6 +1,37 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.3 — RE-CAPTURED AT HEAD (24 shots, both engines); Firefox by the drag route and the
+  `file://` tab reader; a contact sheet by store. No pick made.** HUMAN RULING, verbatim: "(d) Re-capture: yes, all 22
+  at HEAD, both engines, light and dark, same sample. Firefox drag route: YES — extend the capture script (script only,
+  no product code) so the Firefox app-page shots open the folder by the drag route and show the drag note; plus the
+  Firefox tab reader on file:// with "Access local files on your computer" on. Then a contact sheet grouped by store
+  (Chrome 1–5, Edge up to 6, AMO), sizes checked per store, CC's earlier suggested picks marked, no picks made."
+  Preflight: `pnpm audit --prod` EXIT 0 (2026-11-11; 1 low, ignored). Both engines built clean at `3d72e5b` (records
+  only since 8.1k's `1439930`, so the product bytes are 8.1k's: `.output` 6,660,128 / 6,660,114 B of 7,340,032).
+  - **The script** (`scripts/capture-screenshots.ts`): Firefox app-page shots open `_fixtures\search-index` (the real
+    folder on disk, written fresh each run outside the repo) by **dragging it onto the page**. Each capture **fails
+    unless the pane shows `DRAGGED_SNAPSHOT_NOTE` exactly**. The Firefox tab reader turns on "Access local files on your
+    computer" in about:addons first, and fails unless the toggle reads pressed and
+    `extension.isAllowedFileSchemeAccess()` reads true. Chromium is unchanged: the harness, a live handle (what "Open a
+    folder" gives in Chrome / Edge). **Necessary ripple:** `scripts/walk-shots.ts` gains `Engine.dragFolder`, 8.1g's
+    verified Gecko drag driver (a scratch script until now) moved into the engine seam the capture script imports. The
+    Verify clause "Firefox app-page shots open the folder by the drag route" needs it there. No product code.
+  - **Output** `D:\Dev\peekover-shots\9.3\`: **24 / 24 captured, all 1280×800**: 01–12 Chromium 149.0.7827.55
+    (Playwright's build, as on 2026-11-07), 13–24 Firefox 159.0.1. That is the 22 as before plus the Firefox tab reader,
+    light (18) and dark (24). The Firefox numbers moved (they were 13–22). The Chromium numbers are unchanged, so the
+    earlier suggestion's numbers still name the same shots. The 2026-11-07 set is kept in `_previous-5ac0112\`.
+  - **The contact sheet** (`contact-sheet.png` / `.html`) is grouped by store: Chrome Web Store (1–5; 1280×800 or
+    640×400), Edge Add-ons (0–6; 1280×800 or 640×480), AMO (no practical limit; 1.6:1, 1280×800 recommended). Store
+    rules are as re-checked 2026-11-07. Each card states the size and whether it fits that store: **all 12 fit in each
+    store**. The size check's control, `cws-icon-128.png` at 128×128, fits no store, so the check fires. CC's earlier
+    suggestion is marked (Chrome 01, 08, 03, 06, 10; Edge the same plus 05; AMO none). **No pick is made.**
+  - **Seen, not judged (for the pick):** the Firefox pane on the drag route reads "granted: search-index" with Revoke,
+    and its Recent row reads "Firefox can't remember folder access — click to pick it again." Firefox's editor shows
+    Save, which on a folder Peekover cannot write to saves as a download (task 5.4, D-6).
+  - **Not packaged (Verify):** in both engine builds, "Search index rollout" and "bm25" are in 0 files. The control
+    "No network calls" is in 1 file per engine.
+  - 9.3 stays open: the human's picks go to `docs/store/assets/`, then the unit size check over them.
 - **2026-11-11 · M13 — THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+.** HUMAN RULING, verbatim: "(b) Retro proposals (a)
   and (b): YES to both. Record in final-review.md and retro.md (or wherever M13's retro lives) as adopted for M14+."
   The two rules (`retro.md`, "M13 retro", wrong 3 and the 9.3 finding; `final-review.md`, "Optional"):
