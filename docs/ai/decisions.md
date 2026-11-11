@@ -1,6 +1,26 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · GO-LIVE — HISTORY REWRITTEN: the personal email out of commit metadata (records only, under the
+  release freeze).** HUMAN RULING: rewrite the history so no commit carries the personal email. **This supersedes 7.6's
+  "Proceed as is"** (the 2026-11-06 "M13 TASK 7.6" entry below, which accepted the email in commit metadata).
+  Revisit: never for these commits; new commits use the noreply address (GO-LIVE 1.2).
+  - **What changed:** author and committer of 475 of 596 commits, now `93656238+mosuvo@users.noreply.github.com`.
+    Every commit hash changed; no tree changed. HEAD `6bb32a8` (was `0aff160`), tree `a9026103` in both. The new
+    history carries no Gmail in any author, committer or message.
+  - **Old hashes:** records written before the rewrite (this file, `progress.md`, `progress-archive.md`, `retro.md`,
+    GO-LIVE and the rest) cite pre-rewrite hashes and stay as written (append-only). `docs/ai/commit-map.txt` resolves
+    them: one `old new` pair per commit, 596 rows, checked 1:1 against `git rev-list HEAD`. CI run links from before the
+    rewrite open only in the private archive repository `peekover-archive`.
+  - **This clone checked (`D:\Dev\peekover`; the old folder is `D:\Dev\peekover-archive`, push disabled):** HEAD and
+    tree as above, `user.email` the noreply address. Both engines built and are byte-identical to the archive's
+    `.output` (162 files each; 6,660,128 / 6,660,114 B; content script `3eb9a205` / `093beff4`; control: Chrome vs
+    Firefox differs in 5 files). Lint EXIT 0; unit EXIT 0 (1,719 passed, 4 skipped, 1,723).
+  - **Seen, not changed:** this clone's `pnpm install` reported "Ignored build scripts: esbuild@0.27.7,
+    esbuild@0.28.1, spawn-sync@1.0.15" (pnpm 10 skips them unless approved). The archive's install record has no
+    ignored-builds list. The esbuild binaries are byte-identical in both folders, and the builds are too. Not approved
+    (no `approve-builds`).
+
 - **2026-11-11 · M13 GO-LIVE — EDGE ADD-ONS LISTING DEFERRED (docs only, under the release freeze).** HUMAN RULING: the
   Edge Add-ons listing is not part of the v0.1.0 launch. Why: Edge's developer registration publishes a postal
   address. Peekover still supports Edge (the Chromium build; Edge users can install it from the Chrome Web Store).

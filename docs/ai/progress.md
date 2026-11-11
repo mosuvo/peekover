@@ -21,6 +21,8 @@ change lands before the tag; only GO-LIVE steps commit (their Done notes, and th
 A new idea, finding or fix goes to § Post-launch ideas below, not into the tree. The freeze began after the records
 commit that follows the second user fixture (`82776f4`'s tests; `decisions.md`, "M13 — RELEASE FREEZE").
 
+**History rewritten 2026-11-11 (the personal email out of commit metadata):** hashes cited above and in older records are pre-rewrite; resolve them with `docs/ai/commit-map.txt` (`decisions.md`, "HISTORY REWRITTEN").
+
 **Current numbers (HEAD):** `.output` 6,660,128 B (Cr) / 6,660,114 B (Fx) of 7,340,032 — headroom 679,904 / 679,918 B ·
 content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,563,555 B · manifests
 864 / 978 B, `permissions: []` · lint 0 · unit 1,723 (`pnpm test`: unit 1,722 + unit-perf 1) · browser 2,810 passed / 82 skipped (`c43865f`, EXIT 0, 2026-11-11; +22 from
