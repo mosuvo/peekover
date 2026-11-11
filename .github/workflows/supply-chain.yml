@@ -104,7 +104,7 @@ jobs:
       # does not fail the build for the same
       # dev-vs-prod reason documented in the header — `pnpm audit --prod` is the blocking gate.
       - name: Run OSV scanner
-        uses: google/osv-scanner-action/osv-scanner-action@9bb69575e74019c2ad085a1860787043adf47ccb # v2.2.4
+        uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
         continue-on-error: true
         with:
           scan-args: |-
