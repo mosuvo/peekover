@@ -75,7 +75,7 @@ A bare "9.2 signed off" means every row stands as written, every flag included.
 ## Recorded so far (2026-11-11)
 
 Your words: "batch 1 and flags: as you suggest", then "as you suggest" on the copy drafts and batch 2. Banked in
-`docs/ai/decisions.md` ("M13 TASK 9.2 — batch 1 and the flags", "M13 TASK 9.2 — the copy", "M13 TASK 9.2 — batch 2").
+`docs/ai/decisions.md` ("M13 TASK 9.2 — batch 1 and the flags", "M13 TASK 9.2 — the copy", "M13 TASK 9.2 — batch 2", "M13 TASK 9.2 — batch 3").
 The **Status** column of each table says what was recorded. A row with no status is still open.
 
 - **Batch 1:** every row is OK (your verdicts are in the table, and in the ledger's evidence column).
@@ -86,7 +86,8 @@ The **Status** column of each table says what was recorded. A row with no status
 - **Batch 2:** every row is OK; 482 and 498 changed through C-3 and C-7a; the unpublished Firefox note is removed.
 - **Copy, landed 2026-11-11:** C-1, C-2, C-3, C-6, C-7a, C-7b (your variant) and C-7c. No change for C-1b and C-6b.
   The next section lists each draft with its outcome.
-- **Still open:** batches 3–11 as reading batches. The rows above that carry a status are already settled.
+- **Batch 3:** every row is OK; the Edge category and data-usage line are checked at submission (GO-LIVE 6.3, 6.2).
+- **Still open:** batches 4–11 as reading batches. The rows above that carry a status are already settled.
 
 ## The copy drafts and what landed
 
@@ -143,12 +144,12 @@ The same text as Chrome's except the category and the form wording. A ruling on 
 
 | Row | Published sentence | Where | Evidence | Changed since review | CC flag | Status |
 |---|---|---|---|---|---|---|
-| 513 (+ 514) | Render raw markdown into beautiful, private reading. | Short description (= the manifest description) | As 436 and 437. | unchanged | As 436 / 437. | Carries batch 1 (436 / 437) unless you say otherwise; not recorded. |
-| 515 | Productivity | Category (Productivity) | "Confirmed in Partner Center at submission." | unchanged | UNCONFIRMED until submission (GO-LIVE section 7). | Done 2026-11-11 (evidence only, not a verdict on copy): GO-LIVE 6.3 checks the category at submission. |
-| 534 | Files opened from disk need the extension's "Allow access to file URLs" setting turned on. | Known limits | As 457. | unchanged | As 457 (site access, 8.1f). | Carries batch 1 (457) unless you say otherwise; not recorded. |
-| 549 | Website content: Peekover reads the text of the markdown pages and files you open in order to show them, and keeps snapshots of watched documents and drawings of diagrams on your device; none of it leaves your device. | Data usage | The evidence cites the Chrome Web Store user-data FAQ. | unchanged | EVIDENCE MISMATCH: an Edge row backed by Chrome's FAQ. edge.md's notes say Partner Center's checkbox names are read at submission. Re-read this line against the real Edge form at GO-LIVE. | Done 2026-11-11 (evidence only, not a verdict on copy): GO-LIVE 6.2 checks it against Edge's own form at submission. |
-| 550 (+ 551) | No other kind of user data is handled. | Data usage | As 473 / 474. | unchanged | ABSOLUTE, as 473. | ABSOLUTE OK (HUMAN 2026-11-11, flag 9) |
-| 540 (+ 541, 542, 543, 552) | Privacy policy: https://peekover.dev/privacy/ / Peekover is released under the MIT licence, and its source code is at https://github.com/mosuvo/peekover. / https://peekover.dev / https://github.com/mosuvo/peekover/issues / https://peekover.dev/privacy/ | Privacy URL, licence line, website, support | Live at release. | live at release / planned — unchanged | Edge requires the privacy URL to work before submission (edge.md notes). |  |
+| 513 (+ 514) | Render raw markdown into beautiful, private reading. | Short description (= the manifest description) | As 436 and 437. | unchanged | As 436 / 437. | HUMAN 2026-11-11: OK, carries batch 1 (436 / 437). |
+| 515 | Productivity | Category (Productivity) | "Confirmed in Partner Center at submission." | unchanged | UNCONFIRMED until submission (GO-LIVE section 7). | HUMAN 2026-11-11: OK, confirmed at submission (GO-LIVE 6.3). |
+| 534 | Files opened from disk need the extension's "Allow access to file URLs" setting turned on. | Known limits | As 457. | unchanged | As 457 (site access, 8.1f). | HUMAN 2026-11-11: OK, carries batch 1 (457). |
+| 549 | Website content: Peekover reads the text of the markdown pages and files you open in order to show them, and keeps snapshots of watched documents and drawings of diagrams on your device; none of it leaves your device. | Data usage | The evidence cites the Chrome Web Store user-data FAQ. | unchanged | EVIDENCE MISMATCH: an Edge row backed by Chrome's FAQ. edge.md's notes say Partner Center's checkbox names are read at submission. Re-read this line against the real Edge form at GO-LIVE. | HUMAN 2026-11-11: OK, checked against Edge's own form at submission (GO-LIVE 6.2). |
+| 550 (+ 551) | No other kind of user data is handled. | Data usage | As 473 / 474. | unchanged | ABSOLUTE, as 473. | HUMAN 2026-11-11: OK (absolute, flag 9). |
+| 540 (+ 541, 542, 543, 552) | Privacy policy: https://peekover.dev/privacy/ / Peekover is released under the MIT licence, and its source code is at https://github.com/mosuvo/peekover. / https://peekover.dev / https://github.com/mosuvo/peekover/issues / https://peekover.dev/privacy/ | Privacy URL, licence line, website, support | Live at release. | live at release / planned — unchanged | Edge requires the privacy URL to work before submission (edge.md notes). | HUMAN 2026-11-11: OK, live at release. GO-LIVE puts the privacy page live (3.6) before the Edge submission (7.3); checked, no change needed. |
 
 ## Batch 4 — Privacy policy (`docs/trust/PRIVACY.md` = `site/privacy/index.html`)
 

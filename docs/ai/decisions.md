@@ -1,6 +1,14 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.2 — batch 3 (the Edge listing), records.** HUMAN RULING, verbatim: "Batch 3 — HUMAN
+  2026-11-11: OK. 513 / 514 carry batch 1 (436 / 437); 515 OK, confirmed at submission (GO-LIVE 6.3); 534 carries batch 1
+  (457); 549 OK, checked against Edge's own form at submission (GO-LIVE 6.2); 550 / 551 OK (absolute, flag 9); 540–543 /
+  552 OK, live at release." Recorded in `docs/store/claims.md` and `docs/ai/truth-signoff-9.2.md`. **GO-LIVE order
+  checked, no change:** section 3 puts the site live (3.6 checks that https://peekover.dev/privacy/ resolves, row #540
+  among those it names) before section 7's Edge submission (7.3), and the checklist forbids skipping ahead. Batches 4–11
+  are still open.
+
 - **2026-11-11 · M13 TASK 9.2 — batch 2 (the Firefox listing), records.** HUMAN RULING, verbatim: **"as you suggest"**
   on the copy drafts and batch 2. Verdicts, the human's: 477 OK (unchanged; 247 / 250); 479 / 480 OK; 482 via C-3; 491
   OK (the human's drag check); 498 via C-7a; 500 OK; 506–510 OK, live at release, and GO-LIVE's AMO step must paste the
