@@ -11,10 +11,10 @@ Mozilla to sign the test build:
 | Step | What | Your time | Blocks |
 | --- | --- | --- | --- |
 | 1 | The Firefox signed install | ~20 min to submit (+ AMO's wait, up to 24 h) + ~5 min to read the result | the release BLOCKER; step 2's item I-3 |
-| 2 | The 8.1 design walk | ~3–4 h (three sittings) | go-live; may re-open 3 and 4 |
+| 2 | The 8.1 design walk — **DONE 2026-11-11** | ~3–4 h (three sittings) | go-live; may re-open 3 and 4 |
 | 3 | The 9.2 truth sign-off — **DONE 2026-11-11** | ~60–75 min | go-live |
 | 4 | The 9.3 screenshot pick | ~15 min | go-live (Chrome needs ≥ 1 screenshot) |
-| 5 | Two proposals from the retro | ~5 min | nothing; next milestone |
+| 5 | Two proposals from the retro — **DONE 2026-11-11: both adopted for M14+** | ~5 min | nothing; next milestone |
 
 **How any decision is recorded.** Reply to the agent in your own words. The agent banks each one verbatim in
 `docs/ai/decisions.md` as a HUMAN RULING, in the commit that acts on it. Nothing below is decided until you write it.
@@ -77,6 +77,11 @@ paste the message.
 ---
 
 ## 2 · The 8.1 design walk (~3–4 h)
+
+**DONE (2026-11-11): 8.1 closed and ticked** (`decisions.md`, "M13 TASK 8.1 — CLOSED", with the full list of the ten
+dispositions; `walk-8.1.md`, "8.1 CLOSED"). The human's own verdicts for I-4 (walk A7 and C16) and III-6 (walk A6),
+given on 2026-11-10, are now recorded. They had never been banked, and that entry says why. The text below is the plan
+as written, kept as the record.
 
 **Start here: `docs/ai/walk-8.1.md`.** Its one-page guide, the live items (I × 11, II × 10, III × 6, IV × 2) and the
 table (36 surfaces × 16 cells, 169 pre-filled "proposed: …"). Three sittings: **A** the live checks (~60 min), **B** the
@@ -212,3 +217,7 @@ picked surface re-captures it, and you confirm the new file.
 
 **Record:** "(a) yes / no", "(b) yes / no". A yes is placed in `WORKFLOW.md` or `AGENTS.md` at the start of the next
 milestone.
+
+**DONE (2026-11-11): (a) YES and (b) YES, both adopted for M14+** (HUMAN RULING: "YES to both"). M14's first session
+places them. Placing (b) needs one answer first: does the string also go into the ledger, or is it only pinned by a
+test? (`decisions.md`, "M13 — THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+".)

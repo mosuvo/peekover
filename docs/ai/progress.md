@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-10 (M13 walk section E - the human's verdicts: III-1 / III-2 / III-4 accepted by name, III-5 accepted, III-3 FIXED as 8.1j (light --faint #8F91A0, 3.01:1), IV-1 / IV-2 closed, I-8 and I-5 accepted as tested-only (macOS not checked). Before that: 2026-11-10 (M13 TASK 8.1i CLOSED - the human approved the held looks; all seven parts on main; reviewer decisions under the human's delegation: a named G-7 exception (+4,152 B content script) and II-1 ... II-10 closed. Before that: 2026-11-10 (M13 TASK 8.1i - walk D's fixes: the human's verdicts recorded; (b) raw box, (c) narrow lightbox, (e) collapsed code scrolls LANDED; (a)+(d) narrow contents sheet + editor gap, (f) pills at rest, (g) active-line cell HELD on local/8.1i-approval for the human's look and a byte ruling (G-7 passed: +4,152 B). Before that: 2026-11-10 (M13 TASK 8.1h - walk fix, HUMAN RULING option A: the can't-watch notes are a quiet footnote after the last line. Before that: 2026-11-10 (M13 TASK 8.1g - walk fixes: the Firefox drag note names the refresh; the guide's off-state site line is conditional; the launcher's Edge notes. Before that: 2026-11-10 (M13 TASK 8.1f - walk fix: the setup guide checks site access, not only the file-URL toggle. Before that: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
+*Updated: 2026-11-11 (M13 TASK 8.1 CLOSED - the ten dispositions; I-4 and III-6 are the human's walk A6 / A7 / C16 verdicts, banked now; the retro's (a) and (b) adopted for M14+; 65 of 67 ticked. Before that: 2026-11-10 (M13 walk section E - the human's verdicts: III-1 / III-2 / III-4 accepted by name, III-5 accepted, III-3 FIXED as 8.1j (light --faint #8F91A0, 3.01:1), IV-1 / IV-2 closed, I-8 and I-5 accepted as tested-only (macOS not checked). Before that: 2026-11-10 (M13 TASK 8.1i CLOSED - the human approved the held looks; all seven parts on main; reviewer decisions under the human's delegation: a named G-7 exception (+4,152 B content script) and II-1 ... II-10 closed. Before that: 2026-11-10 (M13 TASK 8.1i - walk D's fixes: the human's verdicts recorded; (b) raw box, (c) narrow lightbox, (e) collapsed code scrolls LANDED; (a)+(d) narrow contents sheet + editor gap, (f) pills at rest, (g) active-line cell HELD on local/8.1i-approval for the human's look and a byte ruling (G-7 passed: +4,152 B). Before that: 2026-11-10 (M13 TASK 8.1h - walk fix, HUMAN RULING option A: the can't-watch notes are a quiet footnote after the last line. Before that: 2026-11-10 (M13 TASK 8.1g - walk fixes: the Firefox drag note names the refresh; the guide's off-state site line is conditional; the launcher's Edge notes. Before that: 2026-11-10 (M13 TASK 8.1f - walk fix: the setup guide checks site access, not only the file-URL toggle. Before that: 2026-11-10 (M13 TASK 8.1e - walk fix: Copy as rich text pastes no control labels. Before that: 2026-11-10 (M13 TASK 8.1d - walk fix: the exported HTML scrolls, hides its math source, ships no controls. Before that: 2026-11-10 (M13 TASK 8.1a - walk fix: the exported HTML prints whole; the @media space. Before that: 2026-11-07 (M13 TASK 9.5 - records reconciled, everything that does not wait on the human: the landed M13 narrative moved to progress-archive.md; D-1...D-17 audited against their landing commits; spec-coverage F7, F11, section 6-9 / 6-10 / 6-13 re-scored; the byte ledger rebuilt commit by commit; AGENTS.md's milestone line; what waits on the end-of-round review marked 'pending end review'. Next: the human, docs/ai/final-review.md.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,13 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**M13 TASK 8.1 CLOSED (2026-11-11): the walk is done and ticked.** Record: `decisions.md`, "M13 TASK 8.1 — CLOSED", with
+the ten dispositions. Brave is accepted by name from Chrome + Edge, and I-6 / I-7's remainders as tested only. I-4 (the
+icon) and III-6 (focus) are the human's own verdicts from walk A6 / A7 / C16 (2026-11-10). They had never been banked
+because no agent session received them. The retro's proposals (a) and (b) are **adopted for M14+** (placed at M14's
+start, § Carried items). Tasks: 67, **65 ticked**. Left: **9.3**, a full re-capture at HEAD (both engines; Firefox by
+the drag route and the `file://` tab reader), then the human's pick; and **9.5**, the close figures.
 
 **THE HUMAN'S NEXT STEP: `docs/ai/final-review.md`** — every remaining human step in one sitting order: (1) the Firefox
 signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, (3) the 9.2 sign-off (DONE 2026-11-11), (4) the 9.3 pick,
@@ -534,6 +541,10 @@ measurement-driven or explicitly deferred.*
   "M13 TASK 5.9 (measurement)"). *Home:* a fix task once ruled, with an A-B-A against `618d37b`.
 
 #### POST-RELEASE (after M13) — FIRST ON THE LIST
+- **M14's first session: place the two adopted retro rules (HUMAN RULING 2026-11-11, "YES to both").** (a)
+  Engine-only human checks happen in the group that needs them. (b) A claim-bearing in-app string gets a test that pins
+  it to its state. They go into `WORKFLOW.md` or `AGENTS.md`. Ask first whether (b) also ledgers the string or only
+  pins it. *Source:* `decisions.md`, "M13 — THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+".
 - **Non-text contrast of borders — inputs first (the human, walk item III-1, 2026-11-10: "accept by name", with this
   item).** `--line` on `--paper` is 1.21 light / 1.29 dark (WCAG 1.4.11 asks 3:1 for a control's boundary). For 3:1
   the token would be about #929291 light / #5F626E dark — every border heavier. Start with inputs (the search field,

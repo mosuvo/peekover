@@ -1,6 +1,64 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 — THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+.** HUMAN RULING, verbatim: "(b) Retro proposals (a)
+  and (b): YES to both. Record in final-review.md and retro.md (or wherever M13's retro lives) as adopted for M14+."
+  The two rules (`retro.md`, "M13 retro", wrong 3 and the 9.3 finding; `final-review.md`, "Optional"):
+  - **(a)** Engine-only human checks (a signed install, a walk of a new surface) happen in the group that needs them.
+    Only the final look is left for the end.
+  - **(b)** A claim-bearing in-app string gets a test that pins it to the state it is shown in.
+  **Placement:** not placed in this commit. `final-review.md` says a yes "is placed in `WORKFLOW.md` or `AGENTS.md` at
+  the start of the next milestone", so M14's first session places both (carried in `progress.md`). **Flagged for
+  that placement:** (b)'s text says it "reverses part of" the 9.2 ruling "Checked, not ledgered". The reviewer's chat
+  recommendation was narrower: test-pinned but still not ledgered. The human's "YES" names the proposal and not either
+  reading, so M14's placement asks which one before writing the rule. Records only.
+- **2026-11-11 · M13 TASK 8.1 — CLOSED: the walk's last dispositions; 8.1 ticked.** HUMAN RULING, verbatim: "(a) 8.1
+  dispositions: 1 accept by name (Brave from Chrome + Edge — the earlier ruling); 2, 3, 4, 6, 7, 8, 10 as proposed. 5
+  and 9 are NOT open — the human walked them: I-4 icon = walk A7 (Chrome, light + dark browser themes: "all good") and
+  C16 (Firefox); III-6 = walk A6 (Tab / Shift+Tab / Enter through the app page, focus rings visible: "A6, A7, A8 all
+  good"), 2026-11-10. Record those as the human's verdicts and check why they weren't already in walk-8.1.md (were
+  A6–A8 banked anywhere?); note the Edge icon shots as captured, not judged, covered by the Chrome verdict (same icon).
+  Then close 8.1: tick it, with the full disposition list in decisions.md."
+  **The full disposition list** (the ten items the reviewer listed as open on 2026-11-11, each now in its
+  `walk-8.1.md` row):
+  1. **I-1 / I-2 / I-4 on Brave** (not walked): **ACCEPTED BY NAME** from Chrome + Edge. Brave 1.99.55 is Chromium 157;
+     CC's 8.1g measurement found Brave keeps a `-Keep` relaunch enabled, where Edge does not.
+  2. **I-1, the toggle-flip case:** **COVERED.** CC's B10 (e) on Edge 157 (the flip reloaded Peekover and opened no
+     guide; a restart opened none) and the install-only unit test. A store install is checked at GO-LIVE 8.3. Also the
+     human's walk A8 (Chrome, "all good", 2026-11-10; see the note below).
+  3. **I-1 / I-3 / I-11 on the current Firefox build** (the 9.2b guide, `file://` with the setting on, the drag and
+     picker notes): **COVERED** by the human's walk C12–C14, 2026-11-10.
+  4. **I-2 remainder** (typing `chrome://extensions`, "Open Peekover's details", flip off then on with the guide open):
+     **COVERED.** Edge by B10 (b) and (c); Chrome by the human's 8.1g re-check; the labels accepted at 9.2 batch 5a.
+  5. **I-4, the toolbar icon:** **THE HUMAN'S VERDICT, matches.** Chrome light and dark browser themes = walk **A7**,
+     "all good"; Firefox = walk **C16**; both 2026-11-10. Edge: the `b10d-*` shots were **captured, not judged**; they
+     are covered by the Chrome verdict (the same icon). Brave: item 1.
+  6. **I-6 remainder** (the network indicator and "Network used" on a raw web page; dark link hover on Edge):
+     **ACCEPTED AS TESTED ONLY.** `remoteMedia.browser.test.ts`, `statusLine` (unit and browser), 8.1b's
+     `linkHoverContrast.browser.test.ts` on both engines. Edge runs Chrome's engine, and CC measured its hover at
+     13.2:1 (B9).
+  7. **I-7 remainder** (cancel and deny in the OS folder picker; "Network used" after Load): **ACCEPTED AS TESTED
+     ONLY.** The OS dialog cannot be automated. `folderGrant.browser.test.ts`, `remoteMedia.browser.test.ts` and
+     `statusLine` cover the states.
+  8. **I-9 re-check** of the 8.1a / d / e export fixes on the current build: **COVERED.** The human's C15 (Firefox
+     print preview), the human's own Chrome re-checks that found 8.1d and 8.1e, and the export tests (`htmlExport`,
+     `copyAsRichText`, `copyAsHtml`).
+  9. **III-6, control boundaries and focus rings:** **THE HUMAN'S VERDICT, accept.** Walk **A6**, Tab / Shift+Tab /
+     Enter through the app page with focus rings visible, "A6, A7, A8 all good", 2026-11-10.
+  10. **Fixes landed after the walk, never seen live by the human** (8.1i, 8.1j, 8.1k part 1, 9.3d): **COVERED** by
+     tests, plus the human's shot approvals where there were any (8.1i's held looks, 8.1k's `toc-after-*`).
+  **Why A6–A8 and C16 were not in `walk-8.1.md`.** They were not banked anywhere. The human gave the A-section and
+  C16 results in the review chat on 2026-11-10, and no agent session received "A6, A7, A8 all good". A search of every
+  local session transcript finds the phrase only in today's message. Each sitting's agent session banked the findings it
+  was handed, and those were the fixes (A1 → 8.1b, A2 → 8.1c, A3 → 8.1a / d / e, A4 → 8.1f; C13 → 8.1h, C14 → 8.1g). An
+  all-OK item started no task, so nothing wrote it down. The one earlier trace is 9.2 batch 1, flag 5, which cites
+  "C12–C16" as "the human's statement" for ledger row 42. A5 (I-7's cancel / deny) has no banked verdict and is closed
+  by item 7. **Lesson, for the retro's addendum:** a walk sitting's all-OK items need banking as much as its fixes do.
+  **8.1's Verify, at close:** every live item, all 36 surfaces and both pending lists have their own verdicts (IV-1,
+  IV-2 EMPTY). Every fix is a numbered task, all landed: 8.1a–8.1k, 9.2b, 9.3c, 9.3d. Golden EMPTY: nothing changed
+  under `tests/golden/` since M12's close (`14f20d7`). `permissions: []` and no host or optional permissions in both
+  built manifests. 8.1 ticked: 67 tasks, **65 ticked**. Open: 9.3 (the pick, after the re-capture) and 9.5 (the close
+  figures). Records only, no product change.
 - **2026-11-11 · M13 TASK 8.1k — CLOSED: part 2 landed ("Untitled section").** HUMAN RULING, verbatim: "approve
   "Untitled section" (drop "(H1 #3)"), as in toc-after-*.png". `src/render/tocModel.ts`'s `labelFor` returns
   "Untitled section" for a heading with no text (the ordinal parameter removed). Red first: `tocModel.test.ts` (the four

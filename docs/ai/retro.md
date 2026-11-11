@@ -88,6 +88,11 @@
   Proposed for the human: engine-only human checks in the group that needs them (3); a test pinning claim-bearing
   in-app strings to their state (C). Carried: the flake read with `gh` (2). Kept: the census before a chrome move (B);
   the mock before code, with the font named (A).
+  **★ 2026-11-11 — BOTH PROPOSALS ADOPTED FOR M14+ (HUMAN RULING: "Retro proposals (a) and (b): YES to both").**
+  (a) Engine-only human checks happen in the group that needs them, and only the final look is left for the end.
+  (b) A claim-bearing in-app string gets a test that pins it to the state it is shown in. Both are placed in
+  `WORKFLOW.md` or `AGENTS.md` at M14's start (`decisions.md`, "M13 — THE RETRO'S TWO PROPOSALS ADOPTED FOR M14+").
+  That entry flags one question for the placement: whether (b) also ledgers the string or only pins it.
   **THE NUMBERS** are 9.5's (the byte ledger decomposed against the 1,509,173 / 1,509,057 B starting headroom). At
   this writing: `.output` 6,645,510 B (Cr) / 6,645,366 B (Fx) of 7,340,032; content script 345,049 B; unit 1,678.
   Metrics: tasks=51 (40 + 11 discovered) · commits=89 · first-try verification pass=no — CI went red after local

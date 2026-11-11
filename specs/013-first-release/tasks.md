@@ -1138,7 +1138,7 @@ human's, after 8.1 and group 9 (`docs/store/GO-LIVE.md`, section 0).
 *Short check-in sessions; tree and background processes confirmed clean before each (WORKFLOW §7.4). Every item needs a
 loaded extension and has NO agent substitute (AGENTS.md).*
 
-- [ ] **8.1 ★ HUMAN-ONLY design walk, from fresh production builds of both engines.** Agent prep (not the walk): clean
+- [x] **8.1 ★ HUMAN-ONLY design walk, from fresh production builds of both engines.** Agent prep (not the walk): clean
       `pnpm build` and the Firefox build, zips, the checklist table filled with surfaces and blank verdicts. **The walk:**
       every surface (spec §3.6) × light / dark × Chromium / Firefox × 1440 / 1280 / 1080 / 414 — "matches", "differs by
       ruling" (with the ruling) or "fix"; the toolbar judged against **`design/toolbar-mock.html`**, not `mockup.html`
@@ -1168,6 +1168,12 @@ loaded extension and has NO agent substitute (AGENTS.md).*
       surface (36) with per-cell exceptions; 17 surfaces walked on Chromium by the notes, 19 not; Firefox's current build
       not yet walked. Fixes from the walk so far: 8.1a, 8.1b, 8.1c, 8.1d, 8.1e, 8.1f, 8.1g, 8.1h, 8.1i (walk D), 8.1j (III-3), and 9.2b / 9.3c from its Firefox
       items.
+      ★ *2026-11-11 (CLOSED; `decisions.md`, "M13 TASK 8.1 — CLOSED"; HUMAN RULING, the ten dispositions):* every
+      live item, all 36 surfaces and every pending list has its own verdict (`walk-8.1.md`). I-4 (the icon) and III-6
+      (focus) are the human's verdicts from walk A6 / A7 / C16, 2026-11-10, never banked until now. Brave is accepted by
+      name from Chrome + Edge; I-6 and I-7's remainders are accepted as tested only. Fixes: 8.1a–8.1k, 9.2b, 9.3c, 9.3d,
+      all landed. Pending lists: both EMPTY (IV-1, IV-2). Golden EMPTY (no change under `tests/golden/` since M12's close, `14f20d7`)
+      · `permissions: []`, no host or optional permissions (both built manifests), read 2026-11-11.*
 - [x] **8.1a The exported HTML prints whole (WALK FIX, 8.1 item I-9; the human: the export "gets cut off at the
       middle").** `translateReaderStylesheet` wrote `@media${condition}` with the condition trimmed, so `@media print`
       and `@media screen and (max-width:1280px)` came out as `@mediaprint` / `@mediascreen …` — unknown at-rules, dropped.
