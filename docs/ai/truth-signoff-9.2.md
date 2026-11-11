@@ -12,7 +12,7 @@
 - **Auto-pinned: 364 rows**, counted per surface below and not listed: backed by a test, a code path or a record, and unchanged since you
   last saw them. 66 of these are headings or labels that make no claim.
 - **Flagged: 56 entries** (the CC flag column is not "—").
-- **Not in this pack:** 58 withdrawn rows on these surfaces (not published); REPRODUCING (22 rows) and
+- **Not in this pack:** 60 withdrawn rows on these surfaces (not published); REPRODUCING (22 rows) and
   SOURCE_CODE_REVIEW (11 rows), which are outside 9.2's read list and were checked sentence by sentence by the
   agent at the 9.2 prep; in-app notes (the drag and picker notes), which are "checked, not ledgered" by your 9.2 ruling and
   belong to the walk.
@@ -28,11 +28,11 @@
 | PRIVACY.md (+ site privacy page) | 35 | 6 | 29 (0) | 0 |
 | Setup guide | 38 | 21 | 17 (3) | 1 |
 | Website | 185 | 38 | 147 (63) | 37 |
-| README | 47 | 15 | 32 (0) | 14 |
+| README | 46 | 14 | 32 (0) | 15 |
 | CHANGELOG | 29 | 7 | 22 (0) | 0 |
-| SECURITY.md | 16 | 5 | 11 (0) | 6 |
+| SECURITY.md | 15 | 4 | 11 (0) | 7 |
 | THREAT-MODEL.md | 33 | 8 | 25 (0) | 0 |
-| **Total** | **501** | **137** | **364 (66)** | **58** |
+| **Total** | **499** | **135** | **364 (66)** | **60** |
 | PERMISSIONS.md (not ledgered) | — | 5 passages | pinned by `permissionsLedger.test.ts` | — |
 
 **"Changed since the last human review"** means changed after the 9.2 prep commit `5ac0112` (2026-11-07): by walk fixes
@@ -75,7 +75,7 @@ A bare "9.2 signed off" means every row stands as written, every flag included.
 ## Recorded so far (2026-11-11)
 
 Your words: "batch 1 and flags: as you suggest", then "as you suggest" on the copy drafts and batch 2. Banked in
-`docs/ai/decisions.md` ("M13 TASK 9.2 — batch 1 and the flags", "M13 TASK 9.2 — the copy", "M13 TASK 9.2 — batch 2", "M13 TASK 9.2 — batch 3", "M13 TASK 9.2 — batch 4").
+`docs/ai/decisions.md` ("M13 TASK 9.2 — batch 1 and the flags", "M13 TASK 9.2 — the copy", "M13 TASK 9.2 — batch 2", "M13 TASK 9.2 — batch 3", "M13 TASK 9.2 — batch 4", "M13 TASK 9.2 — go-live tense and batch 5").
 The **Status** column of each table says what was recorded. A row with no status is still open.
 
 - **Batch 1:** every row is OK (your verdicts are in the table, and in the ledger's evidence column).
@@ -88,7 +88,9 @@ The **Status** column of each table says what was recorded. A row with no status
   The next section lists each draft with its outcome.
 - **Batch 3:** every row is OK; the Edge category and data-usage line are checked at submission (GO-LIVE 6.3, 6.2).
 - **Batch 4:** every row is OK; 373 re-worded by your copy approval (no "once it is public"; linked).
-- **Still open:** batches 5a–11 as reading batches. The rows above that carry a status are already settled.
+- **Batches 5a / 5b:** every row is OK, with the walk or measurement named in each Status cell.
+- **Go-live tense (copy, 2026-11-11):** SECURITY 47 cut, 48 / 339 re-worded; README 36 withdrawn; site 434 re-worded.
+- **Still open:** batches 6–11 as reading batches. The rows above that carry a status are already settled.
 
 ## The copy drafts and what landed
 
@@ -171,17 +173,17 @@ Opens on install, so this is the first Peekover page a Chrome or Edge user sees.
 
 | Row | Published sentence | Where | Evidence | Changed since review | CC flag | Status |
 |---|---|---|---|---|---|---|
-| 295 | Files on your computer need a browser setting. | Section "Files on your computer", lead | Chromium branch; PERMISSIONS.md's file:// note. | Re-worded 2026-11-11 (C-6) | Resolved by C-6: "a browser setting". | C-6 LANDED (red-first pin). |
-| 297 | Peekover can read files on your computer: “Allow access to file URLs” is on. | "On" state | Shown only when the file-URL answer is true and (since 8.1f) site access holds the file:// matches. | Evidence changed at 8.1f | — |  |
-| 586 | Peekover can’t read files on your computer yet: its site access for file:///* is turned off. | "Blocked" state (new) | Chromium: the file-URL answer is true but permissions.contains is false. Measured on Chrome 157. | Added 8.1f | — |  |
-| 587 | Under site access, turn on file:///* (in Chrome and Edge: “Automatically allow access on the following sites”). | "Blocked" state, step 2 (new) | The labels on Peekover's Details page, Chrome 157. | Added 8.1f | Label read on Chrome 157 only; the floor is 121. | Done 2026-11-11 (evidence only, not a verdict on copy): ACCEPTED RISK (flag 8): Chrome 121 cannot be obtained. |
-| 592 | If site access for file:///* is off, turn it on too (in Chrome and Edge: “Automatically allow access on the following sites”). | "Off" / "unknown" state, step 2 (new) | With the file-URL toggle off the browser reports file sites as not allowed, so the line is conditional. | Added 8.1f, made conditional at 8.1g | — |  |
-| 305 | Raw markdown files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket are shown with no setup. | Section "Raw files on the web" | Content-script matches. Replaced by 588 when site access for a raw host is off. | Evidence changed at 8.1f | — |  |
-| 588 | Peekover can’t show raw markdown files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket yet: its site access for at least one of them is turned off. | Section "Raw files on the web", off state (new) | permissions.contains over the four raw-host matches is false. Measured on Chrome 157. | Added 8.1f | — |  |
-| 589 | Turn them on under site access in Peekover’s details on your browser’s extensions page. | Same, the step (new) | The per-site rows on Peekover's Details page, Chrome 157. | Added 8.1f | — |  |
-| 306 | To read files on your computer in Chrome or Edge, turn on “Allow access to file URLs” for Peekover on your browser’s extensions page. | Page-failed fallback | entrypoints/onboarding/main.ts; its Firefox half is now row 585. | Evidence changed at 9.2b | — |  |
-| 302 | Turn on “Allow access to file URLs”. | Steps, "Turn on …" | The toggle label, read on Chromium 149 at 6.1. "Other Chromium browsers walked at 8.1." | unchanged | Was the label checked on Edge in walk notes E1–E4? If not, the "walked at 8.1" evidence is still owed. |  |
-| 303 | Your browser may restart Peekover and close this page. | Steps, the restart warning | Flipping the toggle closed the page on Chromium 149 (a command-line install). The evidence also says "a store install walked at 8.1". | unchanged | EVIDENCE OVERSTATED: no store install exists before go-live, so the walk can only see a Load-unpacked install. The sentence is hedged ("may") and true. | Done 2026-11-11 (evidence only, not a verdict on copy): unpacked install walked (8.1); store install checked at go-live (GO-LIVE 8.3). |
+| 295 | Files on your computer need a browser setting. | Section "Files on your computer", lead | Chromium branch; PERMISSIONS.md's file:// note. | Re-worded 2026-11-11 (C-6) | Resolved by C-6: "a browser setting". | HUMAN 2026-11-11: OK (C-6 landed). |
+| 297 | Peekover can read files on your computer: “Allow access to file URLs” is on. | "On" state | Shown only when the file-URL answer is true and (since 8.1f) site access holds the file:// matches. | Evidence changed at 8.1f | — | HUMAN 2026-11-11: OK |
+| 586 | Peekover can’t read files on your computer yet: its site access for file:///* is turned off. | "Blocked" state (new) | Chromium: the file-URL answer is true but permissions.contains is false. Measured on Chrome 157. | Added 8.1f | — | HUMAN 2026-11-11: OK; read on the built page (walk A4 screenshot, Chrome 157, 2026-11-10). |
+| 587 | Under site access, turn on file:///* (in Chrome and Edge: “Automatically allow access on the following sites”). | "Blocked" state, step 2 (new) | The labels on Peekover's Details page, Chrome 157. | Added 8.1f | Label read on Chrome 157 only; the floor is 121. | HUMAN 2026-11-11: OK; walk A4 (Chrome 157); wording widened to "in Chrome and Edge" (8.1g); Edge label measured by CC, B10 (a), Edge 157. Floor 121 stays an accepted risk. |
+| 592 | If site access for file:///* is off, turn it on too (in Chrome and Edge: “Automatically allow access on the following sites”). | "Off" / "unknown" state, step 2 (new) | With the file-URL toggle off the browser reports file sites as not allowed, so the line is conditional. | Added 8.1f, made conditional at 8.1g | — | HUMAN 2026-11-11: OK; the human's 8.1g re-check (Chrome). |
+| 305 | Raw markdown files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket are shown with no setup. | Section "Raw files on the web" | Content-script matches. Replaced by 588 when site access for a raw host is off. | Evidence changed at 8.1f | — | HUMAN 2026-11-11: OK |
+| 588 | Peekover can’t show raw markdown files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket yet: its site access for at least one of them is turned off. | Section "Raw files on the web", off state (new) | permissions.contains over the four raw-host matches is false. Measured on Chrome 157. | Added 8.1f | — | HUMAN 2026-11-11: OK; read on the built page (walk A4, Chrome 157). |
+| 589 | Turn them on under site access in Peekover’s details on your browser’s extensions page. | Same, the step (new) | The per-site rows on Peekover's Details page, Chrome 157. | Added 8.1f | — | HUMAN 2026-11-11: OK; read on the built page (walk A4, Chrome 157). |
+| 306 | To read files on your computer in Chrome or Edge, turn on “Allow access to file URLs” for Peekover on your browser’s extensions page. | Page-failed fallback | entrypoints/onboarding/main.ts; its Firefox half is now row 585. | Evidence changed at 9.2b | — | HUMAN 2026-11-11: OK |
+| 302 | Turn on “Allow access to file URLs”. | Steps, "Turn on …" | The toggle label, read on Chromium 149 at 6.1. "Other Chromium browsers walked at 8.1." | unchanged | Was the label checked on Edge in walk notes E1–E4? If not, the "walked at 8.1" evidence is still owed. | HUMAN 2026-11-11: OK; the label on Chrome (walk A4) and on Edge 157 (CC, B10 (a)); walk I-2 notes the Edge item covered. |
+| 303 | Your browser may restart Peekover and close this page. | Steps, the restart warning | Flipping the toggle closed the page on Chromium 149 (a command-line install). The evidence also says "a store install walked at 8.1". | unchanged | EVIDENCE OVERSTATED: no store install exists before go-live, so the walk can only see a Load-unpacked install. The sentence is hedged ("may") and true. | HUMAN 2026-11-11: OK; store install checked at GO-LIVE 8.3. |
 
 ## Batch 5b — The setup guide, Firefox build
 
@@ -189,20 +191,20 @@ The Firefox branch was added at 9.2b (your approval "exactly as drafted", 2026-1
 
 | Row | Published sentence | Where | Evidence | Changed since review | CC flag | Status |
 |---|---|---|---|---|---|---|
-| 296 | Files on your computer need one Firefox setting. | Section "Files on your computer", lead | Firefox 153+: local-file access is a separate setting, off by default. Pinned by the onboarding unit and browser tests. | Re-worded at 9.2b (was "nothing needs setting up") | — | HUMAN 2026-11-11: no change (C-6b). |
-| 304 | Peekover can read files on your computer: “Access local files on your computer” is on. | "On" state | Shown when isAllowedFileSchemeAccess() answers true. | Re-worded at 9.2b | — |  |
-| 580 | Peekover can’t read files on your computer yet: “Access local files on your computer” is off. | "Off" state (new) | Shown when the answer is false. | Added 9.2b | — |  |
-| 581 | Open about:addons (type it in the address bar) and choose Peekover. | Step 1 (new) | An extension cannot open about:addons, so the step names it (no button). | Added 9.2b | — |  |
-| 582 | Open the Permissions and data tab. | Step 2 (new) | The tab's name on Firefox 159 (screenshot in the AMO kit's step-11 evidence). | Added 9.2b | Label read on 159 only; the floor is 153. Was the tab called "Permissions and data" in 153? | Done 2026-11-11 (evidence only, not a verdict on copy): ACCEPTED RISK (flag 8): only a human can read about:addons on Firefox 153. |
-| 583 | Turn on “Access local files on your computer”. | Step 3, off (new) | The toggle's label on Firefox 159 (string id webext-perms-host-description-file-urls). | Added 9.2b | Same 153-vs-159 question as 582. | Done 2026-11-11 (evidence only, not a verdict on copy): ACCEPTED RISK (flag 8), as 582. |
-| 584 | Check that “Access local files on your computer” is on. | Step 3, check failed (new) | HUMAN RULING 2026-11-10, approved as drafted. | Added 9.2b | — |  |
-| 585 | In Firefox, turn on “Access local files on your computer” under Peekover’s Permissions and data in about:addons. | Page-failed fallback, Firefox half (new) | As 26. | Added 9.2b | — |  |
-| 590 | Peekover can’t show raw markdown files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket yet: its permission for at least one of them is turned off. | Section "Raw files on the web", off state (new) | Measured on Firefox 159 (one host revoked through permissions.remove). | Added 8.1f | — |  |
-| 591 | Turn them on under Peekover’s Permissions and data in about:addons. | Same, the step (new) | The raw-site entries listed on that tab, Firefox 159. | Added 8.1f | — |  |
+| 296 | Files on your computer need one Firefox setting. | Section "Files on your computer", lead | Firefox 153+: local-file access is a separate setting, off by default. Pinned by the onboarding unit and browser tests. | Re-worded at 9.2b (was "nothing needs setting up") | — | HUMAN 2026-11-11: OK (C-6b, no change). |
+| 304 | Peekover can read files on your computer: “Access local files on your computer” is on. | "On" state | Shown when isAllowedFileSchemeAccess() answers true. | Re-worded at 9.2b | — | HUMAN 2026-11-11: OK |
+| 580 | Peekover can’t read files on your computer yet: “Access local files on your computer” is off. | "Off" state (new) | Shown when the answer is false. | Added 9.2b | — | HUMAN 2026-11-11: OK; walk C12 screenshots of the built Firefox guide (Firefox 159, temporary add-on, 2026-11-10). |
+| 581 | Open about:addons (type it in the address bar) and choose Peekover. | Step 1 (new) | An extension cannot open about:addons, so the step names it (no button). | Added 9.2b | — | HUMAN 2026-11-11: OK; walk C12 (Firefox 159). |
+| 582 | Open the Permissions and data tab. | Step 2 (new) | The tab's name on Firefox 159 (screenshot in the AMO kit's step-11 evidence). | Added 9.2b | Label read on 159 only; the floor is 153. Was the tab called "Permissions and data" in 153? | HUMAN 2026-11-11: OK; walk C12 (Firefox 159). Floor 153 stays an accepted risk. |
+| 583 | Turn on “Access local files on your computer”. | Step 3, off (new) | The toggle's label on Firefox 159 (string id webext-perms-host-description-file-urls). | Added 9.2b | Same 153-vs-159 question as 582. | HUMAN 2026-11-11: OK; walk C12 (Firefox 159). Floor 153 stays an accepted risk. |
+| 584 | Check that “Access local files on your computer” is on. | Step 3, check failed (new) | HUMAN RULING 2026-11-10, approved as drafted. | Added 9.2b | — | HUMAN 2026-11-11: OK; walk C12 (Firefox 159). |
+| 585 | In Firefox, turn on “Access local files on your computer” under Peekover’s Permissions and data in about:addons. | Page-failed fallback, Firefox half (new) | As 26. | Added 9.2b | — | HUMAN 2026-11-11: OK |
+| 590 | Peekover can’t show raw markdown files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket yet: its permission for at least one of them is turned off. | Section "Raw files on the web", off state (new) | Measured on Firefox 159 (one host revoked through permissions.remove). | Added 8.1f | — | HUMAN 2026-11-11: OK; CC's Firefox 159 measurement (8.1f). |
+| 591 | Turn them on under Peekover’s Permissions and data in about:addons. | Same, the step (new) | The raw-site entries listed on that tab, Firefox 159. | Added 8.1f | — | HUMAN 2026-11-11: OK; CC's Firefox 159 measurement (8.1f). |
 
 ## Batch 6 — The website (`site/index.html`)
 
-No sentence on the site has changed since you approved it at 9.1. Its only change since then is one colour token (8.1j, `--faint`). The rows below are here for their evidence or their flags.
+Before 9.2, no sentence on the site had changed since you approved it at 9.1 (only a colour token, 8.1j `--faint`). On 2026-11-11 your copy approvals changed two: 183 (C-1) and 434 (the go-live tense). Both were checked at 414 px. The other rows are here for their evidence or their flags.
 
 | Row | Published sentence | Where | Evidence | Changed since review | CC flag | Status |
 |---|---|---|---|---|---|---|
@@ -215,8 +217,8 @@ No sentence on the site has changed since you approved it at 9.1. Its only chang
 | 77 | Coding agents write CLAUDE.md files, specs, plans and changelogs faster than anyone can read them raw. | "For agent output" section | The problem the product addresses, not a product claim (product spec §3). | unchanged | Rhetoric ("faster than anyone can read them raw"). Fine as framing? |  |
 | 138 (+ 71, 136, 137, 154) | There is no backend, no database and no account. | Security section; hero strip; receipt | "No backend exists in the repository", an absence checked by reading, not by a test. | unchanged | ABSOLUTE ("no backend, no database and no account"). | ABSOLUTE OK (HUMAN 2026-11-11, flag 9) |
 | 172 (+ 145, 153, 158, 160, 173, 176, 188) | No price, no tiers No “Pro” version, no locked features, no trials. | "Free means free" section; receipt | AGENTS.md rule 6, a project rule rather than a test. | unchanged | ABSOLUTE ("no locked features", "Price $0"). True by your own rule. | ABSOLUTE OK (HUMAN 2026-11-11, flag 9) |
-| 161 (+ 179, 180, 181) | Not in stores yet — build from source | Hero, receipt footer, Setup "Build" | "Not in stores yet": no listing exists. Each carries UPDATE AT GO-LIVE. | unchanged | True today, false the day a listing goes live. GO-LIVE section 3 must swap them. |  |
-| 434 (+ 63, 64, 70, 187, 196, 197, 198, 199, 200, 554) | For the first public release: listings in the Chrome, Firefox and Edge stores; attestations on release files; a privacy policy at https://peekover.dev/privacy/ and this website at https://peekover.dev, neither online yet. / GitHub (https://github.com/mosuvo/peekover) Not in stores yet — build from source / Agent output Reading Editor Security Planned GitHub (https://github.com/mosuvo/peekover) / Not in stores yet — build from source Build it from the repository (https://github.com/mosuvo/peekover#build-from-source) See everything ↓ / Not in stores yet — build from source GitHub (https://github.com/mosuvo/peekover) / github.com/mosuvo/peekover (https://github.com/mosuvo/peekover) / SECURITY.md (https://github.com/mosuvo/peekover/blob/main/docs/trust/SECURITY.md) / PERMISSIONS.md (https://github.com/mosuvo/peekover/blob/main/docs/trust/PERMISSIONS.md) / Releases (https://github.com/mosuvo/peekover/releases) / Report a bug (https://github.com/mosuvo/peekover/issues) / The same text is in the repository as docs/trust/PRIVACY.md (https://github.com/mosuvo/peekover/blob/main/docs/trust/PRIVACY.md). | Planned section, nav, footer links, privacy page | Live at release: the repository and peekover.dev are not public yet. | live at release / planned — unchanged | The repo links 404 for visitors today (private repo). |  |
+| 161 (+ 179, 180, 181) | Not in stores yet — build from source | Hero, receipt footer, Setup "Build" | "Not in stores yet": no listing exists. Each carries UPDATE AT GO-LIVE. | unchanged | True today, false the day a listing goes live. GO-LIVE 8.2 swaps them for the store links. |  |
+| 434 (+ 63, 64, 70, 187, 196, 197, 198, 199, 200, 554) | For the first public release: listings in the Chrome, Firefox and Edge stores, and attestations on release files. / GitHub (https://github.com/mosuvo/peekover) Not in stores yet — build from source / Agent output Reading Editor Security Planned GitHub (https://github.com/mosuvo/peekover) / Not in stores yet — build from source Build it from the repository (https://github.com/mosuvo/peekover#build-from-source) See everything ↓ / Not in stores yet — build from source GitHub (https://github.com/mosuvo/peekover) / github.com/mosuvo/peekover (https://github.com/mosuvo/peekover) / SECURITY.md (https://github.com/mosuvo/peekover/blob/main/docs/trust/SECURITY.md) / PERMISSIONS.md (https://github.com/mosuvo/peekover/blob/main/docs/trust/PERMISSIONS.md) / Releases (https://github.com/mosuvo/peekover/releases) / Report a bug (https://github.com/mosuvo/peekover/issues) / The same text is in the repository as docs/trust/PRIVACY.md (https://github.com/mosuvo/peekover/blob/main/docs/trust/PRIVACY.md). | Planned section, nav, footer links, privacy page | Live at release: the repository and peekover.dev are not public yet. | live at release / planned — unchanged | The repo links 404 for visitors today (private repo). | Row 434 re-worded 2026-11-11 (copy approval; now planned, no URL). The rest: your batch 6 read. |
 | 129 (+ 130, 132) | PLANNED / Not built yet. / Later, not yet scheduled: on-device and bring-your-own-key AI features, DOCX and ZIP export, publishing, presentation mode, read-aloud, and other raw file types such as JSON, YAML, TOML and CSV. | Planned section | Planned (tasks 7.4 / 7.5; spec §6 out of scope). | live at release / planned — unchanged | — |  |
 
 ## Batch 7 — README (`README.md`)
@@ -233,7 +235,7 @@ Seen once the repository is public. Its only edit since the 9.2 prep is row 26.
 | 41 | To load it in Chrome or Edge, turn on Developer mode on the extensions page and choose "Load unpacked" with .output/chrome-mv3. | Build from source | The browser's own Load-unpacked flow. "Walked by the human at 8.1": the Chrome walk notes (1–15) were loaded this way. | unchanged | — |  |
 | 42 | To load it in Firefox, open about:debugging, choose "This Firefox", then "Load Temporary Add-on", and pick .output/firefox-mv3/manifest.json. | Build from source | The browser's own temporary add-on flow. "Walked by the human at 8.1". | unchanged | EVIDENCE NOT YET TRUE: tasks.md 8.1 says "Firefox's current build not yet walked". Walk section C (Load Temporary Add-on) is what makes it true. | Done 2026-11-11 (evidence only, not a verdict on copy): cites your walk of the temporary add-on, C12–C16, 2026-11-10 (flag 5). |
 | 45 | It is free: there is no price, no paid tier and no ads. | Licence | AGENTS.md rule 6. | unchanged | ABSOLUTE, as the site's free rows. | ABSOLUTE OK (HUMAN 2026-11-11, flag 9) |
-| 4 (+ 32, 33, 36, 37, 38, 432) | Peekover is not in any browser store yet. | "Not in any store yet"; Planned list | True until go-live; planned items named by tasks / spec §6. | live at release / planned — unchanged | 4 flips at go-live (GO-LIVE section 3). |  |
+| 4 (+ 32, 33, 36, 37, 38, 432) | Peekover is not in any browser store yet. | "Not in any store yet"; Planned list | True until go-live; planned items named by tasks / spec §6. | live at release / planned — unchanged | 4 flips at go-live (GO-LIVE section 3). | Row 36 WITHDRAWN 2026-11-11 (copy approval: the privacy-policy / website item left "Planned"). The rest: your batch 7 read. |
 
 ## Batch 8 — CHANGELOG (`CHANGELOG.md`, "0.1.0 - Unreleased")
 
@@ -267,7 +269,7 @@ No edit since the 9.2 prep.
 
 | Row | Published sentence | Where | Evidence | Changed since review | CC flag | Status |
 |---|---|---|---|---|---|---|
-| 46 (+ 47, 48) | Report security problems through GitHub private vulnerability reporting on this repository. / That channel opens when the repository becomes public at the first release; until then the repository is private. / For anything that is not a security problem, open a GitHub issue once the repository is public. | Reporting | Private vulnerability reporting and issues open when the repository goes public (GO-LIVE turns them on). | live at release / planned — unchanged | No response-time promise is made, by design. |  |
+| 46 (+ 47, 48) | Report security problems through GitHub private vulnerability reporting on this repository. / That channel opens when the repository becomes public at the first release; until then the repository is private. / For anything that is not a security problem, open a GitHub issue (https://github.com/mosuvo/peekover/issues). | Reporting | Private vulnerability reporting and issues open when the repository goes public (GO-LIVE turns them on). | live at release / planned — unchanged | No response-time promise is made, by design. | Row 47 CUT and row 48 re-worded (linked to the issues page) 2026-11-11, copy approval. The rest: your batch 10 read. |
 | 55 | CI fails on a known advisory in the production dependencies, except one recorded exception in a dependency of the diagram library. | What CI checks | supply-chain.yml (`pnpm audit --prod --audit-level low`); package.json has exactly one ignoreGhsas entry, GHSA-238p-pmpm-9mq7 (checked today). | unchanged | "one recorded exception" is still one. Whether it is still needed is the next preflight's `pnpm audit --prod`; this prep did not run it. |  |
 | 59 | Build attestations on release files. | Planned | release.yml: the attest job runs only for a public repository. | live at release / planned — unchanged | — |  |
 

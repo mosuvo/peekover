@@ -1,6 +1,18 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.2 — batch 5 (the setup guide, both builds), records.** HUMAN RULING ("as the reviewer
+  suggested"): 5a and 5b all OK, with this evidence, now in each row of `docs/store/claims.md` and the pack's Status:
+  - **5a:** 586 / 588 / 589: the human read them on the built page (walk A4 screenshot, Chrome 157, 2026-11-10). 587:
+    the same, its wording since widened to "in Chrome and Edge" (8.1g copy), and the Edge label measured by CC (B10 (a),
+    Edge 157). 592: the human's 8.1g re-check (Chrome). 302: the label on Chrome (A4) and on Edge 157 (B10 (a)).
+    `walk-8.1.md` I-2 now says its Edge label item is covered by that measurement. 295, 297, 305, 306, 303: OK.
+  - **5b:** 580–584: the human's walk C12 screenshots of the built Firefox guide (off state, four steps, then "on"),
+    Firefox 159, temporary add-on, 2026-11-10. The shots are the human's statement; they are not filed in `walk-8.1.md`.
+    296, 304, 585: OK. 590 / 591: CC's Firefox 159 measurement (8.1f).
+  - The floor-version labels (587 on Chrome 121; 582 / 583 on Firefox 153) stay the accepted risk recorded under flag 8.
+    Batches 6–11 are still open.
+
 - **2026-11-11 · M13 TASK 9.2 — go-live tense and batch 5 (copy).** HUMAN COPY APPROVAL ("as the reviewer suggested"):
   - **SECURITY.md:** row 47 cut ("That channel opens when … the repository is private."); row 48 now "For anything that
     is not a security problem, open a [GitHub issue](https://github.com/mosuvo/peekover/issues).", linked like 373; row
