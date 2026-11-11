@@ -48,6 +48,12 @@
  * page on its own: readerMode.ts writes 'edit' only from enterEditMode, after the edit view is
  * built, and its setReaderMode turns a carried 'edit' back into 'reading'. Rationale for rules
  * in this file belongs up here — a comment inside the template literal ships as bytes.
+ *
+ * A BLOCK INSIDE A QUOTE LOOKS LIKE THE SAME BLOCK AT THE TOP LEVEL (M13 walk fix 8.1k). The
+ * quote's italic and muted colour are for its prose; they were inherited by every block nested in
+ * it — a fence (and on the tab surface, which has no highlighter, its text colour too), a table,
+ * the table tools, a diagram, math. The rule after the blockquote rule resets exactly those blocks
+ * to the top-level values, at any depth (a quote in a list in a quote still matches).
  */
 export const READER_CSS = /* css */ `
 /* ============ Design tokens (design/tokens.css — verbatim) ============ */
@@ -182,6 +188,7 @@ export const READER_CSS = /* css */ `
   color:var(--muted);font-style:italic;
 }
 .peekover-reader blockquote p:last-child{margin-bottom:0}
+.peekover-reader blockquote :is(pre,table,.peekover-code,.peekover-table-tools,.peekover-diagram,.peekover-math){font-style:normal;color:var(--ink)}
 
 /* ---- code ---- */
 .peekover-reader code{
