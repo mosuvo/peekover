@@ -75,7 +75,7 @@ A bare "9.2 signed off" means every row stands as written, every flag included.
 ## Recorded so far (2026-11-11)
 
 Your words: "batch 1 and flags: as you suggest", then "as you suggest" on the copy drafts and batch 2. Banked in
-`docs/ai/decisions.md` ("M13 TASK 9.2 — batch 1 and the flags", "M13 TASK 9.2 — the copy", "M13 TASK 9.2 — batch 2", "M13 TASK 9.2 — batch 3", "M13 TASK 9.2 — batch 4", "M13 TASK 9.2 — go-live tense and batch 5", "M13 TASK 9.2 — batch 6").
+`docs/ai/decisions.md` ("M13 TASK 9.2 — batch 1 and the flags", "M13 TASK 9.2 — the copy", "M13 TASK 9.2 — batch 2", "M13 TASK 9.2 — batch 3", "M13 TASK 9.2 — batch 4", "M13 TASK 9.2 — go-live tense and batch 5", "M13 TASK 9.2 — batch 6", "M13 TASK 9.2 — batches 7 and 8").
 The **Status** column of each table says what was recorded. A row with no status is still open.
 
 - **Batch 1:** every row is OK (your verdicts are in the table, and in the ledger's evidence column).
@@ -91,7 +91,8 @@ The **Status** column of each table says what was recorded. A row with no status
 - **Batches 5a / 5b:** every row is OK, with the walk or measurement named in each Status cell.
 - **Go-live tense (copy, 2026-11-11):** SECURITY 47 cut, 48 / 339 re-worded; README 36 withdrawn; site 434 re-worded.
 - **Batch 6:** every row is OK; row 110 now has a size guard (tests/extensionSize.test.ts, GO-LIVE 0.5).
-- **Still open:** batches 7–11 as reading batches. The rows above that carry a status are already settled.
+- **Batches 7 and 8:** every row is OK (22 / 331 as 457).
+- **Still open:** batches 9–11 as reading batches. The rows above that carry a status are already settled.
 
 ## The copy drafts and what landed
 
@@ -228,15 +229,15 @@ Seen once the repository is public. Edits since the 9.2 prep: row 26 (9.2b), and
 
 | Row | Published sentence | Where | Evidence | Changed since review | CC flag | Status |
 |---|---|---|---|---|---|---|
-| 26 | In Firefox, files opened from disk need one setting: "Access local files on your computer", under Peekover's Permissions and data in about:addons. | Limits | Measured on the AMO-signed 0.0.9, Firefox 159. The 153 floor is pinned by a test. | Re-worded at 9.2b (replaced "has not yet been checked on a real install") | — |  |
-| 25 | In Firefox, on the app page, watching works for a folder dragged in and isn't offered for one chosen with the folder picker. | Limits | watchAvailability + the drag browser test + your hand checks ("drag: works as tested", "picker: fresh"). | Re-worded 2026-11-11 (C-7a) | Resolved by C-7a: isn't offered. | C-7a LANDED. |
-| 2 | It works on markdown files opened from your own disk and on raw files from GitHub, GitLab and Bitbucket. | Intro, 2nd sentence | Content-script matches. Evidence still says "the Firefox half PENDING SIGNED INSTALL (9.2)". | unchanged | STALE EVIDENCE: closed at 9.2b. The Firefox caveat is row 26. | Done 2026-11-11 (evidence only, not a verdict on copy): cites the signed install (flag 4). |
-| 8 | Renders markdown files opened from disk (.md and similar extensions) and raw files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket. | Features | As 2. | unchanged | STALE EVIDENCE, as 2. | Done 2026-11-11 (evidence only, not a verdict on copy): cites the signed install (flag 4). |
-| 22 | In Chromium-based browsers such as Chrome and Edge, files opened from disk need the extension's "Allow access to file URLs" setting turned on. | Limits | PERMISSIONS.md's file:// note. | unchanged | As 457: site access (8.1f) can also block local files. |  |
-| 41 | To load it in Chrome or Edge, turn on Developer mode on the extensions page and choose "Load unpacked" with .output/chrome-mv3. | Build from source | The browser's own Load-unpacked flow. "Walked by the human at 8.1": the Chrome walk notes (1–15) were loaded this way. | unchanged | — |  |
-| 42 | To load it in Firefox, open about:debugging, choose "This Firefox", then "Load Temporary Add-on", and pick .output/firefox-mv3/manifest.json. | Build from source | The browser's own temporary add-on flow. "Walked by the human at 8.1". | unchanged | EVIDENCE NOT YET TRUE: tasks.md 8.1 says "Firefox's current build not yet walked". Walk section C (Load Temporary Add-on) is what makes it true. | Done 2026-11-11 (evidence only, not a verdict on copy): cites your walk of the temporary add-on, C12–C16, 2026-11-10 (flag 5). |
-| 45 | It is free: there is no price, no paid tier and no ads. | Licence | AGENTS.md rule 6. | unchanged | ABSOLUTE, as the site's free rows. | ABSOLUTE OK (HUMAN 2026-11-11, flag 9) |
-| 4 (+ 32, 33, 36, 37, 38, 432) | Peekover is not in any browser store yet. | "Not in any store yet"; Planned list | True until go-live; planned items named by tasks / spec §6. | live at release / planned — unchanged | 4 flips at go-live: GO-LIVE 8.2 swaps the README store lines for the store links. | Row 36 WITHDRAWN 2026-11-11 (copy approval: the privacy-policy / website item left "Planned"). The rest: your batch 7 read. |
+| 26 | In Firefox, files opened from disk need one setting: "Access local files on your computer", under Peekover's Permissions and data in about:addons. | Limits | Measured on the AMO-signed 0.0.9, Firefox 159. The 153 floor is pinned by a test. | Re-worded at 9.2b (replaced "has not yet been checked on a real install") | — | HUMAN 2026-11-11: OK |
+| 25 | In Firefox, on the app page, watching works for a folder dragged in and isn't offered for one chosen with the folder picker. | Limits | watchAvailability + the drag browser test + your hand checks ("drag: works as tested", "picker: fresh"). | Re-worded 2026-11-11 (C-7a) | Resolved by C-7a: isn't offered. | HUMAN 2026-11-11: OK (C-7a landed). |
+| 2 | It works on markdown files opened from your own disk and on raw files from GitHub, GitLab and Bitbucket. | Intro, 2nd sentence | Content-script matches. Evidence still says "the Firefox half PENDING SIGNED INSTALL (9.2)". | unchanged | STALE EVIDENCE: closed at 9.2b. The Firefox caveat is row 26. | HUMAN 2026-11-11: OK |
+| 8 | Renders markdown files opened from disk (.md and similar extensions) and raw files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket. | Features | As 2. | unchanged | STALE EVIDENCE, as 2. | HUMAN 2026-11-11: OK |
+| 22 | In Chromium-based browsers such as Chrome and Edge, files opened from disk need the extension's "Allow access to file URLs" setting turned on. | Limits | PERMISSIONS.md's file:// note. | unchanged | As 457: site access (8.1f) can also block local files. | HUMAN 2026-11-11: OK (as 457). |
+| 41 | To load it in Chrome or Edge, turn on Developer mode on the extensions page and choose "Load unpacked" with .output/chrome-mv3. | Build from source | The browser's own Load-unpacked flow. "Walked by the human at 8.1": the Chrome walk notes (1–15) were loaded this way. | unchanged | — | HUMAN 2026-11-11: OK |
+| 42 | To load it in Firefox, open about:debugging, choose "This Firefox", then "Load Temporary Add-on", and pick .output/firefox-mv3/manifest.json. | Build from source | The browser's own temporary add-on flow. "Walked by the human at 8.1". | unchanged | EVIDENCE NOT YET TRUE: tasks.md 8.1 says "Firefox's current build not yet walked". Walk section C (Load Temporary Add-on) is what makes it true. | HUMAN 2026-11-11: OK (walk C12–C16). |
+| 45 | It is free: there is no price, no paid tier and no ads. | Licence | AGENTS.md rule 6. | unchanged | ABSOLUTE, as the site's free rows. | HUMAN 2026-11-11: OK (flag 9). |
+| 4 (+ 32, 33, 36, 37, 38, 432) | Peekover is not in any browser store yet. | "Not in any store yet"; Planned list | True until go-live; planned items named by tasks / spec §6. | live at release / planned — unchanged | 4 flips at go-live: GO-LIVE 8.2 swaps the README store lines for the store links. | HUMAN 2026-11-11: OK (row 36 withdrawn earlier today by copy approval). |
 
 ## Batch 8 — CHANGELOG (`CHANGELOG.md`, "0.1.0 - Unreleased")
 
@@ -244,13 +245,13 @@ It mirrors the README. Edits since the 9.2 prep: rows 328 and 335 (9.2b), and on
 
 | Row | Published sentence | Where | Evidence | Changed since review | CC flag | Status |
 |---|---|---|---|---|---|---|
-| 328 | Needs Chrome 121 or later, or Firefox 153 or later. | Added | wxt.config.ts (Chrome 121, Firefox 153.0); browserFloor.test.ts (MDN data: isAllowedFileSchemeAccess is the binding feature). | Floor raised from 127 to 153 at 9.2b | — |  |
-| 335 | In Firefox, files opened from disk need one setting: "Access local files on your computer", under Peekover's Permissions and data in about:addons. | Known limits | As README 26. | Re-worded at 9.2b | — |  |
-| 334 | In Firefox, on the app page, watching works for a folder dragged in and isn't offered for one chosen with the folder picker. | Known limits | As README 25. | Re-worded 2026-11-11 (C-7a) | Resolved by C-7a. | C-7a LANDED. |
-| 312 | Renders markdown files opened from disk (`.md` and similar extensions) and raw files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket. | Added | As README 8. | unchanged | STALE EVIDENCE, as 2. | Done 2026-11-11 (evidence only, not a verdict on copy): cites the signed install (flag 4). |
-| 331 | In Chromium-based browsers such as Chrome and Edge, files opened from disk need the extension's "Allow access to file URLs" setting turned on. | Known limits | As README 22. | unchanged | As 457 (site access). |  |
-| 324 | On the app page, a Stored data panel lists what Peekover keeps on your device, except one small mark (that you closed the note about snapshots), and "Wipe all data" erases all of it. | Added | store.ts: no panel line for the notices row (your 6.2a choice; wording approved at 9.2). | Re-worded 2026-11-11 (C-7b, your variant) | Resolved by C-7b. | C-7b LANDED, the reviewer's variant. |
-| 325 | A setup guide opens once, when Peekover is first installed, and the app page links to it. | Added | background.ts (install only, at most once) + tests. "A store install is walked at 8.1". | unchanged | EVIDENCE OVERSTATED, as 303: no store install before go-live. The AMO-signed install did confirm it on Firefox ("opens once, not again": TRUE). | Done 2026-11-11 (evidence only, not a verdict on copy): unpacked install walked (8.1); store install checked at go-live (GO-LIVE 8.3). |
+| 328 | Needs Chrome 121 or later, or Firefox 153 or later. | Added | wxt.config.ts (Chrome 121, Firefox 153.0); browserFloor.test.ts (MDN data: isAllowedFileSchemeAccess is the binding feature). | Floor raised from 127 to 153 at 9.2b | — | HUMAN 2026-11-11: OK |
+| 335 | In Firefox, files opened from disk need one setting: "Access local files on your computer", under Peekover's Permissions and data in about:addons. | Known limits | As README 26. | Re-worded at 9.2b | — | HUMAN 2026-11-11: OK |
+| 334 | In Firefox, on the app page, watching works for a folder dragged in and isn't offered for one chosen with the folder picker. | Known limits | As README 25. | Re-worded 2026-11-11 (C-7a) | Resolved by C-7a. | HUMAN 2026-11-11: OK (C-7a landed). |
+| 312 | Renders markdown files opened from disk (`.md` and similar extensions) and raw files on raw.githubusercontent.com, gist.githubusercontent.com, GitLab and Bitbucket. | Added | As README 8. | unchanged | STALE EVIDENCE, as 2. | HUMAN 2026-11-11: OK |
+| 331 | In Chromium-based browsers such as Chrome and Edge, files opened from disk need the extension's "Allow access to file URLs" setting turned on. | Known limits | As README 22. | unchanged | As 457 (site access). | HUMAN 2026-11-11: OK (as 457). |
+| 324 | On the app page, a Stored data panel lists what Peekover keeps on your device, except one small mark (that you closed the note about snapshots), and "Wipe all data" erases all of it. | Added | store.ts: no panel line for the notices row (your 6.2a choice; wording approved at 9.2). | Re-worded 2026-11-11 (C-7b, your variant) | Resolved by C-7b. | HUMAN 2026-11-11: OK (C-7b landed). |
+| 325 | A setup guide opens once, when Peekover is first installed, and the app page links to it. | Added | background.ts (install only, at most once) + tests. "A store install is walked at 8.1". | unchanged | EVIDENCE OVERSTATED, as 303: no store install before go-live. The AMO-signed install did confirm it on Firefox ("opens once, not again": TRUE). | HUMAN 2026-11-11: OK; store install checked at GO-LIVE 8.3. |
 
 ## Batch 9 — PERMISSIONS.md (`docs/trust/PERMISSIONS.md`)
 
@@ -266,12 +267,12 @@ Not a ledger surface: `tests/permissionsLedger.test.ts` pins it instead, so its 
 
 ## Batch 10 — SECURITY.md (`docs/trust/SECURITY.md`)
 
-No edit since the 9.2 prep.
+Edits on 2026-11-11 (copy approval, the go-live tense): row 47 cut, row 48 linked to the issues page, row 339 ("The privacy policy, published at https://peekover.dev/privacy/.") re-worded. Row 339 is not listed below: before today it was test-pinned and counted auto.
 
 | Row | Published sentence | Where | Evidence | Changed since review | CC flag | Status |
 |---|---|---|---|---|---|---|
 | 46 (+ 47, 48) | Report security problems through GitHub private vulnerability reporting on this repository. / That channel opens when the repository becomes public at the first release; until then the repository is private. / For anything that is not a security problem, open a GitHub issue (https://github.com/mosuvo/peekover/issues). | Reporting | Private vulnerability reporting and issues open when the repository goes public (GO-LIVE turns them on). | live at release / planned — unchanged | No response-time promise is made, by design. | Row 47 CUT and row 48 re-worded (linked to the issues page) 2026-11-11, copy approval. The rest: your batch 10 read. |
-| 55 | CI fails on a known advisory in the production dependencies, except one recorded exception in a dependency of the diagram library. | What CI checks | supply-chain.yml (`pnpm audit --prod --audit-level low`); package.json has exactly one ignoreGhsas entry, GHSA-238p-pmpm-9mq7 (checked today). | unchanged | "one recorded exception" is still one. Whether it is still needed is the next preflight's `pnpm audit --prod`; this prep did not run it. |  |
+| 55 | CI fails on a known advisory in the production dependencies, except one recorded exception in a dependency of the diagram library. | What CI checks | supply-chain.yml (`pnpm audit --prod --audit-level low`); package.json has exactly one ignoreGhsas entry, GHSA-238p-pmpm-9mq7 (checked today). | unchanged | "one recorded exception" is still one, and still needed: `pnpm audit --prod` on 2026-11-11 found 1 low advisory, 1 ignored (exit 0). |  |
 | 59 | Build attestations on release files. | Planned | release.yml: the attest job runs only for a public repository. | live at release / planned — unchanged | — |  |
 
 ## Batch 11 — THREAT-MODEL.md (`docs/trust/THREAT-MODEL.md`)

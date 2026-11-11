@@ -1,6 +1,11 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.2 — batches 7 and 8 (README, CHANGELOG), records.** HUMAN RULING, verbatim: "7 + 8 — HUMAN
+  2026-11-11: all OK (22 / 331 as 457)." Every row in both batches is recorded OK in `docs/store/claims.md` and the
+  pack; 22 and 331 are OK as is, as 457 (true for a default install; restricted site access is handled by the guide).
+  Row 36 was withdrawn earlier today (go-live tense). Batches 9–11 are still open.
+
 - **2026-11-11 · M13 TASK 9.2 — batch 6 (the website), records; the size guard.** HUMAN RULING: "all OK. 183 OK (C-1,
   414 passed); 82 / 112 / 185 / 209 OK; 110 OK (6,659,446 B under 7,000,000; add a guard …); 77 OK (framing, not a
   product claim); 138 / 172 groups OK (flag 9); 161 group OK (GO-LIVE 8.2 swaps them); 434 link group OK, live at
