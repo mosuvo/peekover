@@ -34,16 +34,16 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/markdown-it": "^14.1.2",
-    "@vitest/browser-playwright": "4.1.10",
-    "eslint": "^10.7.0",
+    "@vitest/browser-playwright": "4.1.12",
+    "eslint": "^10.14.0",
     "jsdom": "^29.1.1",
-    "pdfjs-dist": "^6.3.289",
-    "playwright": "^1.61.1",
-    "tsx": "^4.23.1",
+    "pdfjs-dist": "^6.5.438",
+    "playwright": "^1.65.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.64.0",
-    "vitest": "^4.1.10",
-    "wxt": "^0.20.27"
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^4.1.12",
+    "wxt": "^0.21.5"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.2",
