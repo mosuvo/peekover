@@ -1,6 +1,33 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 9.2 — batch 1 and the flags (the reading pack, `docs/ai/truth-signoff-9.2.md`).** HUMAN
+  RULING, verbatim: **"batch 1 and flags: as you suggest"**. The instruction that went with it: record batch 1, make the
+  evidence-only fixes, draft the copy changes for approval. Local; not pushed. 9.2 stays open.
+  - **Batch 1 (Chrome listing), the human's words:** 436 OK (7.5 ruling kept); 437 OK ("by default" exact; remote images
+    the disclosed opt-in); 438 OK; 457 / 440 OK as is (true for a default install; restricted site access is handled by
+    the guide); 472 OK (remote image loads send nothing from the user's files); 473 OK (recent paths stay on device,
+    never sent); 474 OK; 463 / 464 / 465 / 466 / 475 OK, live at release (submit only after go-live). Each is recorded
+    in the row's evidence in `docs/store/claims.md` ("9.2 sign-off: …").
+  - **Evidence-only fixes (records, not verdicts on copy):** flag 4: rows 2, 8, 112, 185, 209, 312 and 482 cite the
+    signed install (AMO kit step 11; "the AMO-signed 0.0.9 on a real Firefox"; 9.2b) instead of "PENDING SIGNED
+    INSTALL" or "unchecked". Flag 5: row 42 cites the human's walk of the Firefox temporary add-on, C12–C16,
+    2026-11-10 (`walk-8.1.md` records the C13 and C14 findings; C12, C15 and C16 rest on the human's statement in this
+    ruling). Rows 303 and 325 and PERMISSIONS.md's install note read "unpacked install walked (8.1); store install
+    checked at go-live", with a new `GO-LIVE.md` step 8.3. Flag 6: row 110 re-measured at HEAD, both engines built from
+    `556990f`: `.output` 6,659,448 B (Chromium) / 6,659,434 B (Firefox), under 7 MB by 340,552 B. PERMISSIONS.md's
+    manifest bytes are now 864 / 978 B (the number change in published text approved by this ruling). Flag 8: `GO-LIVE.md`
+    6.2 (Edge row 549 against Edge's own form), 6.3 (the Edge category) and 6.4 (AMO's summary, 247 / 250, after any
+    edit). The setup-guide labels on the floor versions are an **ACCEPTED RISK** (rows 582, 583, 587): Chrome 121 has no
+    official download, and about:addons on Firefox 153 is out of the automation's reach (AGENTS.md), so only a human
+    could read it. Flag 9: every ABSOLUTE row is marked "ABSOLUTE OK (human 2026-11-11, backed by …)".
+  - **Drafted, NOT landed:** flags 1 (site setup step, 183; 82 recommended unchanged), 2 (PRIVACY 372), 3 (Firefox
+    listing 482), 6 (onboarding 295; 296 checked and accurate as is) and 7 (25 / 334 / 498; 324 / 363 with two options;
+    359). They are in the pack's "Drafts for your approval" table. C-6 is a production string, so it lands with the full
+    Verify.
+  - **Verify:** docs only, empty production diff. `pnpm lint` and `pnpm test` (truthPins, permissionsLedger) green;
+    browser suites not run (no production change, AGENTS.md).
+
 - **2026-11-11 · M13 — LINE ENDINGS CHECKED: a fresh Windows clone is LF; the sources zip reproduces from it.** Local; not
   pushed. Follows I-10's sources-zip difference (CI `641e1ba3…` vs a local zip).
   - **`.gitattributes` already pins LF** — `* text=auto eol=lf` (and `*.sh text eol=lf`), there since `3b71a8b` (task 1.1);

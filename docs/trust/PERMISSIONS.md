@@ -144,7 +144,7 @@ bundled asset.
 A second bundled extension page (`entrypoints/onboarding/`), like the app page: served from the
 extension's own origin, reached from the app page's **"Setup guide"** link (a new tab). It adds **no
 manifest key and no permission** — both built manifests are byte-identical before and after it
-(833 / 949 B, `permissions: []`, re-proven by `tests/manifest.test.ts`). What it uses, and why none of it
+(864 / 978 B, `permissions: []`, re-proven by `tests/manifest.test.ts`). What it uses, and why none of it
 needs a permission:
 - **`extension.isAllowedFileSchemeAccess()`** (both builds) — reads whether the user has turned on "Allow access to
   file URLs" (Chromium) or "Access local files on your computer" (Firefox 153+) for Peekover, so the page can say
@@ -179,11 +179,11 @@ extension update (`"update"`), a browser update (`"chrome_update"` in Chrome, `"
 Firefox) or a shared-module update (`"shared_module_update"`). **This adds no permission:** `onInstalled`
 needs none (Chrome's `runtime` reference names a permission only for native messaging), and
 `tabs.create` with the extension's **own** URL reads no tab field, like the toolbar action above.
-Nothing is fetched. Both built manifests are byte-identical before and after (833 / 949 B,
+Nothing is fetched. Both built manifests are byte-identical before and after (864 / 978 B,
 `permissions: []`); `tests/background.test.ts` runs the real background against a fake browser API
 and checks each reason. *Measured on a command-line-loaded Chromium 149 (`--load-extension`): every
 browser start reports `"install"` for such an install; a store install is expected to report it once —
-the 8.1 walk checks it.*
+unpacked install walked (8.1); store install checked at go-live (`docs/store/GO-LIVE.md`, step 8.3).*
 
 **At most once (task 6.2a).** So that the guide never opens twice whatever reason the browser reports,
 the listener opens it only if Peekover's own storage holds no "guide shown" mark, and stores the mark as

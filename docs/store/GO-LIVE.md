@@ -252,6 +252,22 @@ Pages works on public repositories only on this plan, so this comes after step 2
   - **Check:** the questions match `docs/store/chrome.md`, `docs/store/firefox.md` and `docs/store/edge.md`.
   - **If it fails:** a question asks something the file does not answer, or its wording changes the answer → stop
     that store and bring it to an agent session to re-check the file. Do not improvise an answer about data.
+- [ ] **6.2 Edge: the data-usage answer against Edge's own form.** `docs/store/edge.md`'s Data usage text (ledger row
+  549) was written from the Chrome Web Store's user-data FAQ, not from Partner Center (9.2 sign-off, flag 8).
+  - **Where:** Partner Center → the extension → **Privacy** → Data usage.
+  - **Check:** Partner Center offers a "Website content" choice and the certifications that `docs/store/edge.md` says
+    are ticked, in words that keep its answer true.
+  - **If it fails:** stop the Edge submission and bring the form's exact wording to an agent session.
+- [ ] **6.3 Edge: the category exists.** `docs/store/edge.md` proposes **Productivity** (ledger row 515), not yet seen
+  in Partner Center.
+  - **Check:** **Productivity** is in Partner Center's category list.
+  - **If it fails:** pick the nearest category, carry on, and note it for an agent to update `docs/store/edge.md`.
+- [ ] **6.4 AMO: the summary is still within 250 characters.** The Firefox summary (ledger row 477) is 247 of 250
+  characters (9.2 sign-off, flag 8).
+  - **Do:** only if the summary was edited after 2026-11-11, count it again: the two lines of `docs/store/firefox.md`'s
+    Summary, joined by one line break.
+  - **Check:** 250 characters or fewer, and AMO's field accepts it with no error.
+  - **If it fails:** stop the AMO submission. Shortening a published sentence is an agent task, with your approval.
 
 ## 7 · Submit to the stores
 
@@ -317,6 +333,16 @@ file are for you, not the store.
   rows marked UPDATE AT GO-LIVE), the site's Setup step "Build", and README's "not in any browser store yet" / "build
   it from source" lines become the real store links. Then run step 3.2 again.
   - **Check:** the live site and README name the three store links, and each opens its listing.
+- [ ] **8.3 A store install, once per store.** The walk could only use unpacked and temporary installs; three
+  sentences are evidenced as "store install checked at go-live" (ledger rows 303 and 325, and the install note in
+  `docs/trust/PERMISSIONS.md`; 9.2 sign-off, flag 5).
+  - **Do:** in a fresh browser profile, install Peekover from each live listing (Chrome, Edge, Firefox). Close the
+    browser and start it again. In Chrome and Edge, then turn on "Allow access to file URLs" on Peekover's Details
+    page while the setup guide is open.
+  - **Check:** the setup guide opens once, on install, and not again after the restart (rows 325 and PERMISSIONS.md).
+    In Chrome and Edge, flipping the toggle may restart Peekover and close the guide, and nothing else breaks (row 303).
+  - **If it fails:** a guide that opens again, or anything else that breaks, is an agent task. Leave the listings up
+    unless the failure is serious enough for section 9.
 
 ## 9 · Rollback — if something has to come down
 
