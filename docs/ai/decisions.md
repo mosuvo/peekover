@@ -1,6 +1,54 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-11 · M13 TASK 8.1k — WALK FIX (the human's weird-nesting hand test, Chrome): parts 1 and 3 landed, part 2 HELD
+  for the human.** Fixture `tests/fixtures/weird-nesting.md`, used as the human supplied it. Local; not pushed.
+  - **CI on the pushed head `c58b49f`:** CI 42957971841 success (verify, reproducible); Supply chain 42957971899 success.
+  - **Part 1 — the cause differs from the report, and the report's premise is half by design.** Measured on both engines,
+    both surfaces, before any change:
+    - On the APP PAGE, every LABELLED fence inside a quote or list (§1 js, §2 python, §5 sh) already had its wrapper,
+      toolbar (in flow, always visible) and highlighted spans. The enhancer selects `pre > code[class^="language-"]` at
+      any depth; nothing stops at a blockquote.
+    - The UNLABELLED fences (§4, §6) have no toolbar at any depth: the selector requires a `language-` class, so a
+      top-level unlabelled fence has none either.
+    - The TAB surface has no code engine at all (the code import fence; README row 20, a published limit), so no fence
+      there has a toolbar or colours, the top-level one included. "No toolbar, no colours" matches the tab, by design.
+    - The real defect, on both surfaces and all four enhancers: CSS inheritance from
+      `.peekover-reader blockquote{color:var(--muted);font-style:italic}`. Code, tables, the table tools, diagrams and
+      math inside a quote took the italic, and tab-surface code also took the muted colour.
+    - **Fix:** one rule after the blockquote rule resets those blocks to the top-level font-style and `--ink` colour, at
+      any depth. Rationale in the doc comment above the literal, since CSS comments ship.
+    - **Red first:** new `tests/browser/nestedBlocks.browser.test.ts`, 12 of 12 red, then green. It compares every fence
+      in every fixture section against a top-level control of the same kind, on the same surface and in the same theme
+      (font-style, colour, toolbar present or not, highlighted or not), on both engines, light and dark; plus a table,
+      a diagram and math inside a quote. An Export / Copy as HTML check (one serializer and wrapper, loaded in an
+      iframe) passes, and goes red with the rule ablated.
+    - **Other enhancers:** tables inside quotes and lists get their tools on both surfaces; diagrams and math inside
+      quotes and lists render on the app page. Same cause (the italic), same fix.
+    - **Verify:** lint, build+zip (both engines), unit 1,718 / 1,718, browser 2,778 passed / 82 skipped; all exit 0.
+      Content script 350,117 → 350,266 B (+149); app chunk +149 B. Commit `3bf141d`.
+  - **Part 2 — HELD (a decision, not landed).** The contents list's fallback for an empty heading is
+    `Untitled section (H<level> #<ordinal>)` (`src/render/tocModel.ts`, `labelFor`). It is not a ledgered string: no
+    published surface quotes it, and in-app strings are "checked, not ledgered". It is pinned by
+    `src/render/tocModel.test.ts` and now by `weirdNesting.browser.test.ts`. The proposal: "Untitled section", without
+    the bracket. The trade-off, from the function's own comment: the ordinal was chosen "so multiple untitled sections
+    stay tellable apart"; without it, the fixture's five untitled entries differ only by indent and position.
+    Before / after: `D:\Dev\peekover-shots\8.1k\toc-{before,after}-{chromium,firefox}.png`.
+  - **Part 3 — landed, test only (`b1b8376`).** New `tests/browser/weirdNesting.browser.test.ts`, both engines, 10 / 10:
+    - The tag structure of each section as rendered now (§3's `# #` / `## ##` are empty headings by CommonMark's
+      closing-sequence rule).
+    - No fallback banner on either surface.
+    - Table tools on all three real tables (§1; §2 inside the list; §6).
+    - The 16 contents entries and their labels.
+    - Distinct targets: Peekover sets NO heading ids (navigation is by element reference; permalinks are deferred), so
+      the test pins that every entry, the two "Duplicate" and the five empty ones included, is its own heading element.
+      Selecting one brings it into the reading pane; with the clicks removed, the check goes red.
+    - An export that keeps every heading, block and word.
+  - **§4's tight table, compared (report only):** GitHub's own renderer in FILE mode (`gh api markdown`, mode=markdown)
+    gives the same structure as Peekover: no table, the pipe lines are text in the second list item, the quote
+    continues lazily, the bare fence is a code block in the quote. GFM COMMENT mode differs only by `<br>` at each soft
+    break.
+
 - **2026-11-11 · M13 TASK 9.3d — DISCOVERED (CI run 42943681675 on `fc02f4d`): the watch baseline is the RENDERED SOURCE,
   so a save that lands before the first read is shown. The p2 flake bounded.** HUMAN RULING: "Approve the baseline fix,
   with these conditions." Code at `4b84584`; local, not pushed.

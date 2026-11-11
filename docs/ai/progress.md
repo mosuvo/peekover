@@ -17,6 +17,13 @@ signed install (DONE 2026-11-10; its BLOCKER closed at 9.2b), (2) the 8.1 walk, 
 then**, except: if the human says "the signed .xpi is saved", run `D:\Dev\peekover-amo-test\AMO-STEPS.md` step 11 FIRST
 and record it.
 
+**M13 TASK 8.1k (2026-11-11) — WEIRD NESTING: PARTS 1 AND 3 LANDED, PART 2 HELD.** Record: `decisions.md`, "M13 TASK
+8.1k". (1) A block inside a quote took the quote's italic (and, on the tab surface, its muted colour); fixed by one CSS
+rule (`3bf141d`, content script +149 B). On the app page nested labelled fences already had their toolbar and colours;
+the tab has no highlighter, by design. (3) The fixture pinned (`b1b8376`). **THE HUMAN'S NEXT STEP:** part 2, the empty
+heading's label "Untitled section (H1 #3)" → "Untitled section"? Shots in `D:\Dev\peekover-shots\8.1k\`. Tasks: 67, 63
+ticked.
+
 **M13 TASK 9.3d LANDED (2026-11-11) — the watch baseline is the rendered source.** Record: `decisions.md`, "M13 TASK
 9.3d". CI's `firefoxDragWatch` (A) red on `fc02f4d` was a product race: a save that reached disk before the first read at
 the click resolved was absorbed. Now the first read is compared against the rendered source (one normalisation: BOM,
