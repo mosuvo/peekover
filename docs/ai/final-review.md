@@ -12,7 +12,7 @@ Mozilla to sign the test build:
 | --- | --- | --- | --- |
 | 1 | The Firefox signed install | ~20 min to submit (+ AMO's wait, up to 24 h) + ~5 min to read the result | the release BLOCKER; step 2's item I-3 |
 | 2 | The 8.1 design walk | ~3–4 h (three sittings) | go-live; may re-open 3 and 4 |
-| 3 | The 9.2 truth sign-off | ~60–75 min | go-live |
+| 3 | The 9.2 truth sign-off — **DONE 2026-11-11** | ~60–75 min | go-live |
 | 4 | The 9.3 screenshot pick | ~15 min | go-live (Chrome needs ≥ 1 screenshot) |
 | 5 | Two proposals from the retro | ~5 min | nothing; next milestone |
 
@@ -123,6 +123,10 @@ done".
 ---
 
 ## 3 · The 9.2 truth sign-off (~60–75 min)
+
+**DONE (2026-11-11): signed off and 9.2 ticked** (`decisions.md`, "M13 TASK 9.2 — SIGNED OFF"; the pack
+`docs/ai/truth-signoff-9.2.md`, every row with a status). The table below is the plan as written on 2026-11-07, kept
+as the record.
 
 **What you are signing:** every published sentence matches `docs/store/claims.md` (the ledger, 579 rows). At 9.2 the
 agent re-verified every row's evidence at HEAD (0 problems; its control found 3 / 3 planted faults). Your part is
