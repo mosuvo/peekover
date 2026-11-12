@@ -79,8 +79,7 @@ The manifest declares that Peekover collects no data: data_collection_permission
 
 - Package: `.output/peekover-<version>-firefox.zip` from the draft release; source: `peekover-<version>-sources.zip`
   (it holds `SOURCE_CODE_REVIEW.md`, the reviewer's build steps).
-- Support email: left empty — there is no working address yet (plan G-1). AMO suggests one; add it only once an
-  address is confirmed working (`docs/store/GO-LIVE.md`).
+- Support email: hello@peekover.dev (GO-LIVE 4.1 passed 2026-11-12).
 - Licence: MIT. Platforms: Firefox for desktop (Windows, macOS, Linux); Firefox for Android is not supported (the human's
   ruling at M13 task 5.6).
 - Icon and screenshots: AMO's icon is from the package. Screenshots, in order, each with the description of the same

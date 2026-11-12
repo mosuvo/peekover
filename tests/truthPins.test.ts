@@ -27,6 +27,8 @@ const SURFACES = {
   // 7.4; its rows carried to 9.2 by HUMAN RULING) join.
   REPRODUCING: 'docs/trust/REPRODUCING.md',
   SOURCE_CODE_REVIEW: 'SOURCE_CODE_REVIEW.md',
+  // GO-LIVE (2026-11-12): GitHub finds a security policy only in .github/, the root or docs/, so a pointer joins.
+  'GITHUB-SECURITY': '.github/SECURITY.md',
 } as const;
 type Surface = keyof typeof SURFACES;
 const LEDGER = 'docs/store/claims.md';
@@ -93,11 +95,35 @@ function ledgerRows(): Row[] {
     });
 }
 
+// A missing surface reads as empty text, so the existence test below names it instead of the whole file failing to load.
 const docs = Object.fromEntries(
-  (Object.keys(SURFACES) as Surface[]).map((s) => [s, read(SURFACES[s])]),
+  (Object.keys(SURFACES) as Surface[]).map((s) => [s, existsSync(join(ROOT, SURFACES[s])) ? read(SURFACES[s]) : '']),
 ) as Record<Surface, string>;
 
+describe('every surface file exists', () => {
+  it.each(Object.keys(SURFACES) as Surface[])('%s exists', (surface) => {
+    expect(existsSync(join(ROOT, SURFACES[surface])), SURFACES[surface]).toBe(true);
+  });
+});
+
 const isPlanned = (section: string): boolean => /planned/i.test(section);
+
+const EMAIL = /hello@peekover\.dev/i;
+/** Where each surface may name the address (G-1): its contact section. Surfaces not listed name it nowhere. */
+const EMAIL_SECTION: Partial<Record<Surface, string>> = {
+  SECURITY: 'Reporting a vulnerability',
+  PRIVACY: 'Questions',
+  'GITHUB-SECURITY': 'Security policy',
+};
+
+/** Whether the address appears in `section`, and every sentence naming it outside that section. */
+export function emailPlacement(md: string, section: string | undefined): { inSection: boolean; elsewhere: string[] } {
+  const hits = sentences(md).filter((s) => EMAIL.test(s.text));
+  return {
+    inSection: hits.some((s) => s.section === section),
+    elsewhere: hits.filter((s) => s.section !== section).map((s) => `[${s.section}] ${s.text}`),
+  };
+}
 
 describe('the claims ledger (013 task 1.2, D-12)', () => {
   it('exists, and every row has a known status; every "true now" row names evidence that exists', () => {
@@ -137,8 +163,19 @@ describe('THREAT-MODEL.md names only tests and checks that exist (013 task 7.2)'
 });
 
 describe('README and SECURITY.md say only what ships (013 task 1.2)', () => {
-  it.each(Object.keys(SURFACES) as Surface[])('%s names no hello@peekover.dev address (G-1: not a working channel)', (surface) => {
-    expect(docs[surface]).not.toMatch(/hello@peekover\.dev/i);
+  // G-1 (plan §9 note 1): once a test message arrived (GO-LIVE 4.1, 2026-11-12), hello@peekover.dev is a second
+  // security channel and the contact address, in the contact section of these three surfaces and nowhere else.
+  it.each(Object.keys(SURFACES) as Surface[])('%s names hello@peekover.dev only in its contact section (G-1, GO-LIVE 4.1)', (surface) => {
+    const placed = emailPlacement(docs[surface], EMAIL_SECTION[surface]);
+    expect(placed.elsewhere, `${surface}: the address outside its contact section`).toEqual([]);
+    expect(placed.inSection, `${surface}: the address in "${EMAIL_SECTION[surface] ?? '(none)'}"`).toBe(EMAIL_SECTION[surface] !== undefined);
+  });
+
+  it('the placement check fires: an address in the wrong section, and a contact section without it', () => {
+    const md = '# T\n\n## Questions\n\nOpen an issue.\n\n## Other\n\nEmail hello@peekover.dev.\n';
+    expect(emailPlacement(md, 'Questions')).toEqual({ inSection: false, elsewhere: ['[Other] Email hello@peekover.dev.'] });
+    expect(emailPlacement(md.replace('Open an issue.', 'Email hello@peekover.dev.'), 'Questions').inSection).toBe(true);
+    expect(emailPlacement('## A\n\nEmail HELLO@peekover.dev.\n', undefined).elsewhere).toHaveLength(1);
   });
 
   it.each(Object.keys(SURFACES) as Surface[])('%s has no install-shaped link and no store claim while no listing exists', (surface) => {
@@ -446,6 +483,21 @@ const publishedFields = (l: Listing): Field[] => fields(listingText(l)).filter((
 const num = (s: string): number => Number(s.replace(/,/g, ''));
 const manifestDescription = /description:\s*\n?\s*'([^']+)'/.exec(read('wxt.config.ts'))?.[1] ?? '';
 
+/**
+ * Every email address in a listing file, except hello@peekover.dev inside a section that is not published (the
+ * submission notes record the store's support-email field there; GO-LIVE 4.1). A published field names no address.
+ */
+export function listingAddressStrays(md: string): string[] {
+  const ADDRESS = /[\w.+-]+@[\w-]+\.[a-z]{2,}/gi;
+  let published = md;
+  const strays: string[] = [];
+  for (const f of fields(md).filter((x) => unpublished(x.heading))) {
+    published = published.replace(f.body, '');
+    strays.push(...[...f.body.matchAll(ADDRESS)].map((m) => m[0]).filter((a) => !/^hello@peekover\.dev$/i.test(a)));
+  }
+  return [...strays, ...[...published.matchAll(ADDRESS)].map((m) => m[0])];
+}
+
 describe('the store listings say only what ships, within each store\'s limits (013 task 7.5)', () => {
   const all = Object.keys(LISTINGS) as Listing[];
 
@@ -490,7 +542,7 @@ describe('the store listings say only what ships, within each store\'s limits (0
   it.each(all)('the %s listing links the privacy policy, names no address, and has no superlative or unbuilt feature', (l) => {
     const published = publishedFields(l).map((f) => f.body).join('\n');
     expect(published, 'the privacy policy URL').toContain('https://peekover.dev/privacy/');
-    expect(listingText(l), 'an email address').not.toMatch(/[\w.+-]+@[\w-]+\.[a-z]{2,}/i);
+    expect(listingAddressStrays(listingText(l)), 'an email address other than the support email in the notes').toEqual([]);
     const SUPERLATIVE = /\b(best|fastest|greatest|most (secure|private|powerful|advanced)|number one|ultimate|revolutionary|blazing|world'?s|unmatched|perfect|military[- ]grade)\b|#1\b/i;
     expect(published.split('\n').filter((t) => SUPERLATIVE.test(t)), 'superlatives').toEqual([]);
     const NOT_BUILT = /\bDOCX\b|on-device AI|\bBYOK\b|bring[- ]your[- ]own[- ]key|\bAI (rewrite|features?|assist)|\bpublish(ing)?\b|reproducible build|attestation|signed release|presentation mode|read-aloud/i;
@@ -507,6 +559,18 @@ describe('the store listings say only what ships, within each store\'s limits (0
     const fromDisk = lines.filter((t) => /from (your own )?disk/i.test(t));
     expect(fromDisk.length, 'the listing does speak of files from disk (non-vacuous)').toBeGreaterThan(0);
     expect(fromDisk.filter((t) => !t.includes('Access local files on your computer')), 'from-disk lines without the setting').toEqual([]);
+  });
+
+  it('the Firefox submission notes record the support email (GO-LIVE 4.1 passed; 7.2 pastes it)', () => {
+    const notes = fields(listingText('firefox')).filter((f) => unpublished(f.heading)).map((f) => f.body).join('\n');
+    expect(notes).toMatch(/^- Support email: hello@peekover\.dev\b/m);
+  });
+
+  it('the address check fires on an address in a published field, or another address in the notes', () => {
+    const md = '# x listing — Peekover\n\n## Description (max 10 characters)\n\nHi.\n\n## Submission notes — not published\n\n- Support email: hello@peekover.dev\n';
+    expect(listingAddressStrays(md)).toEqual([]);
+    expect(listingAddressStrays(md.replace('Hi.', 'Mail hello@peekover.dev.'))).toEqual(['hello@peekover.dev']);
+    expect(listingAddressStrays(md.replace('hello@peekover.dev', 'me@example.com'))).toEqual(['me@example.com']);
   });
 
   it('the from-disk guard fires on a line that omits the setting', () => {

@@ -4,6 +4,7 @@
 
 Report security problems through GitHub private vulnerability reporting on this repository.
 For anything that is not a security problem, open a [GitHub issue](https://github.com/mosuvo/peekover/issues).
+You can also email hello@peekover.dev, for a security problem or anything else.
 
 ## What is true today
 

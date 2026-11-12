@@ -1,6 +1,22 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-12 · GO-LIVE 4.1 — THE EMAIL EDIT: `hello@peekover.dev` is a second security channel and the contact
+  address (plan §9 note 1, G-1).** HUMAN COPY APPROVAL 2026-11-12, as written: E1 (SECURITY.md), E2 / E3
+  (PRIVACY.md and the site privacy page), P1–P3 (`.github/SECURITY.md`, new, the pointer GitHub reads as the
+  security policy), N1 (`docs/store/firefox.md`'s support-email note), N2 (GO-LIVE 7.2). The existing sentences stay,
+  so rows #46, #48 and #373 and GO-LIVE 3.6 are unchanged. New rows 609–613 are "true now".
+  - **`tests/truthPins.test.ts`, red-first:** five reds before the doc edits (the new surface is missing, three
+    placements, the Firefox note). Then green. An ablation (the address planted in README and in a published Firefox
+    field) turns the placement and listing checks red.
+    - The address may appear only in the contact section of SECURITY, PRIVACY and GITHUB-SECURITY.
+    - A listing names no address in a published field. Only hello@peekover.dev may appear, and only in the notes.
+    - A missing surface file now reads as empty, with its own existence test.
+  - **Store fields:** AMO "Support email" (7.2). Chrome has no email field (the Support URL stays the issues page).
+    Edge's support contact stays the issues URL (the listing is deferred).
+  - **The site privacy page carries the address as plain text, not a link:** Peekover's parser does not link email
+    addresses, and the page must match its rendering of PRIVACY.md line for line (`tests/privacyPage.test.ts`).
+
 - **2026-11-12 · GO-LIVE — v0.1.0 RELEASED; the release freeze is over.** The human pushed the `v0.1.0` tag on
   `216cf7b` and published the release at 03:55:19Z, after sections 0–5 of `docs/store/GO-LIVE.md`. The evidence for
   every step, with run ids, is in GO-LIVE's Done notes; the release's attestation is

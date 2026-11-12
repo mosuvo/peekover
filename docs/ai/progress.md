@@ -23,9 +23,8 @@ commit that follows the second user fixture (`82776f4`'s tests; `decisions.md`, 
 
 **History rewritten 2026-11-11 (the personal email out of commit metadata):** hashes cited above and in older records are pre-rewrite; resolve them with `docs/ai/commit-map.txt` (`decisions.md`, "HISTORY REWRITTEN").
 
-**Where go-live stands (2026-11-12):** released. GO-LIVE 4.1 passed (`hello@peekover.dev` forwards), so the email
-edit (4.1's "If it arrives") is the next agent task, with the `.github/SECURITY.md` pointer. Land it before section 7
-if AMO's support email should carry the address.
+**Where go-live stands (2026-11-12):** released. The email edit landed (GO-LIVE 4.1; `decisions.md`, "THE EMAIL
+EDIT"), with the `.github/SECURITY.md` pointer; AMO's support email is `hello@peekover.dev` at 7.2.
 
 **Current numbers (HEAD):** `.output` 6,660,128 B (Cr) / 6,660,114 B (Fx) of 7,340,032 — headroom 679,904 / 679,918 B ·
 content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,607,862 B (the v0.1.0 release's) · manifests
@@ -48,7 +47,7 @@ Sorted into § Carried items (or dropped) by M14's first session.*
 - **Protect `main`** (2026-11-12, CC at go-live, the human's call): the repository is public now. Block force-push
   and deletion; optionally require CI (`verify`, `reproducible`) and Supply chain before a merge. It is a Settings
   change, not a commit. Check it does not block the human's own direct pushes, unless that is intended.
-- **`.github/SECURITY.md` pointer** (2026-11-12, `decisions.md` "v0.1.0 RELEASED"): GitHub does not find
+- ~~**`.github/SECURITY.md` pointer**~~ — **DONE 2026-11-12 with the email edit.** (`decisions.md` "v0.1.0 RELEASED"): GitHub did not find
   `docs/trust/SECURITY.md`. It is drafted with the email edit, for the human's approval.
 
 ### Carried items

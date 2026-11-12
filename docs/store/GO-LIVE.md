@@ -328,7 +328,7 @@ the README), never from an earlier copy, a draft or a screenshot.
   - **Describe:** Name, Summary, Categories (**Web Development**, **Other**), Description, Homepage, Support site,
     Licence **MIT**, Privacy policy (paste the full text of `docs/trust/PRIVACY.md` as it stands now: the UPDATED
     text, after 9.2 changed rows 359, 363, 372 and 373; ledger row 510) — from `docs/store/firefox.md`.
-    Support email: leave empty unless step 4 found the address working and the email edit has landed.
+    Support email: hello@peekover.dev (`docs/store/firefox.md`).
   - **Screenshots:** upload, in this order, `docs/store/assets/amo-1-reading-light.png`, `amo-2-agent-file-dark.png`,
     `amo-3-table-diagram-dark.png`, `amo-4-math-code-light.png`, `amo-5-tab-reader-light.png`, and give each the
     description of the same number (`docs/store/firefox.md`, "Screenshot descriptions").
