@@ -24,7 +24,11 @@ commit that follows the second user fixture (`82776f4`'s tests; `decisions.md`, 
 **History rewritten 2026-11-11 (the personal email out of commit metadata):** hashes cited above and in older records are pre-rewrite; resolve them with `docs/ai/commit-map.txt` (`decisions.md`, "HISTORY REWRITTEN").
 
 **Where go-live stands (2026-11-12):** released. The email edit landed (GO-LIVE 4.1; `decisions.md`, "THE EMAIL
-EDIT"), with the `.github/SECURITY.md` pointer; AMO's support email is `hello@peekover.dev` at 7.2.
+EDIT"), with the `.github/SECURITY.md` pointer. Both stores have it for review (GO-LIVE Done notes 7.1, 7.2):
+- **Chrome Web Store:** item `bcfjejemkkoklbplcgfccboipmgiokpc`, submitted 2026-11-12, auto-publish ON. The dashboard
+  warned that the host access may mean an in-depth review.
+- **AMO:** listed, Awaiting Review, source zip attached at submission.
+- **Edge:** deferred.
 
 **Current numbers (HEAD):** `.output` 6,660,128 B (Cr) / 6,660,114 B (Fx) of 7,340,032 — headroom 679,904 / 679,918 B ·
 content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,607,862 B (the v0.1.0 release's) · manifests
@@ -33,9 +37,10 @@ the second user fixture's two test files; the last product change is 8.1k) · `p
 
 ## Up next
 
-1. **GO-LIVE** (`docs/store/GO-LIVE.md`): sections 0–5 done 2026-11-12 (v0.1.0 released). Next: the email edit
-   (4.1's agent task) → 6 the dashboards read against the files → 7 the stores → 8 after approval (8.5: the human
-   reviews the screenshot pick and captions) → 9 rollback if needed.
+1. **GO-LIVE** (`docs/store/GO-LIVE.md`): sections 0–5 done 2026-11-12 (v0.1.0 released); the email edit landed;
+   7.1 (Chrome) and 7.2 (AMO) submitted 2026-11-12, both awaiting review; 7.3 (Edge) deferred. Next: 8 after
+   approval (8.5: the human reviews the screenshot pick and captions) → 9 rollback if needed. Section 6 (the
+   dashboards read against the files) has no Done note yet.
 2. **M14's first session** (§ Carried items, POST-RELEASE): place the two adopted retro rules ((b) is test-pinned,
    not ledgered — answered 2026-11-11); write the retro's "ADDENDUM AFTER THE 8.1 WALK" (`retro.md`; source: `decisions.md` "M13
    CLOSED" and the 8.1 / 9.x entries); read CI history with `gh` for each named flake (the M13 retro's carried action).
