@@ -1,6 +1,24 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-12 · GO-LIVE — attestations and the privacy policy are true now; the published sentences say so.**
+  HUMAN COPY APPROVAL 2026-11-12: R1–R10 and the README privacy sentence. The human corrected R1, R4, R7 and R10 for
+  accuracy: an attestation proves where a file was built, not that it matches the source. Evidence: Release run
+  43150291963, https://github.com/mosuvo/peekover/attestations/66530573, GO-LIVE Done notes 3.6, 5.2 and 5.4.
+  - **Rows changed in place**, as at 9.2: #59 and #432 (planned → true now), #407 (to "Defences", true now), #339
+    (live at release, kept), #434 (planned, attestations removed). New rows: #614 (THREAT-MODEL's Check line),
+    #615 / #616 (the site's "Attested releases."), #617 (README's privacy-policy URL, live at release; added to
+    GO-LIVE 3.6's table). The "Planned" headings left SECURITY.md and THREAT-MODEL.md once they were empty.
+  - **`tests/truthPins.test.ts`, red-first:**
+    - Red 1, the ledger first: 6 reds (rows naming sentences the docs did not yet say).
+    - Red 2, the docs edited: 4 reds (attestation outside "Planned" on README, SECURITY, THREAT-MODEL and the site).
+    - Then "attestation" left the unbuilt lists for the trust docs and the site.
+    - The store listings keep it banned until GO-LIVE 8.4. Ablation: a planted attestation line in a published
+      Chrome field turns the listing check red.
+  - **Caveat:** these sentences hold while the repository is public. The attest job runs only then (G-9).
+  - **The site changed:** peekover.dev shows the old text until the Pages workflow runs again
+    (`gh workflow run pages.yml --ref main`, after the push).
+
 - **2026-11-12 · GO-LIVE 4.1 — THE EMAIL EDIT: `hello@peekover.dev` is a second security channel and the contact
   address (plan §9 note 1, G-1).** HUMAN COPY APPROVAL 2026-11-12, as written: E1 (SECURITY.md), E2 / E3
   (PRIVACY.md and the site privacy page), P1–P3 (`.github/SECURITY.md`, new, the pointer GitHub reads as the

@@ -27,6 +27,7 @@ This page says what Peekover protects, from whom, what it does not try to protec
 - Code loaded from outside the package: every import in the shipped code is fixed at build time, and CI checks this. Check: `scripts/check-dynamic-imports.ts`, run in `.github/workflows/supply-chain.yml`.
 - A harmful or vulnerable dependency: CI installs exactly the locked versions and fails on a known advisory in the production dependencies, except one recorded exception. Check: `.github/workflows/supply-chain.yml`, `package.json` (the exception).
 - Saving over a file that changed on disk: Save reads the file again first and writes nothing if it changed. Test: `tests/browser/editorSave.browser.test.ts`.
+- A download altered after it was built: every release file carries a build attestation, and `gh attestation verify` fails on a changed file. Check: `.github/workflows/release.yml`, `tests/ciConfig.test.ts`.
 
 ## Out of scope
 
@@ -35,7 +36,3 @@ This page says what Peekover protects, from whom, what it does not try to protec
 - The sites that host images, once you choose to load them.
 - Someone who can use your device or read your browser profile: Peekover's storage is not encrypted.
 - A change to a file in the instant between Save's check and its write.
-
-## Planned
-
-- Build attestations on release files, from the first public release, so that a download can be checked against the source.

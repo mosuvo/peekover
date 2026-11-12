@@ -196,7 +196,9 @@ describe('README and SECURITY.md say only what ships (013 task 1.2)', () => {
     '%s presents nothing unbuilt as current: reproducibility, threat model, attestations, signed tags, audits only under "Planned"',
     (surface) => {
       // 7.2: "threat model" left this list — docs/trust/THREAT-MODEL.md exists now (its own test below).
-      const UNBUILT = /reproducib|attestation|signed tag|community audit|verified in CI/i;
+      // GO-LIVE (2026-11-12): "attestation" left it too — v0.1.0's files are attested (Release run 43150291963,
+      // GO-LIVE Done notes 5.2 / 5.4). The store listings keep it banned until GO-LIVE 8.4.
+      const UNBUILT = /reproducib|signed tag|community audit|verified in CI/i;
       const outside = linesWithSection(docs[surface])
         .filter((l) => UNBUILT.test(l.text) && !isPlanned(l.section))
         .map((l) => `[${l.section || 'top'}] ${l.text.trim()}`);
@@ -365,8 +367,9 @@ describe('the site says only what ships (013 task 1.3, D-12; F-3)', () => {
     ] as const) {
       expect(outside.filter((t) => re.test(t)), `the site claims ${what}`).toEqual([]);
     }
+    // GO-LIVE (2026-11-12): "attestation" left this list (v0.1.0's files are attested); the listings keep it banned.
     const NOT_BUILT =
-      /\bDOCX\b|\bZIP\b|on-device AI|\bBYOK\b|bring[- ]your[- ]own[- ]key|chat with the document|\bAI (rewrite|features?|assist|web-clip)|\bpublish(ing)?\b|side-by-side|presentation mode|read-aloud|text-to-speech|\bTTS\b|reproducible build|threat model|attestation|signed release|hall[- ]of[- ]fame|\bcoming (soon|to)\b|\bphase 2\b/i;
+      /\bDOCX\b|\bZIP\b|on-device AI|\bBYOK\b|bring[- ]your[- ]own[- ]key|chat with the document|\bAI (rewrite|features?|assist|web-clip)|\bpublish(ing)?\b|side-by-side|presentation mode|read-aloud|text-to-speech|\bTTS\b|reproducible build|threat model|signed release|hall[- ]of[- ]fame|\bcoming (soon|to)\b|\bphase 2\b/i;
     const bad = outside.filter((t) => NOT_BUILT.test(t));
     expect(bad, 'unbuilt features presented outside the planned section').toEqual([]);
     expect(site.match(/\bid="planned"/g) ?? [], 'exactly one planned section').toHaveLength(1);
