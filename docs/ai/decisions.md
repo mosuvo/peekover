@@ -1,6 +1,12 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-12 · CHROME LISTING: no keyword lists in store descriptions.** The Chrome Web Store rejected item
+  `bcfjejemkkoklbplcgfccboipmgiokpc` for "Keyword Spam" (Yellow Argon) over the description's list of 13
+  highlighted languages. The human changed the bullet to "highlights code in common programming languages" and
+  resubmitted. `docs/store/chrome.md` and ledger row 452 match it (GO-LIVE Done note 7.1). The Firefox and Edge
+  listings keep the list: AMO did not object. Revisit: if AMO or Edge object, or when a listing next changes.
+
 - **2026-11-12 · GO-LIVE — attestations and the privacy policy are true now; the published sentences say so.**
   HUMAN COPY APPROVAL 2026-11-12: R1–R10 and the README privacy sentence. The human corrected R1, R4, R7 and R10 for
   accuracy: an attestation proves where a file was built, not that it matches the source. Evidence: Release run

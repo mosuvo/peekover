@@ -26,7 +26,9 @@ commit that follows the second user fixture (`82776f4`'s tests; `decisions.md`, 
 **Where go-live stands (2026-11-12):** released. The email edit landed (GO-LIVE 4.1; `decisions.md`, "THE EMAIL
 EDIT"), with the `.github/SECURITY.md` pointer. Both stores have it for review (GO-LIVE Done notes 7.1, 7.2):
 - **Chrome Web Store:** item `bcfjejemkkoklbplcgfccboipmgiokpc`, submitted 2026-11-12, auto-publish ON. The dashboard
-  warned that the host access may mean an in-depth review.
+  warned that the host access may mean an in-depth review. The first submission was rejected for "Keyword Spam"
+  (Yellow Argon, the language list), the bullet was shortened, and it was resubmitted the same day. `chrome.md` and
+  ledger row 452 match. Rule: no keyword lists in store descriptions (`decisions.md`).
 - **AMO:** listed, Awaiting Review, source zip attached at submission.
 - **Edge:** deferred.
 
@@ -38,7 +40,8 @@ the second user fixture's two test files; the last product change is 8.1k) · `p
 ## Up next
 
 1. **GO-LIVE** (`docs/store/GO-LIVE.md`): sections 0–5 done 2026-11-12 (v0.1.0 released); the email edit landed;
-   7.1 (Chrome) and 7.2 (AMO) submitted 2026-11-12, both awaiting review; 7.3 (Edge) deferred. Next: 8 after
+   7.1 (Chrome, resubmitted after a keyword-spam rejection) and 7.2 (AMO) submitted 2026-11-12, both awaiting
+   review; 7.3 (Edge) deferred. Next: 8 after
    approval (8.5: the human reviews the screenshot pick and captions) → 9 rollback if needed. Section 6 (the
    dashboards read against the files) has no Done note yet.
 2. **M14's first session** (§ Carried items, POST-RELEASE): place the two adopted retro rules ((b) is test-pinned,
