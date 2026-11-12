@@ -185,6 +185,14 @@ describe('the release workflow (013 task 7.4, D-14; G-9)', () => {
     expect(t, 'a store upload').not.toMatch(/web-ext sign|chrome-webstore|webstore-upload|addons\.mozilla\.org|microsoftedge|AMO_|CWS_/i);
   });
 
+  // GO-LIVE 5.5 (2026-11-12): publishing keeps the body, so a body that said "Draft." had to be edited by hand on the
+  // published v0.1.0. The body is the one the human published: true while a draft and after.
+  it('the release notes read the same as a draft and once published (no "Draft." in the body)', () => {
+    const notes = /--notes "([^"]*)"/.exec(text())?.[1];
+    expect(notes, 'release.yml passes --notes').toBeDefined();
+    expect(notes).toBe('What changed: CHANGELOG.md. To check a download, compare it with SHA256SUMS; to rebuild it, see docs/trust/REPRODUCING.md.');
+  });
+
   it('checks the tag equals package.json\'s version before building', () => {
     const t = text();
     const check = steps(t).find((s) => /^\s*- name: Check the tag equals package\.json's version/m.test(s));

@@ -179,4 +179,4 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           gh release create "$TAG" dist/* --draft --verify-tag --title "Peekover ${TAG#v}" \
-            --notes "Draft. What changed: CHANGELOG.md. To check a download, compare it with SHA256SUMS; to rebuild it, see docs/trust/REPRODUCING.md."
+            --notes "What changed: CHANGELOG.md. To check a download, compare it with SHA256SUMS; to rebuild it, see docs/trust/REPRODUCING.md."
