@@ -11,33 +11,32 @@
 
 ## Now (start here)
 
-**M13 CLOSED (2026-11-11). Next: go live, `docs/store/GO-LIVE.md`, from section 0 (Gates).** Record: `decisions.md`,
-"M13 CLOSED" and "M13 TASK 9.5 — CLOSED"; the summary is under § Closed milestones below; the narrative is in
-`progress-archive.md`. Nothing in M13 is open. **The human pushes `main`** (ahead of `origin/main`, `2b85b68`, by the
-close commits), then CI and Supply chain on the new head; GO-LIVE 0.3 needs CI green on the release commit.
+**v0.1.0 RELEASED (2026-11-12), on `216cf7b`. Next: `docs/store/GO-LIVE.md` section 6 (the dashboards), then 7
+(the stores).** Sections 0–5 are done; the evidence is in GO-LIVE's Done notes (`decisions.md`, "v0.1.0 RELEASED").
+The site is live at https://peekover.dev, and the release is at https://github.com/mosuvo/peekover/releases/tag/v0.1.0.
+M13 closed 2026-11-11 (`decisions.md`, "M13 CLOSED"; summary under § Closed milestones).
 
-**★ RELEASE FREEZE (HUMAN RULING, 2026-11-11), until the `v0.1.0` tag is pushed (GO-LIVE 5.1).** No product or test
+**~~★ RELEASE FREEZE~~ — ENDED 2026-11-12 at the `v0.1.0` tag.** Was (HUMAN RULING, 2026-11-11): No product or test
 change lands before the tag; only GO-LIVE steps commit (their Done notes, and the agent tasks GO-LIVE itself names).
 A new idea, finding or fix goes to § Post-launch ideas below, not into the tree. The freeze began after the records
 commit that follows the second user fixture (`82776f4`'s tests; `decisions.md`, "M13 — RELEASE FREEZE").
 
 **History rewritten 2026-11-11 (the personal email out of commit metadata):** hashes cited above and in older records are pre-rewrite; resolve them with `docs/ai/commit-map.txt` (`decisions.md`, "HISTORY REWRITTEN").
 
-**Where go-live stands (2026-11-12):** `7aafb96` pushed. CI 43043430194 green on attempt 3 (attempts 1 and 2 on
-2026-11-11 were the runner's apt/DNS at "Install Playwright browsers"; `ci.yml` unchanged); browser 2,802 / 90 skipped,
-the same as the last pre-rewrite green. Supply chain green (43043430290). GO-LIVE 0.3 and 2.1 Done notes written
-(gitleaks 8.30.1 clean on the new history, control fired); boxes left for the release commit.
+**Where go-live stands (2026-11-12):** released. GO-LIVE 4.1 passed (`hello@peekover.dev` forwards), so the email
+edit (4.1's "If it arrives") is the next agent task, with the `.github/SECURITY.md` pointer. Land it before section 7
+if AMO's support email should carry the address.
 
 **Current numbers (HEAD):** `.output` 6,660,128 B (Cr) / 6,660,114 B (Fx) of 7,340,032 — headroom 679,904 / 679,918 B ·
-content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,563,555 B · manifests
+content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,607,862 B (the v0.1.0 release's) · manifests
 864 / 978 B, `permissions: []` · lint 0 · unit 1,723 (`pnpm test`: unit 1,722 + unit-perf 1) · browser 2,810 passed / 82 skipped (`c43865f`, EXIT 0, 2026-11-11; +22 from
 the second user fixture's two test files; the last product change is 8.1k) · `pnpm audit --prod` EXIT 0 (1 low, ignored) · tasks 67 / 67.
 
 ## Up next
 
-1. **GO-LIVE** (`docs/store/GO-LIVE.md`): 0 Gates → 1 Accounts → 2 the repository public → 3 the site → 4 the email
-   (optional) → 5 the release v0.1.0 → 6 the dashboards read against the files → 7 the stores → 8 after approval
-   (8.5: the human reviews the screenshot pick and captions) → 9 rollback if needed.
+1. **GO-LIVE** (`docs/store/GO-LIVE.md`): sections 0–5 done 2026-11-12 (v0.1.0 released). Next: the email edit
+   (4.1's agent task) → 6 the dashboards read against the files → 7 the stores → 8 after approval (8.5: the human
+   reviews the screenshot pick and captions) → 9 rollback if needed.
 2. **M14's first session** (§ Carried items, POST-RELEASE): place the two adopted retro rules ((b) is test-pinned,
    not ledgered — answered 2026-11-11); write the retro's "ADDENDUM AFTER THE 8.1 WALK" (`retro.md`; source: `decisions.md` "M13
    CLOSED" and the 8.1 / 9.x entries); read CI history with `gh` for each named flake (the M13 retro's carried action).
@@ -46,7 +45,11 @@ the second user fixture's two test files; the last product change is 8.1k) · `p
 *The release freeze's inbox: anything new between now and the `v0.1.0` tag, one line each, with its source and date.
 Sorted into § Carried items (or dropped) by M14's first session.*
 
-- *(none yet)*
+- **Protect `main`** (2026-11-12, CC at go-live, the human's call): the repository is public now. Block force-push
+  and deletion; optionally require CI (`verify`, `reproducible`) and Supply chain before a merge. It is a Settings
+  change, not a commit. Check it does not block the human's own direct pushes, unless that is intended.
+- **`.github/SECURITY.md` pointer** (2026-11-12, `decisions.md` "v0.1.0 RELEASED"): GitHub does not find
+  `docs/trust/SECURITY.md`. It is drafted with the email edit, for the human's approval.
 
 ### Carried items
 *Banked deliberately, each with a recorded home. Do NOT guess at any of them; every one is either

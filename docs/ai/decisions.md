@@ -1,6 +1,23 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-12 · GO-LIVE — v0.1.0 RELEASED; the release freeze is over.** The human pushed the `v0.1.0` tag on
+  `216cf7b` and published the release at 03:55:19Z, after sections 0–5 of `docs/store/GO-LIVE.md`. The evidence for
+  every step, with run ids, is in GO-LIVE's Done notes; the release's attestation is
+  https://github.com/mosuvo/peekover/attestations/66530573. Next: GO-LIVE 6 (the dashboards) and 7 (the stores).
+  - **216cf7b's timestamp is 6 hours early — HUMAN RULING: accepted.** The commit records 2026-11-11T19:05:39Z, but
+    it was made at about 2026-11-12T01:05Z, right after CI 43043430194's attempt 3 finished (01:04:28Z). This
+    machine's clock was about 6 hours slow until a Windows time sync at 03:14:55Z on 2026-11-12. Since then it
+    matches Google's Date header to the second, and the tag's time (03:45:05Z) is right. The builds read no clock
+    (`scripts/compare-builds.ts`). The release SBOM takes the commit time (`SOURCE_DATE_EPOCH`,
+    `.github/workflows/release.yml`), so it reads 2026-11-11T19:05:39Z: reproducible, but 6 hours off the wall
+    clock. Why accepted: a fix rewrites the release commit and needs a force-push. Revisit: never.
+  - **Found: GitHub does not see the security policy.** The community profile reads `security_policy: null`. GitHub
+    looks for SECURITY.md in `.github/`, then the root, then `docs/` (docs.github.com, "Creating a default community
+    health file", read 2026-11-12), and Peekover's is `docs/trust/SECURITY.md`. A `.github/SECURITY.md` pointer is
+    drafted with the email edit (it is a published surface: ledger rows and `truthPins`), for the human's approval.
+  - **Suggested, not done: protect `main`** now that the repository is public (`progress.md` § Post-launch ideas).
+
 - **2026-11-11 · GO-LIVE — HISTORY REWRITTEN: the personal email out of commit metadata (records only, under the
   release freeze).** HUMAN RULING: rewrite the history so no commit carries the personal email. **This supersedes 7.6's
   "Proceed as is"** (the 2026-11-06 "M13 TASK 7.6" entry below, which accepted the email in commit metadata).
