@@ -1,6 +1,17 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-13 · WIF CONDITION BY REPOSITORY ID (NOT RE-TESTED).** The human set the `peekover` provider's attribute
+  condition to `assertion.repository_id=='1454048576' && assertion.environment=='chrome-web-store'`. 1454048576 is this
+  repository's ID (`gh api repos/mosuvo/peekover --jq .id`, checked by CC the same day). It replaces
+  `assertion.repository=='mosuvo/peekover' && …` (entry below). Why: a name can be taken over. A repository created
+  later under that name (after a rename or a deletion) gets a new ID, so it is refused; the ID also survives a rename
+  of this repository. The environment clause is unchanged. **Not re-tested:** the only sign-in, cws-check run
+  43372743291 attempt 3, ran under the name-based condition. No run has signed in under this one, and the first 0.1.1
+  release (GO-LIVE 10.2) will prove it. If that run's sign-in is rejected by the condition, run GO-LIVE 10.3 on the
+  release tag to test the sign-in alone. GO-LIVE 10.1, THREAT-MODEL (the sentence of ledger row 622, its evidence
+  marked NOT RE-TESTED) and `progress.md` updated; no code changed. Revisit: at the 0.1.1 release's sign-in.
+
 - **2026-11-13 · CHROME UPLOADS: SIGN-IN PROVEN; WIF CONDITION CHANGED; STORE IDS CHECKED.** The first check ran:
   cws-check run 43372743291 (`v0.1.0-cws-check`, on `7f25e7d`), attempt 3, succeeded. It read the item as `PUBLISHED`,
   version `0.1.0`, and uploaded nothing (GO-LIVE Done note 10.3). Attempt 1 failed with "The given credential is

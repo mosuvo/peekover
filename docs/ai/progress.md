@@ -108,8 +108,10 @@ measurement-driven or explicitly deferred.*
   checked against `SHA256SUMS` first. `cws-check.yml` signs in and calls only `fetchStatus`. Both workflows trim and
   check the two store IDs before any call. `tests/ciConfig.test.ts` pins all of it. **Done 2026-11-13:** cws-check
   run 43372743291, attempt 3, read the item as `PUBLISHED` 0.1.0 (GO-LIVE Done note 10.3). It took two failed
-  attempts first: the WIF condition (now `assertion.repository` && `assertion.environment`), then a pasted line break
-  in a secret. **Next:** the first real upload at 0.1.1 (10.2). Its upload and publish calls, and their jq parsing,
+  attempts first: the WIF condition, then a pasted line break in a secret. The condition then moved to the repository
+  ID (`assertion.repository_id=='1454048576' && assertion.environment=='chrome-web-store'`; `decisions.md`, "WIF
+  CONDITION BY REPOSITORY ID"), and that one is **not re-tested**. **Next:** the first real upload at 0.1.1 (10.2),
+  which also proves the new condition. Its upload and publish calls, and their jq parsing,
   have not yet run against Google. fetchStatus's response has been parsed: the check run's jq `itemId` check passed.
 - **M14's first session: place the two adopted retro rules (HUMAN RULING 2026-11-11, "YES to both").** (a)
   Engine-only human checks happen in the group that needs them. (b) A claim-bearing in-app string gets a test that pins

@@ -445,11 +445,19 @@ retired.*
     **Account → Service account** (one service account per publisher).
   - **Workload Identity Federation:** pool `github`, OIDC provider `peekover` (issuer
     `https://token.actions.githubusercontent.com`). Attribute condition
-    `assertion.repository=='mosuvo/peekover' && assertion.environment=='chrome-web-store'`, so Google takes only
-    tokens from a job that runs in that environment of this repository. The repository is bound to the service account
-    with `roles/iam.workloadIdentityUser`. The first condition, `assertion.sub=='repo:mosuvo/peekover:environment:chrome-web-store'`,
-    rejected the check run's token ("The given credential is rejected by the attribute condition", 10.3, attempt 1),
-    so the human changed it on 2026-11-13. Why the `sub` claim did not match was not diagnosed.
+    `assertion.repository_id=='1454048576' && assertion.environment=='chrome-web-store'`, so Google takes only tokens
+    from a job that runs in that environment of this repository. `1454048576` is the repository's numeric ID
+    (`gh api repos/mosuvo/peekover --jq .id`). The ID does not change on a rename, and a repository created later
+    under the same name gets a new one. The repository is bound to the service account with
+    `roles/iam.workloadIdentityUser`. **Not re-tested:** the human set this condition on 2026-11-13, after the 10.3
+    check. No run has signed in under it yet, and the first 0.1.1 release (10.2) will prove it. If that run fails at
+    "Sign in to Google" with "rejected by the attribute condition", run 10.3 on the release tag to test the sign-in
+    alone.
+    History: the first condition, `assertion.sub=='repo:mosuvo/peekover:environment:chrome-web-store'`, rejected the
+    check run's token ("The given credential is rejected by the attribute condition", 10.3, attempt 1). Why the `sub`
+    claim did not match was not diagnosed. The human replaced it with `assertion.repository=='mosuvo/peekover' &&
+    assertion.environment=='chrome-web-store'`, under which 10.3 passed (attempt 3). Then the human replaced that one
+    with the ID-based condition above.
   - **GitHub:** the environment `chrome-web-store`. Required reviewer `mosuvo`, admin bypass off, and deployments from
     `v*` tags only. It holds four environment secrets (not variables): `GCP_WIF_PROVIDER`, `GCP_SERVICE_ACCOUNT`,
     `CWS_PUBLISHER_ID` and `CWS_ITEM_ID`. No workflow hard-codes any of them. Paste each value with no line break.
