@@ -33,8 +33,9 @@ EDIT"), with the `.github/SECURITY.md` pointer. Both stores have it for review (
 - **Edge:** deferred.
 - **2026-11-13:** Chrome Web Store **published** 0.1.0 on 2026-11-12, Public
   (https://chromewebstore.google.com/detail/peekover/bcfjejemkkoklbplcgfccboipmgiokpc). GO-LIVE 8.1 and 8.3 (Chrome)
-  are done; 8.3's toggle check (row 303) was not reported. 8.2 and 8.4 (Chrome parts) are committed, and the site needs
-  step 3.2 after the push. The Firefox parts wait for AMO.
+  are done. 8.3's toggle check (row 303) came in later the same day, so 8.3 is complete for Chrome. 8.2 and 8.4 (Chrome
+  parts) landed in `5f0da1b`, and step 3.2 ran (Pages 43364785025). The banner (row 71) stays, by the human's ruling.
+  The phone-width nav fix is committed, and its redeploy (3.2) is pending. The Firefox parts wait for AMO.
 
 **Current numbers (HEAD):** `.output` 6,660,128 B (Cr) / 6,660,114 B (Fx) of 7,340,032 — headroom 679,904 / 679,918 B ·
 content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,607,862 B (the v0.1.0 release's) · manifests
@@ -62,6 +63,11 @@ Sorted into § Carried items (or dropped) by M14's first session.*
   `REPICK_HINT` shows after Revoke and stays for good. Unmeasured: a `NotReadableError` on re-opening a changed picker
   file in Chromium; Chromium drop-watch; the picker blocked by policy. The new wording needs the human's approval.
   **Starts after AMO approves 0.1.0;** no new AMO version is submitted while 0.1.0 is in review.
+- **0.1.1: pin the release workflow runner to a fixed Ubuntu version** (2026-11-13, the human, from an annotation
+  on Pages run 43364785025; https://github.com/mosuvo/peekover/issues/7). GitHub's `ubuntu-latest` moves to Ubuntu
+  26 from 2026-10-19. `release.yml` runs every job on it, and the AMO reviewer notes (`SOURCE_CODE_REVIEW.md`,
+  REPRODUCING) promise a reproducible Ubuntu 24.04 x64 build. Decide then whether `ci.yml`, `supply-chain.yml` and
+  `pages.yml` follow. Same timing as above: after AMO approves 0.1.0.
 
 - **Protect `main`** (2026-11-12, CC at go-live, the human's call): the repository is public now. Block force-push
   and deletion; optionally require CI (`verify`, `reproducible`) and Supply chain before a merge. It is a Settings

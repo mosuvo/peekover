@@ -64,7 +64,7 @@ nav{position:fixed;inset:0 0 auto 0;height:64px;z-index:50;display:flex;align-it
 nav .right{margin-left:auto;display:flex;gap:9px;align-items:center}
 .ghost{padding:9px 15px;border:1.5px solid var(--line);border-radius:10px;font-weight:700;font-size:13px;color:var(--muted);text-decoration:none;transition:.15s;background:var(--paper)}
 .ghost:hover{color:var(--ink);border-color:var(--ink);transform:translateY(-1px)}
-.cta{padding:10px 19px;background:var(--ink);color:var(--paper);border-radius:10px;font-weight:800;font-size:13.5px;text-decoration:none;transition:.15s;border:1.5px solid var(--ink)}
+.cta{padding:10px 19px;background:var(--ink);color:var(--paper);border-radius:10px;font-weight:800;font-size:13.5px;text-decoration:none;transition:.15s;border:1.5px solid var(--ink);white-space:nowrap}
 .cta:hover{background:var(--hl);border-color:#16171F;color:#26210a;transform:translateY(-1px)}
 [data-theme="dark"] .cta{background:var(--hl);color:#191504;border-color:var(--hl)}
 [data-theme="dark"] .cta:hover{background:var(--paper);color:var(--ink);border-color:var(--hl)}
@@ -74,7 +74,7 @@ nav .right{margin-left:auto;display:flex;gap:9px;align-items:center}
 .mnav{display:none;position:fixed;top:64px;left:0;right:0;z-index:49;background:var(--paper);border-bottom:1px solid var(--line);padding:14px min(5vw,44px) 20px;flex-direction:column;gap:4px}
 .mnav.open{display:flex}
 .mnav a{text-decoration:none;font-weight:700;font-size:15px;padding:11px 4px;border-bottom:1px solid var(--line)}
-@media (max-width:880px){.navlinks{display:none}.burger{display:grid;place-items:center}nav .ghost{display:none}}
+@media (max-width:880px){.navlinks{display:none}.burger{display:grid;place-items:center}nav .ghost,nav .cta{display:none}}
 .peek .lid{transform-origin:center;animation:blink 6s infinite}
 @keyframes blink{0%,94%,100%{transform:scaleY(1)}96%,98%{transform:scaleY(.08)}}
 
@@ -284,7 +284,7 @@ footer h5{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var
   </div>
 </nav>
 <div class="mnav" id="mnav">
-  <a href="#ai" onclick="mclose()">Agent output</a><a href="#reading" onclick="mclose()">Reading</a><a href="#editor" onclick="mclose()">Editor</a><a href="#security" onclick="mclose()">Security</a><a href="#planned" onclick="mclose()">Planned</a><a href="https://github.com/mosuvo/peekover" onclick="mclose()">GitHub</a>
+  <a href="#ai" onclick="mclose()">Agent output</a><a href="#reading" onclick="mclose()">Reading</a><a href="#editor" onclick="mclose()">Editor</a><a href="#security" onclick="mclose()">Security</a><a href="#planned" onclick="mclose()">Planned</a><a href="https://github.com/mosuvo/peekover" onclick="mclose()">GitHub</a><a href="https://chromewebstore.google.com/detail/peekover/bcfjejemkkoklbplcgfccboipmgiokpc" onclick="mclose()">Chrome Web Store</a>
 </div>
 
 <!-- ================= HERO ================= -->

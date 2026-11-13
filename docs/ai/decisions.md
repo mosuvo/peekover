@@ -1,6 +1,14 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-13 · SITE BANNER KEPT; nav button hidden below the ☰ breakpoint; runner pin queued.** HUMAN RULING: the
+  banner "Chrome · Edge · Firefox" (row 71) stays. It states where Peekover runs, not where it is listed (GO-LIVE 8.2
+  Done note). Below 880 px the nav's Chrome Web Store button is hidden, and the ☰ menu carries the link (row 64).
+  Every `.cta` is `white-space: nowrap`. At 1280 px, and from 931 px up, the header is byte-identical to before
+  (GO-LIVE Done note, "Site fix"). Queued for 0.1.1: pin the release runner to a fixed Ubuntu version
+  (https://github.com/mosuvo/peekover/issues/7). It is a separate issue from #6 because it concerns the build, not the
+  copy. Revisit: when AMO approves 0.1.0.
+
 - **2026-11-13 · GO-LIVE 8.1–8.4, the Chrome parts: the Chrome Web Store listing is live, and the published lines say
   so.** Chrome Web Store published 0.1.0 on 2026-11-12, Public; the human installed it from the store on 2026-11-13
   (GO-LIVE Done notes 8.1 and 8.3). README and the site link the listing and name Firefox as in review at Mozilla.
