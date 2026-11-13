@@ -405,6 +405,59 @@ describe('the Chrome Web Store sign-in check (CHROME UPLOADS AUTOMATED)', () => 
   });
 });
 
+// cws-check run 43372743291, attempt 2 (2026-11-13): a line break pasted into a secret reached the URL, and curl failed
+// with "(3) URL rejected". Both workflows now clean and check the two store IDs before any call.
+/** The store-ID step of a workflow file (the `- name:` step whose title starts "Check the store IDs"). */
+function storeIdStep(text: string): string {
+  return steps(text).find((s) => /^\s*- name: Check the store IDs\b/m.test(s)) ?? '';
+}
+
+describe('the store IDs are trimmed and format-checked before any call (cws-check 43372743291, attempt 2)', () => {
+  const files = [RELEASE, CWS_CHECK];
+
+  it.each(files)('%s: the step trims, then checks the item ID (a-p, 32) and the publisher ID (URL-safe), and fails', (file) => {
+    const step = storeIdStep(read(file));
+    expect(step, `${file}: the store-ID step`).not.toBe('');
+    expect(step).toMatch(/^ {8}id: ids\s*$/m);
+    expect(step).toMatch(/^ {10}RAW_PUBLISHER: \$\{\{ secrets\.CWS_PUBLISHER_ID \}\}\s*$/m);
+    expect(step).toMatch(/^ {10}RAW_ITEM: \$\{\{ secrets\.CWS_ITEM_ID \}\}\s*$/m);
+    expect(step).toContain(`publisher="$(printf '%s' "$RAW_PUBLISHER" | tr -d '[:space:]')"`);
+    expect(step).toContain(`item="$(printf '%s' "$RAW_ITEM" | tr -d '[:space:]')"`);
+    expect(step).toContain('if ! [[ "$item" =~ ^[a-p]{32}$ ]]; then');
+    expect(step).toContain('if ! [[ "$publisher" =~ ^[A-Za-z0-9_-]{1,128}$ ]]; then');
+    // Each mismatch names its secret, and the step fails.
+    expect(step).toMatch(/::error::secret CWS_ITEM_ID is not a Chrome Web Store item ID[^\n]*its value is not printed/);
+    expect(step).toMatch(/::error::secret CWS_PUBLISHER_ID is not a publisher ID[^\n]*its value is not printed/);
+    expect(step).toMatch(/if \[ "\$ok" != true \]; then\n\s*exit 1\n/);
+    // No value is printed: an echo names a value only to mask it or to hand it to later steps.
+    const echoes = step.split('\n').filter((l) => /^\s*echo\b/.test(l) && /\$(?:\{)?(?:RAW_PUBLISHER|RAW_ITEM|publisher|item)\b/.test(l));
+    const allowed = /^\s*echo "::add-mask::\$(publisher|item)"$|^\s*echo "(publisher|item)=\$(publisher|item)" >> "\$GITHUB_OUTPUT"$/;
+    expect(echoes.filter((l) => !allowed.test(l)), `${file}: an echo that prints an ID`).toEqual([]);
+    expect(echoes.length, `${file}: the mask and output lines are seen (firing control)`).toBe(4);
+  });
+
+  it.each(files)('%s: the step runs before the sign-in and every API call, and the API steps read only its outputs', (file) => {
+    const t = read(file);
+    const at = t.indexOf('- name: Check the store IDs');
+    expect(at, `${file}: the store-ID step`).toBeGreaterThan(-1);
+    expect(at, 'before the sign-in').toBeLessThan(t.indexOf('uses: google-github-actions/auth@'));
+    // A curl call, not the word in a comment (the step's own comment quotes curl's error).
+    expect(t.search(/\bcurl -/), 'a curl call (firing control)').toBeGreaterThan(-1);
+    expect(at, 'before any curl call').toBeLessThan(t.search(/\bcurl -/));
+    expect(at, 'before any API URL').toBeLessThan(t.search(/https:\/\/chromewebstore\.googleapis\.com/));
+    // The raw store-ID secrets appear in this step only; the API steps take the cleaned outputs.
+    const outside = t.replace(storeIdStep(t), '');
+    expect(outside, `${file}: a store-ID secret outside the step`).not.toMatch(/secrets\.CWS_(PUBLISHER|ITEM)_ID/);
+    const fromOutputs = [...t.matchAll(/^ {10}(PUBLISHER|ITEM): \$\{\{ steps\.ids\.outputs\.(publisher|item) \}\}\s*$/gm)];
+    expect(fromOutputs.length, `${file}: API steps reading the outputs`).toBe(file === RELEASE ? 4 : 2);
+    expect(t, `${file}: an API step env from the secret directly`).not.toMatch(/^ {10}(PUBLISHER|ITEM): \$\{\{ secrets\./m);
+  });
+
+  it('the step is the same text in both workflows', () => {
+    expect(storeIdStep(read(CWS_CHECK))).toBe(storeIdStep(read(RELEASE)));
+  });
+});
+
 describe('the Pages workflow (013 task 7.4)', () => {
   it('runs by hand only — no push trigger — and deploys only from main', () => {
     const t = read(PAGES);

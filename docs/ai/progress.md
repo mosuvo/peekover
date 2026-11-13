@@ -102,14 +102,15 @@ measurement-driven or explicitly deferred.*
   "M13 TASK 5.9 (measurement)"). *Home:* a fix task once ruled, with an A-B-A against `618d37b`.
 
 #### POST-RELEASE (after M13) — FIRST ON THE LIST
-- **M14: Chrome Web Store uploads automated — committed 2026-11-13, not yet run against Google.**
-  (`decisions.md`, "CHROME UPLOADS AUTOMATED"; GO-LIVE section 10.) `release.yml` has the job `chrome-web-store`:
-  approval-gated, Workload Identity Federation, API V2 upload and publish, the zip checked against `SHA256SUMS` first.
-  `cws-check.yml` signs in and calls only `fetchStatus`. `tests/ciConfig.test.ts` pins both. **Next, the human:** push
-  `main`, then run the check-only workflow on a throwaway `v*` check tag (GO-LIVE 10.3; `--ref v0.1.0` cannot work,
-  because that tag has no `cws-check.yml`). Record its run id as a Done note. The first real upload is 0.1.1 (10.2).
-  Still to confirm: that the IAM Service Account Credentials API is enabled in `peekover-release` (10.1, **If sign-in
-  fails**).
+- **M14: Chrome Web Store uploads automated — committed 2026-11-13; sign-in PROVEN, first upload at 0.1.1.**
+  (`decisions.md`, "CHROME UPLOADS AUTOMATED" and "CHROME UPLOADS: SIGN-IN PROVEN"; GO-LIVE section 10.) `release.yml`
+  has the job `chrome-web-store`: approval-gated, Workload Identity Federation, API V2 upload and publish, with the zip
+  checked against `SHA256SUMS` first. `cws-check.yml` signs in and calls only `fetchStatus`. Both workflows trim and
+  check the two store IDs before any call. `tests/ciConfig.test.ts` pins all of it. **Done 2026-11-13:** cws-check
+  run 43372743291, attempt 3, read the item as `PUBLISHED` 0.1.0 (GO-LIVE Done note 10.3). It took two failed
+  attempts first: the WIF condition (now `assertion.repository` && `assertion.environment`), then a pasted line break
+  in a secret. **Next:** the first real upload at 0.1.1 (10.2). Its upload and publish calls, and their jq parsing,
+  have not yet run against Google. fetchStatus's response has been parsed: the check run's jq `itemId` check passed.
 - **M14's first session: place the two adopted retro rules (HUMAN RULING 2026-11-11, "YES to both").** (a)
   Engine-only human checks happen in the group that needs them. (b) A claim-bearing in-app string gets a test that pins
   it to its state. They go into `WORKFLOW.md` or `AGENTS.md`. **(b) is test-pinned, NOT ledgered** (the human's

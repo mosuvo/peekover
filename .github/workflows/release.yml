@@ -233,6 +233,44 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "zip=dist/$name" >> "$GITHUB_OUTPUT"
 
+      # The two store IDs, checked before any call. A pasted secret can carry a line break (cws-check run 43372743291,
+      # attempt 2: curl "(3) URL rejected"). Whitespace is removed, then each ID must match its format; a mismatch names
+      # the secret, never its value. Later steps read the cleaned IDs from this step's outputs, never the raw secrets.
+      - name: Check the store IDs (whitespace trimmed, format checked, values not printed)
+        id: ids
+        shell: bash
+        env:
+          RAW_PUBLISHER: ${{ secrets.CWS_PUBLISHER_ID }}
+          RAW_ITEM: ${{ secrets.CWS_ITEM_ID }}
+        run: |
+          publisher="$(printf '%s' "$RAW_PUBLISHER" | tr -d '[:space:]')"
+          item="$(printf '%s' "$RAW_ITEM" | tr -d '[:space:]')"
+          ok=true
+          # The item ID is the extension ID: 32 lowercase letters a-p.
+          if ! [[ "$item" =~ ^[a-p]{32}$ ]]; then
+            echo "::error::secret CWS_ITEM_ID is not a Chrome Web Store item ID (32 lowercase letters a-p): ${#item} characters after trimming; its value is not printed"
+            ok=false
+          fi
+          # Google documents no publisher ID format; the API takes it as one URL path segment, so only URL-safe characters.
+          if ! [[ "$publisher" =~ ^[A-Za-z0-9_-]{1,128}$ ]]; then
+            echo "::error::secret CWS_PUBLISHER_ID is not a publisher ID (1 to 128 letters, digits, - or _): ${#publisher} characters after trimming; its value is not printed"
+            ok=false
+          fi
+          if [ "$ok" != true ]; then
+            exit 1
+          fi
+          echo "::add-mask::$publisher"
+          echo "::add-mask::$item"
+          if [ "$publisher" != "$RAW_PUBLISHER" ]; then
+            echo "::warning::secret CWS_PUBLISHER_ID held whitespace or a line break; trimmed here, re-enter it to clean it"
+          fi
+          if [ "$item" != "$RAW_ITEM" ]; then
+            echo "::warning::secret CWS_ITEM_ID held whitespace or a line break; trimmed here, re-enter it to clean it"
+          fi
+          echo "publisher=$publisher" >> "$GITHUB_OUTPUT"
+          echo "item=$item" >> "$GITHUB_OUTPUT"
+          echo "store IDs: well-formed"
+
       - name: Sign in to Google (Workload Identity Federation, no key)
         id: auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
@@ -248,8 +286,8 @@ jobs:
         shell: bash
         env:
           TOKEN: ${{ steps.auth.outputs.access_token }}
-          PUBLISHER: ${{ secrets.CWS_PUBLISHER_ID }}
-          ITEM: ${{ secrets.CWS_ITEM_ID }}
+          PUBLISHER: ${{ steps.ids.outputs.publisher }}
+          ITEM: ${{ steps.ids.outputs.item }}
           ZIP: ${{ steps.zip.outputs.zip }}
           VERSION: ${{ steps.zip.outputs.version }}
         run: |
@@ -292,8 +330,8 @@ jobs:
         shell: bash
         env:
           TOKEN: ${{ steps.auth.outputs.access_token }}
-          PUBLISHER: ${{ secrets.CWS_PUBLISHER_ID }}
-          ITEM: ${{ secrets.CWS_ITEM_ID }}
+          PUBLISHER: ${{ steps.ids.outputs.publisher }}
+          ITEM: ${{ steps.ids.outputs.item }}
           VERSION: ${{ steps.zip.outputs.version }}
         run: |
           api=https://chromewebstore.googleapis.com

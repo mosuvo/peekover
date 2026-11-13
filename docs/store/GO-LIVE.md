@@ -227,7 +227,9 @@ Pages works on public repositories only on this plan, so this comes after step 2
   - **Where:** `gh run watch` on that run (or Actions → **Release**).
   - **Check:** three jobs green — **Build, test and package**, **Attest the release files (public repository only)**
     (it must RUN, not be skipped — the repository is public now) and **Create the draft release**. The build job's
-    summary lists the SHA-256 of each file and the line `REPRODUCIBLE` (`.github/workflows/release.yml`).
+    summary lists the SHA-256 of each file and the line `REPRODUCIBLE` (`.github/workflows/release.yml`). From
+    0.1.1, a fourth job, **Upload to the Chrome Web Store and submit for review**, then waits for your approval (10.2),
+    and `gh run watch` keeps waiting until you approve or reject it.
   - **If it fails:** attest skipped → the repository is still private (step 2.2). Anything else red → stop; an agent
     task. Delete the draft release if one was made (step 9.4) before re-tagging.
 - [ ] **5.3 Download the draft release and check every file.**
@@ -443,17 +445,21 @@ retired.*
     **Account → Service account** (one service account per publisher).
   - **Workload Identity Federation:** pool `github`, OIDC provider `peekover` (issuer
     `https://token.actions.githubusercontent.com`). Attribute condition
-    `assertion.sub=='repo:mosuvo/peekover:environment:chrome-web-store'`, so Google takes only tokens from a job that
-    runs in that environment of this repository. The repository is bound to the service account with
-    `roles/iam.workloadIdentityUser`.
+    `assertion.repository=='mosuvo/peekover' && assertion.environment=='chrome-web-store'`, so Google takes only
+    tokens from a job that runs in that environment of this repository. The repository is bound to the service account
+    with `roles/iam.workloadIdentityUser`. The first condition, `assertion.sub=='repo:mosuvo/peekover:environment:chrome-web-store'`,
+    rejected the check run's token ("The given credential is rejected by the attribute condition", 10.3, attempt 1),
+    so the human changed it on 2026-11-13. Why the `sub` claim did not match was not diagnosed.
   - **GitHub:** the environment `chrome-web-store`. Required reviewer `mosuvo`, admin bypass off, and deployments from
     `v*` tags only. It holds four environment secrets (not variables): `GCP_WIF_PROVIDER`, `GCP_SERVICE_ACCOUNT`,
-    `CWS_PUBLISHER_ID` and `CWS_ITEM_ID`. No workflow hard-codes any of them.
+    `CWS_PUBLISHER_ID` and `CWS_ITEM_ID`. No workflow hard-codes any of them. Paste each value with no line break.
+    Both workflows remove whitespace from the two store IDs and check their format before any call (step "Check the
+    store IDs"). A malformed ID fails there, the error names the secret, and its value is never printed.
   - **If sign-in fails** (10.3 fails at "Sign in to Google"): check that the provider's full resource name is in
-    `GCP_WIF_PROVIDER` (`projects/<number>/locations/global/workloadIdentityPools/github/providers/peekover`). Then
-    check that the IAM Service Account Credentials API (`iamcredentials.googleapis.com`) is enabled in
-    `peekover-release`: the auth action mints the access token through it. This last check was not confirmed in the
-    setup report.
+    `GCP_WIF_PROVIDER` (`projects/<number>/locations/global/workloadIdentityPools/github/providers/peekover`). Check
+    that the attribute condition is the one above. Then check that the IAM Service Account Credentials API
+    (`iamcredentials.googleapis.com`) is enabled in `peekover-release`: the auth action mints the access token
+    through it. Sign-in worked on 2026-11-13 (Done note 10.3), so each of these was right then.
 
 - [ ] **10.2 A release: approve the upload.** It runs on each `v*` tag push (step 5.1).
   - **What runs:** `release.yml`'s job `chrome-web-store` ("Upload to the Chrome Web Store and submit for review"). It
@@ -476,7 +482,7 @@ retired.*
     since. Google's docs: the API cannot publish until you publish by hand once with the new visibility.
   - **To not upload a release:** **Reject** in Review deployments. The draft release is not affected.
 
-- [ ] **10.3 The check-only run: prove the sign-in without uploading.** `.github/workflows/cws-check.yml` ("Chrome Web
+- [x] **10.3 The check-only run: prove the sign-in without uploading.** Done 2026-11-13 (Done note 10.3). `.github/workflows/cws-check.yml` ("Chrome Web
   Store sign-in check") runs by hand only. It runs in the same environment, signs in the same way with the same scope,
   and makes one read-only call, V2 `fetchStatus`. It passes on HTTP 200 for the item in `CWS_ITEM_ID`, and its summary
   shows the published state and version. It uploads nothing and publishes nothing.
@@ -502,9 +508,11 @@ retired.*
   - **Check:** the check run is green, and its summary reads "Signed in and read the item: published `PUBLISHED`
     (version `0.1.0`) … Nothing was uploaded."
   - **Then:** delete the check tag. `git push origin :refs/tags/v0.1.0-cws-check`, then `git tag -d v0.1.0-cws-check`.
-  - **If it fails:** at "Sign in to Google", see 10.1 (**If sign-in fails**). An HTTP 403 or 404 from `fetchStatus`
-    means the token works but the store refused it. Check that `CWS_PUBLISHER_ID` and `CWS_ITEM_ID` are right, and
-    that the service account is the one under the dashboard's **Account → Service account**.
+  - **If it fails:** at "Check the store IDs", re-enter the secret the error names, with no line break: the item ID is
+    32 lowercase letters a–p, and the publisher ID is the one under **Publisher → Settings** in the dashboard. At "Sign in
+    to Google", see 10.1 (**If sign-in fails**). An HTTP 403 or 404 from `fetchStatus` means the token works but the
+    store refused it. Check that `CWS_PUBLISHER_ID` and `CWS_ITEM_ID` are right, and that the service account is the
+    one under the dashboard's **Account → Service account**.
 
 - [ ] **10.4 The manual fallback: the dashboard, as in 7.1.** For when the job cannot run or stopped after the upload.
   - **Do:** download `peekover-<version>-chrome.zip` and `SHA256SUMS` from the GitHub release, and check them with
@@ -533,3 +541,4 @@ retired.*
 - **8.3 (Chrome) complete · 2026-11-13 · the human:** in the same clean profile, the human turned on "Allow access to file URLs", and the setup guide showed it as on (row 303). With the earlier note, 8.3 is done for Chrome; Firefox follows when AMO approves.
 - **3.2 re-run after 8.2 · 2026-11-13 · the human:** Pages run 43364785025 succeeded, on `5f0da1b` (checked by CC with `gh run view`). On peekover.dev, the human checked that the Chrome Web Store buttons open the listing, that Setup reads "From install to reading.", and that /privacy/ loads. **At phone width the nav button wrapped onto two lines and overflowed the header.** The next commit fixes that, and its redeploy (step 3.2 again) is pending. The run carries an annotation: `ubuntu-latest` moves to Ubuntu 26 from 2026-10-19 (queued for 0.1.1, https://github.com/mosuvo/peekover/issues/7).
 - **Site fix, the nav button at phone width · 2026-11-13 · CC:** below the 880 px breakpoint, where the nav collapses to ☰, the nav's Chrome Web Store button is hidden. The ☰ menu gained a "Chrome Web Store" link to the listing (row 64; step 3.6's table names #64). Every `.cta` has `white-space: nowrap`. Measured in Playwright Chromium, with the site served locally and its own fonts: at 320, 375, 380, 414 and 768 px the nav is 64 px high with no overflow, the button is hidden, and the menu lists the link. At 1280 px the header screenshot is byte-identical to the previous commit's, and so is every width from 931 px up (swept 881–1101). From 881 to about 925 px the old button wrapped onto two lines (151×64); now it is one line (166×43), and the nav links' wrapping range ("Agent output", 881–921 px) is unchanged. The old page reproduced the bug: a 64 px two-line button at 320–414 px, and the nav overflowing at 320 px. Red-first: row 64 first (2 reds), then the site (green).
+- **10.3 · 2026-11-13 · the human, checked by CC with `gh`:** cws-check run 43372743291 (ref `v0.1.0-cws-check`, on `7f25e7d`), attempt 3, `completed success`. It signed in and read the item: published `PUBLISHED`, version `0.1.0`; nothing was uploaded (the job has no upload or publish call). Attempt 1 failed at sign-in: "The given credential is rejected by the attribute condition". The human changed the provider condition to `assertion.repository=='mosuvo/peekover' && assertion.environment=='chrome-web-store'` (10.1). Attempt 2 failed with curl "(3) URL rejected: Malformed input to a URL function", most likely a line break in a pasted secret. The human re-entered `CWS_ITEM_ID` and `CWS_PUBLISHER_ID`, and both workflows now trim and check the two IDs before any call (10.1). The side effect ran as 10.3 says: Release run 43372737530 on the same tag failed in 6 s at "Check the tag equals package.json's version" ("tag v0.1.0-cws-check does not match package.json version 0.1.0"). Install and every later build step were skipped, and so were attest, the draft release and the Chrome Web Store job: no release, no upload, no approval asked. The check tag was deleted afterwards. Only `v0.1.0` remains (`gh api .../git/refs/tags`).

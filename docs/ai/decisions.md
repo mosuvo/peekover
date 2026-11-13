@@ -1,6 +1,30 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-13 · CHROME UPLOADS: SIGN-IN PROVEN; WIF CONDITION CHANGED; STORE IDS CHECKED.** The first check ran:
+  cws-check run 43372743291 (`v0.1.0-cws-check`, on `7f25e7d`), attempt 3, succeeded. It read the item as `PUBLISHED`,
+  version `0.1.0`, and uploaded nothing (GO-LIVE Done note 10.3). Attempt 1 failed with "The given credential is
+  rejected by the attribute condition". The human changed the WIF provider's condition from
+  `assertion.sub=='repo:mosuvo/peekover:environment:chrome-web-store'` to
+  `assertion.repository=='mosuvo/peekover' && assertion.environment=='chrome-web-store'`. It admits the same jobs:
+  this repository, this environment. Why `sub` did not match was not diagnosed. Attempt 2 failed with curl "(3) URL
+  rejected", most likely a line break in a pasted secret; the human re-entered `CWS_ITEM_ID` and `CWS_PUBLISHER_ID`.
+  The tag's Release run 43372737530 failed in 6 s at the tag/version check, as GO-LIVE 10.3 expects: nothing after it
+  ran, and the Chrome Web Store job was skipped. The tag is deleted. **Hardening:** both workflows gain the step "Check
+  the store IDs". It runs before the sign-in and every API call. It removes all whitespace from the two IDs, then
+  checks the item ID against `^[a-p]{32}$` (Google: "Each item has a 32-character ID, which is the same as the
+  extension ID"). It checks the publisher ID against `^[A-Za-z0-9_-]{1,128}$`: Google documents no publisher ID format
+  (using-api says only where it is shown, Publisher → Settings), and the V2 discovery document's only pattern is
+  `publishers/[^/]+/items/[^/]+`. So the check is one URL-safe path segment, not a guessed shape. A mismatch fails with
+  an error that names the secret and its trimmed length, never its value. The cleaned IDs are masked and passed to the
+  API steps as step outputs. The raw secrets appear only in that step. `tests/ciConfig.test.ts` pins it (11 ablation
+  arms, all red), and the step is byte-identical in both files. Run locally on 9 inputs per file: clean, newline,
+  spaces, bad length, uppercase, the letter q, a slash, a "?", empty. **Trust docs:** THREAT-MODEL gains the upload
+  path, as an adversary, a defence and an out-of-scope line (ledger rows 619–627). The search for a sentence saying
+  releases never upload to a store found none on the published surfaces; only GO-LIVE 5.2's "three jobs green" went
+  stale, and it now names the fourth job. Revisit: when Google documents a publisher ID format (tighten the check);
+  for an ID-based condition (`assertion.repository_id`), if the repository is ever renamed or moved.
+
 - **2026-11-13 · CHROME UPLOADS AUTOMATED.** The human's instruction, after doing the one-time Google Cloud, Workload
   Identity Federation and GitHub environment setup (GO-LIVE 10.1). On a real `v*` tag release, `release.yml`'s new job
   `chrome-web-store` runs after build, attestation and the draft release succeed. Attestation must be `success`: a
