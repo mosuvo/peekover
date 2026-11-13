@@ -102,6 +102,14 @@ measurement-driven or explicitly deferred.*
   "M13 TASK 5.9 (measurement)"). *Home:* a fix task once ruled, with an A-B-A against `618d37b`.
 
 #### POST-RELEASE (after M13) — FIRST ON THE LIST
+- **M14: Chrome Web Store uploads automated — committed 2026-11-13, not yet run against Google.**
+  (`decisions.md`, "CHROME UPLOADS AUTOMATED"; GO-LIVE section 10.) `release.yml` has the job `chrome-web-store`:
+  approval-gated, Workload Identity Federation, API V2 upload and publish, the zip checked against `SHA256SUMS` first.
+  `cws-check.yml` signs in and calls only `fetchStatus`. `tests/ciConfig.test.ts` pins both. **Next, the human:** push
+  `main`, then run the check-only workflow on a throwaway `v*` check tag (GO-LIVE 10.3; `--ref v0.1.0` cannot work,
+  because that tag has no `cws-check.yml`). Record its run id as a Done note. The first real upload is 0.1.1 (10.2).
+  Still to confirm: that the IAM Service Account Credentials API is enabled in `peekover-release` (10.1, **If sign-in
+  fails**).
 - **M14's first session: place the two adopted retro rules (HUMAN RULING 2026-11-11, "YES to both").** (a)
   Engine-only human checks happen in the group that needs them. (b) A claim-bearing in-app string gets a test that pins
   it to its state. They go into `WORKFLOW.md` or `AGENTS.md`. **(b) is test-pinned, NOT ledgered** (the human's

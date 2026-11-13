@@ -426,6 +426,93 @@ the README), never from an earlier copy, a draft or a screenshot.
   ([GitHub docs](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/setting-repository-visibility)).
   Code already cloned or forked cannot be called back.
 
+## 10 · Chrome Web Store uploads (from 0.1.1)
+
+*Added 2026-11-13 (`docs/ai/decisions.md`, "CHROME UPLOADS AUTOMATED"). From 0.1.1 on, the release workflow uploads
+the Chrome zip and submits it for review, after your approval. Step 7.1 is still the way to submit by hand (see 10.4).
+AMO and Edge stay by hand. Google's docs, read 2026-11-13: [Use the Chrome Web Store
+API](https://developer.chrome.com/docs/webstore/using-api), [Service
+accounts](https://developer.chrome.com/docs/webstore/service-accounts), [API
+reference](https://developer.chrome.com/docs/webstore/api/reference/rest). The workflow uses API V2 only; V1 is
+retired.*
+
+- [x] **10.1 The one-time setup (done by the human, 2026-11-13).** No key file exists, and no long-lived credential is
+  stored anywhere.
+  - **Google Cloud:** project `peekover-release`, with the Chrome Web Store API enabled. Service account
+    `cws-publisher@peekover-release.iam.gserviceaccount.com`, with no key, added in the Chrome Web Store dashboard under
+    **Account → Service account** (one service account per publisher).
+  - **Workload Identity Federation:** pool `github`, OIDC provider `peekover` (issuer
+    `https://token.actions.githubusercontent.com`). Attribute condition
+    `assertion.sub=='repo:mosuvo/peekover:environment:chrome-web-store'`, so Google takes only tokens from a job that
+    runs in that environment of this repository. The repository is bound to the service account with
+    `roles/iam.workloadIdentityUser`.
+  - **GitHub:** the environment `chrome-web-store`. Required reviewer `mosuvo`, admin bypass off, and deployments from
+    `v*` tags only. It holds four environment secrets (not variables): `GCP_WIF_PROVIDER`, `GCP_SERVICE_ACCOUNT`,
+    `CWS_PUBLISHER_ID` and `CWS_ITEM_ID`. No workflow hard-codes any of them.
+  - **If sign-in fails** (10.3 fails at "Sign in to Google"): check that the provider's full resource name is in
+    `GCP_WIF_PROVIDER` (`projects/<number>/locations/global/workloadIdentityPools/github/providers/peekover`). Then
+    check that the IAM Service Account Credentials API (`iamcredentials.googleapis.com`) is enabled in
+    `peekover-release`: the auth action mints the access token through it. This last check was not confirmed in the
+    setup report.
+
+- [ ] **10.2 A release: approve the upload.** It runs on each `v*` tag push (step 5.1).
+  - **What runs:** `release.yml`'s job `chrome-web-store` ("Upload to the Chrome Web Store and submit for review"). It
+    runs only when build, tests, attestation and the draft release have all succeeded, and never on a dry run. It
+    downloads the release files the draft release was made from, and checks `peekover-<version>-chrome.zip` against
+    `SHA256SUMS` (`sha256sum --check`) before anything is sent. It then signs in through Workload Identity Federation,
+    uploads that zip (V2 `upload`, polling `fetchStatus` while the upload is processed), and submits it (V2 `publish`,
+    `DEFAULT_PUBLISH`: it goes live once Google approves it). Any non-2xx response, or any state other than upload
+    `SUCCEEDED` and publish `PENDING_REVIEW` or `PUBLISHED`, fails the job. The log shows each response body, which
+    holds no token. The run summary shows the publish state and the version that `fetchStatus` reports.
+  - **Do:** open the Release run (`gh run list --workflow release.yml --limit 1`, then the run's page). Check the draft
+    release first (5.3 and 5.4). Then go to **Review deployments** → tick `chrome-web-store` → **Approve and deploy**.
+    Until you approve, the job waits, and nothing has been sent to Google.
+  - **Check:** the job is green; its summary reads `publish state PENDING_REVIEW` with the new version; the dashboard
+    shows the item as pending review. Google's review then runs as in 7.1 (**Expect**).
+  - **If it fails:** read the job's log. The step that failed, and the API's response body, say where it stopped.
+    Before the upload, nothing reached the store: fix the cause, then **Re-run failed jobs**. After the upload, or at
+    publish: finish in the dashboard (10.4). The package may already be there as a draft, so submit it or upload it
+    again. A publish fails when the item's visibility was changed in the dashboard and has not been published by hand
+    since. Google's docs: the API cannot publish until you publish by hand once with the new visibility.
+  - **To not upload a release:** **Reject** in Review deployments. The draft release is not affected.
+
+- [ ] **10.3 The check-only run: prove the sign-in without uploading.** `.github/workflows/cws-check.yml` ("Chrome Web
+  Store sign-in check") runs by hand only. It runs in the same environment, signs in the same way with the same scope,
+  and makes one read-only call, V2 `fetchStatus`. It passes on HTTP 200 for the item in `CWS_ITEM_ID`, and its summary
+  shows the published state and version. It uploads nothing and publishes nothing.
+  - **Which ref:** the environment deploys from `v*` tags only, and a dispatched run uses the workflow file at the ref
+    it runs on. So **`--ref v0.1.0` does not work.** `v0.1.0` (`216cf7b`) does not contain `cws-check.yml`, and GitHub
+    refuses the dispatch. Dispatched from `main`, the run starts, and the environment then refuses the job (the branch
+    is not allowed to deploy). Use a `v*` tag on a commit that has the file. Before 0.1.1, that is a throwaway check
+    tag on the pushed `main`. From 0.1.1, the release tag itself works (`--ref v0.1.1`), dispatched before you approve
+    10.2.
+  - **Do** (after `main`, with `cws-check.yml`, is pushed):
+    ```bash
+    git fetch origin
+    git tag -a v0.1.0-cws-check -m "Chrome Web Store sign-in check (no release)" origin/main
+    git push origin v0.1.0-cws-check
+    gh workflow run cws-check.yml --repo mosuvo/peekover --ref v0.1.0-cws-check
+    gh run list --repo mosuvo/peekover --workflow cws-check.yml --limit 1
+    ```
+    Then, on that run's page: **Review deployments** → `chrome-web-store` → **Approve and deploy**, and
+    `gh run watch <run id> --repo mosuvo/peekover`.
+  - **Side effect:** pushing a `v*` tag also starts a Release run. That run fails within a minute, at "Check the tag
+    equals package.json's version" (`v0.1.0-cws-check` is not `v0.1.0`). No release is created, nothing is uploaded,
+    and no approval is asked. It is expected; ignore it.
+  - **Check:** the check run is green, and its summary reads "Signed in and read the item: published `PUBLISHED`
+    (version `0.1.0`) … Nothing was uploaded."
+  - **Then:** delete the check tag. `git push origin :refs/tags/v0.1.0-cws-check`, then `git tag -d v0.1.0-cws-check`.
+  - **If it fails:** at "Sign in to Google", see 10.1 (**If sign-in fails**). An HTTP 403 or 404 from `fetchStatus`
+    means the token works but the store refused it. Check that `CWS_PUBLISHER_ID` and `CWS_ITEM_ID` are right, and
+    that the service account is the one under the dashboard's **Account → Service account**.
+
+- [ ] **10.4 The manual fallback: the dashboard, as in 7.1.** For when the job cannot run or stopped after the upload.
+  - **Do:** download `peekover-<version>-chrome.zip` and `SHA256SUMS` from the GitHub release, and check them with
+    `sha256sum --check --ignore-missing SHA256SUMS` (5.3). Then [developer
+    dashboard](https://chrome.google.com/webstore/devconsole) → the item → **Package** → **Upload new package** → that
+    zip → **Submit for review** (7.1's **Submit**; the listing fields are already there).
+  - **Check:** the item's status reads pending review, with the new version.
+
 ## Done notes
 
 *One line per step: the step number, the date, and the evidence seen (a run id, a URL, "all OK").*

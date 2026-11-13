@@ -151,6 +151,9 @@ function jobPermissions(job: string): string[] | null {
 
 const RELEASE = '.github/workflows/release.yml';
 const PAGES = '.github/workflows/pages.yml';
+const CWS_CHECK = '.github/workflows/cws-check.yml';
+/** The `chrome-web-store` environment's secrets (decisions.md, "CHROME UPLOADS AUTOMATED"), sorted. */
+const CWS_SECRETS = ['CWS_ITEM_ID', 'CWS_PUBLISHER_ID', 'GCP_SERVICE_ACCOUNT', 'GCP_WIF_PROVIDER'];
 
 describe('the release workflow (013 task 7.4, D-14; G-9)', () => {
   const text = (): string => read(RELEASE);
@@ -174,7 +177,7 @@ describe('the release workflow (013 task 7.4, D-14; G-9)', () => {
     expect(cond, 'a hand run creates a release only with dry_run off').toContain("(github.event_name == 'push' || !inputs.dry_run)");
   });
 
-  it('creates a DRAFT release only — never publishes, never uploads to a store', () => {
+  it('creates a DRAFT release only — never publishes; no store upload outside the chrome-web-store job', () => {
     const t = text();
     const creates = t.match(/gh release create\b[^\n]*/g) ?? [];
     expect(creates, 'one gh release create').toHaveLength(1);
@@ -182,7 +185,13 @@ describe('the release workflow (013 task 7.4, D-14; G-9)', () => {
     expect(creates[0]).toMatch(/--verify-tag\b/);
     expect(t, 'a release action other than gh').not.toMatch(/action-gh-release|create-release@/);
     expect(t, 'a step that publishes a release').not.toMatch(/gh release edit|--draft=false|draft: false|--latest\b/);
-    expect(t, 'a store upload').not.toMatch(/web-ext sign|chrome-webstore|webstore-upload|addons\.mozilla\.org|microsoftedge|AMO_|CWS_/i);
+    // AMO and Edge stay by hand (decisions.md, "CHROME UPLOADS AUTOMATED"); the Chrome Web Store only in its own job.
+    expect(t, 'an AMO or Edge upload').not.toMatch(/web-ext sign|addons\.mozilla\.org|microsoftedge|AMO_/i);
+    const cws = jobBlock(t, 'chrome-web-store');
+    expect(cws, 'release.yml has a chrome-web-store job').not.toBe('');
+    const outside = t.replace(cws, '');
+    expect(outside.length, 'the job was cut out').toBeLessThan(t.length);
+    expect(outside, 'a Chrome Web Store call outside its job').not.toMatch(/chromewebstore|webstore-upload|CWS_|google-github-actions/i);
   });
 
   // GO-LIVE 5.5 (2026-11-12): publishing keeps the body, so a body that said "Draft." had to be edited by hand on the
@@ -241,6 +250,7 @@ describe('the release workflow (013 task 7.4, D-14; G-9)', () => {
       build: ['contents: read'],
       attest: ['attestations: write', 'contents: read', 'id-token: write'],
       release: ['contents: write'],
+      'chrome-web-store': ['contents: read', 'id-token: write'],
     };
     const jobs = keysAt(topLevelBlock(t, 'jobs'), 2);
     expect(jobs.sort(), 'release.yml jobs').toEqual(Object.keys(want).sort());
@@ -249,11 +259,149 @@ describe('the release workflow (013 task 7.4, D-14; G-9)', () => {
     }
   });
 
-  it('uses no secret but GITHUB_TOKEN', () => {
-    for (const p of [RELEASE, PAGES]) {
-      const secrets = [...read(p).matchAll(/secrets\.(\w+)/g)].map((m) => m[1]).filter((s) => s !== 'GITHUB_TOKEN');
-      expect(secrets, `secrets used in ${p}`).toEqual([]);
+  it('uses no secret but GITHUB_TOKEN, except the four chrome-web-store environment secrets in that job', () => {
+    const secretsIn = (t: string): string[] =>
+      [...new Set([...t.matchAll(/secrets\.(\w+)/g)].map((m) => m[1]).filter((s) => s !== 'GITHUB_TOKEN'))].sort();
+    expect(secretsIn(read(PAGES)), `secrets used in ${PAGES}`).toEqual([]);
+    const t = text();
+    const cws = jobBlock(t, 'chrome-web-store');
+    expect(secretsIn(cws), 'secrets used in the chrome-web-store job').toEqual(CWS_SECRETS);
+    expect(secretsIn(t.replace(cws, '')), `secrets used in ${RELEASE} outside the chrome-web-store job`).toEqual([]);
+  });
+});
+
+// ── CHROME UPLOADS AUTOMATED (decisions.md, 2026-11-13; GO-LIVE.md, "Chrome Web Store uploads"). ─────────────────
+// The release job uploads the release's Chrome zip with the Chrome Web Store API V2 and submits it for review; a
+// separate hand-run workflow signs in the same way and only reads the item's status.
+
+/** google-github-actions/auth, pinned (v3.0.0 = this commit, `git ls-remote` 2026-11-13). */
+const AUTH_PIN = 'google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0';
+/** A Chrome Web Store API V1 URL (retired): the v1.1 path on www.googleapis.com, or a v1 path on either host. */
+const CWS_V1 = /www\.googleapis\.com\/(?:upload\/)?chromewebstore|chromewebstore\/v1|chromewebstore\.googleapis\.com\/(?:upload\/)?v1\b|\/v1\.1\//;
+
+/** The sign-in step: the auth action, the two WIF secrets, an access token for the chromewebstore scope, no file. */
+function expectWifSignIn(job: string, where: string): void {
+  const auth = steps(job).find((s) => s.includes('uses: google-github-actions/auth@'));
+  expect(auth, `${where}: the sign-in step`).toBeDefined();
+  expect(auth!, `${where}: the auth action pinned`).toContain(`uses: ${AUTH_PIN}`);
+  for (const line of [
+    'workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}',
+    'service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}',
+    'token_format: access_token',
+    'access_token_scopes: https://www.googleapis.com/auth/chromewebstore',
+    'create_credentials_file: false',
+  ]) {
+    expect(auth!, `${where}: ${line}`).toMatch(new RegExp(`^ {10}${line.replace(/[$()*+.?[\]^{|}\\]/g, '\\$&')}\\s*$`, 'm'));
+  }
+  // No key: no JSON key input, no credentials file.
+  expect(auth!, `${where}: a key input`).not.toMatch(/credentials_json|GOOGLE_APPLICATION_CREDENTIALS/);
+}
+
+describe('the chrome-web-store release job (CHROME UPLOADS AUTOMATED)', () => {
+  const job = (): string => jobBlock(read(RELEASE), 'chrome-web-store');
+
+  it('runs in the chrome-web-store environment, after build, attestation and the draft release, on a real tag only', () => {
+    const j = job();
+    expect(j, 'release.yml has a chrome-web-store job').not.toBe('');
+    expect(j).toMatch(/^ {4}environment: chrome-web-store\s*$/m);
+    expect(j).toMatch(/^ {4}needs: \[build, attest, release\]\s*$/m);
+    const cond = /^ {4}if: >-\n((?: {6}.*\n)*)/m.exec(j)?.[1].replace(/\s+/g, ' ') ?? '';
+    for (const clause of [
+      "needs.build.result == 'success'",
+      // Strict: a skipped attestation (a private repository) does not upload.
+      "needs.attest.result == 'success'",
+      "needs.release.result == 'success'",
+      "github.ref_type == 'tag'",
+      "(github.event_name == 'push' || !inputs.dry_run)",
+    ]) {
+      expect(cond, `the job's condition: ${clause}`).toContain(clause);
     }
+    expect(cond, 'a skipped attestation passes').not.toContain("needs.attest.result == 'skipped'");
+    expect(jobPermissions(j), 'the job: an OIDC token and read access, nothing else').toEqual(['contents: read', 'id-token: write']);
+  });
+
+  it('signs in with Workload Identity Federation: the pinned auth action, an access token, no key', () => {
+    expectWifSignIn(job(), 'release.yml');
+  });
+
+  it('checks the exact release zip against SHA256SUMS before the upload, and uploads that file', () => {
+    const j = job();
+    const s = steps(j);
+    const check = s.find((x) => /^\s*- name: Check the Chrome zip against SHA256SUMS/m.test(x));
+    expect(check, 'the checksum step').toBeDefined();
+    expect(check!).toMatch(/name="peekover-\$version-chrome\.zip"/);
+    expect(check!).toMatch(/dist\/SHA256SUMS/);
+    expect(check!).toMatch(/sha256sum --check --strict -/);
+    expect(check!).toMatch(/echo "zip=dist\/\$name" >> "\$GITHUB_OUTPUT"/);
+    // The files are the release-files artifact the draft release was created from.
+    const download = s.find((x) => x.includes('uses: actions/download-artifact@'));
+    expect(download, 'the release files are downloaded').toBeDefined();
+    expect(download!).toMatch(/^ {10}name: release-files\s*$/m);
+    // Order: download → checksum → sign-in → upload → publish.
+    const at = (needle: string): number => j.indexOf(needle);
+    const order = [
+      'uses: actions/download-artifact@',
+      'sha256sum --check --strict',
+      'uses: google-github-actions/auth@',
+      ':upload"',
+      ':publish"',
+    ].map((n) => [n, at(n)] as const);
+    for (const [n, i] of order) expect(i, `the job contains ${n}`).toBeGreaterThan(-1);
+    expect(order.map(([, i]) => i), 'the steps run in this order').toEqual(order.map(([, i]) => i).sort((a, b) => a - b));
+    // The uploaded file is the checked one.
+    expect(j).toMatch(/ZIP: \$\{\{ steps\.zip\.outputs\.zip \}\}/);
+    expect(j).toMatch(/--data-binary "@\$ZIP"/);
+  });
+
+  it('uses the V2 API only: upload, publish (normal, after review) and fetchStatus; no V1 URL anywhere', () => {
+    const j = job();
+    expect(j).toMatch(/^ {10}api=https:\/\/chromewebstore\.googleapis\.com\s*$/m);
+    const paths = [...j.matchAll(/"\$api\/([^"]*)"/g)].map((m) => m[1]);
+    expect([...new Set(paths)].sort(), 'the endpoints called').toEqual(['upload/v2/$item:upload', 'v2/$item:fetchStatus', 'v2/$item:publish']);
+    expect(j).toMatch(/item="publishers\/\$PUBLISHER\/items\/\$ITEM"/);
+    // Normal publish: live once approved — not staged, no review skipped.
+    expect(j).toContain(`--data '{"publishType":"DEFAULT_PUBLISH"}'`);
+    expect(j).not.toMatch(/STAGED_PUBLISH|skipReview|deployPercentage/);
+    // Firing control, then the scan over every workflow.
+    expect('https://www.googleapis.com/upload/chromewebstore/v1.1/items/x').toMatch(CWS_V1);
+    expect('https://chromewebstore.googleapis.com/v1/items/x').toMatch(CWS_V1);
+    expect('https://chromewebstore.googleapis.com/upload/v2/publishers/p/items/x:upload').not.toMatch(CWS_V1);
+    const v1 = workflows.filter(({ text: t }) => CWS_V1.test(t)).map((w) => w.file);
+    expect(v1, 'workflows with a Chrome Web Store V1 URL').toEqual([]);
+  });
+
+  it('fails on a non-2xx response or an unexpected state, and prints the response, never the token', () => {
+    const j = job();
+    expect(j).toMatch(/if \[ "\$\{code:0:1\}" != 2 \]; then/);
+    expect(j).toMatch(/if \[ "\$state" != SUCCEEDED \]; then/);
+    expect(j).toMatch(/PENDING_REVIEW \| PUBLISHED\) ;;/);
+    expect(j).toMatch(/jq \. "\$out"/);
+    // The token is only ever sent in the Authorization header, never echoed.
+    expect(j).not.toMatch(/echo[^\n]*\$TOKEN|set -x/);
+    expect(j).toMatch(/-H "Authorization: Bearer \$TOKEN"/);
+  });
+});
+
+describe('the Chrome Web Store sign-in check (CHROME UPLOADS AUTOMATED)', () => {
+  it('runs by hand only, in the chrome-web-store environment, with only an OIDC token', () => {
+    const t = read(CWS_CHECK);
+    expect(keysAt(topLevelBlock(t, 'on'), 2), 'cws-check.yml triggers').toEqual(['workflow_dispatch']);
+    expect(t, 'top-level permissions').toMatch(/^permissions: \{\}\s*$/m);
+    expect(keysAt(topLevelBlock(t, 'jobs'), 2), 'cws-check.yml jobs').toEqual(['check']);
+    const j = jobBlock(t, 'check');
+    expect(j).toMatch(/^ {4}environment: chrome-web-store\s*$/m);
+    expect(jobPermissions(j)).toEqual(['id-token: write']);
+    expectWifSignIn(j, 'cws-check.yml');
+    const secrets = [...new Set([...t.matchAll(/secrets\.(\w+)/g)].map((m) => m[1]))].sort();
+    expect(secrets, 'secrets used in cws-check.yml').toEqual(CWS_SECRETS);
+  });
+
+  it('calls only V2 fetchStatus — no upload, no publish', () => {
+    const t = read(CWS_CHECK);
+    const urls = t.match(/https:\/\/chromewebstore\.googleapis\.com\/[^"\s]*/g) ?? [];
+    expect(urls, 'the one API call').toEqual(['https://chromewebstore.googleapis.com/v2/publishers/$PUBLISHER/items/$ITEM:fetchStatus']);
+    expect(t, 'a write call').not.toMatch(/:upload\b|:publish\b|:cancelSubmission|:rollback|:setPublishedDeployPercentage|--data|-X POST/);
+    expect(t).toMatch(/if \[ "\$code" != 200 \]; then/);
   });
 });
 
@@ -285,7 +433,7 @@ describe('workflow hygiene (013 tasks 7.4, 7.4a)', () => {
         .map((u) => `${file}: ${u}`),
     );
     // Firing control: the scan sees every workflow, and the actions in each.
-    expect([...workflowFiles].sort()).toEqual(['ai-hygiene.yml', 'ci.yml', 'pages.yml', 'release.yml', 'supply-chain.yml']);
+    expect([...workflowFiles].sort()).toEqual(['ai-hygiene.yml', 'ci.yml', 'cws-check.yml', 'pages.yml', 'release.yml', 'supply-chain.yml']);
     expect(workflows.every(({ text: t }) => /uses: /.test(t)), 'each workflow uses an action').toBe(true);
     expect(offenders, 'actions not pinned by full commit SHA').toEqual([]);
   });

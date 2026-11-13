@@ -1,6 +1,24 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-13 · CHROME UPLOADS AUTOMATED.** The human's instruction, after doing the one-time Google Cloud, Workload
+  Identity Federation and GitHub environment setup (GO-LIVE 10.1). On a real `v*` tag release, `release.yml`'s new job
+  `chrome-web-store` runs after build, attestation and the draft release succeed. Attestation must be `success`: a
+  skipped attestation (a private repository) uploads nothing. The job runs in the environment `chrome-web-store`
+  (required reviewer `mosuvo`, admin bypass off, `v*` tags only), with `contents: read` and `id-token: write`. It checks
+  the release's `peekover-<version>-chrome.zip` against `SHA256SUMS`, then signs in with
+  `google-github-actions/auth` v3.0.0 (pinned by SHA). The sign-in uses Workload Identity Federation through the
+  service account, an access token, the `chromewebstore` scope and no credentials file. It then calls Chrome Web Store
+  API **V2 only**: `upload`, polling `fetchStatus` while the upload is in progress, then `publish` with
+  `DEFAULT_PUBLISH`, so the version goes live once Google approves it. It fails on any non-2xx response or unexpected
+  state, and prints each response body (no token). A separate hand-run workflow, `cws-check.yml`, signs in the same way
+  and calls only `fetchStatus`. It needs a `v*` tag that contains the file (GO-LIVE 10.3), so `--ref v0.1.0` cannot
+  work. IDs come from the four environment secrets only: no key file, no new secret. AMO and Edge stay by hand. The
+  dashboard upload (7.1) is the fallback (10.4). Pinned by `tests/ciConfig.test.ts`, with each new assertion ablated
+  red (17 arms). Why: each release's Chrome upload was a hand step. Now the exact attested bytes go up, and the
+  human's approval remains the gate. **Not yet run against Google:** the first evidence is the human's check-only run
+  (10.3). Revisit: when that check runs; at the first automated release (0.1.1); if Google changes the V2 API.
+
 - **2026-11-13 · SITE BANNER KEPT; nav button hidden below the ☰ breakpoint; runner pin queued.** HUMAN RULING: the
   banner "Chrome · Edge · Firefox" (row 71) stays. It states where Peekover runs, not where it is listed (GO-LIVE 8.2
   Done note). Below 880 px the nav's Chrome Web Store button is hidden, and the ☰ menu carries the link (row 64).
