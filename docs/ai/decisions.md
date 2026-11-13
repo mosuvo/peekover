@@ -1,6 +1,29 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-13 · GO-LIVE 8.1–8.4, the Chrome parts: the Chrome Web Store listing is live, and the published lines say
+  so.** Chrome Web Store published 0.1.0 on 2026-11-12, Public; the human installed it from the store on 2026-11-13
+  (GO-LIVE Done notes 8.1 and 8.3). README and the site link the listing and name Firefox as in review at Mozilla.
+  Rows changed in place: 4, 5, 33, 63, 70, 161, 178–181, 187 and 434; new row 618. Step 3.6 lists the listing URL.
+  `tests/truthPins.test.ts` allows only the exact Chrome listing URL (`strayStoreUrls`, with its own control) and still
+  bans AMO and Edge URLs. Red-first, plus an ablation (Done note 8.2). The wording is the agent's, written to the
+  human's 2026-11-13 instruction; the human reviews it before the push. **Open:** 8.3's toggle check (row 303) was not
+  reported. The banner (row 71) is the human's decision. The live site needs step 3.2. The Firefox and Edge parts
+  follow their listings. Revisit: when AMO approves 0.1.0 (8.1–8.4, the Firefox parts).
+
+- **2026-11-13 · POST-LAUNCH QUEUE: "0.1.1: CHROMIUM FALLBACK COPY".** CC's diagnosis (no code changed). The
+  folder-open path is chosen by feature detection (`'showDirectoryPicker' in window`, `src/app/folderSource.ts`). The
+  fallback's notices are written as if the browser were always Firefox. So Brave (no `showDirectoryPicker`) shows
+  `FIREFOX_PICKER_NOTE` and `READ_ONLY_SNAPSHOT_NOTE` (or `DRAGGED_SNAPSHOT_NOTE` on a drop). In Chrome, `REPICK_HINT`
+  ("Firefox can't remember folder access") shows after Revoke and stays for good: Revoke deletes the folder row but
+  keeps its recents and pins, and a re-pick mints a new folder id. Unmeasured: a `NotReadableError` on re-opening a
+  changed picker file in Chromium (would make "Opening a file again shows its latest saved version" false there);
+  Chromium drop-watch ("Watching works here" is Firefox-measured only); the picker blocked by enterprise policy
+  (detection likely passes, then the picker fails with no fallback). Direction: name the missing capability, not the
+  browser, and keep only engine-measured sentences. The new wording needs the human's approval. Tracked as
+  https://github.com/mosuvo/peekover/issues/6. **Starts after AMO approves 0.1.0;** no new AMO version is submitted
+  while 0.1.0 is in review. Revisit: at AMO's decision.
+
 - **2026-11-12 · CHROME LISTING: no keyword lists in store descriptions.** The Chrome Web Store rejected item
   `bcfjejemkkoklbplcgfccboipmgiokpc` for "Keyword Spam" (Yellow Argon) over the description's list of 13
   highlighted languages. The human changed the bullet to "highlights code in common programming languages" and

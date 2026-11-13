@@ -108,6 +108,32 @@ describe('every surface file exists', () => {
 
 const isPlanned = (section: string): boolean => /planned/i.test(section);
 
+/** GO-LIVE 8.1 (2026-11-12): the one store listing that exists. Its own URL may appear; any other store URL is a stray —
+ *  AMO and Edge Add-ons stay banned until their listings are live (8.2 / 8.4, Firefox and Edge parts). */
+const CHROME_LISTING = 'https://chromewebstore.google.com/detail/peekover/bcfjejemkkoklbplcgfccboipmgiokpc';
+const STORE_URL = /(?:https?:\/\/)?(?:chromewebstore\.google\.com|chrome\.google\.com\/webstore|addons\.mozilla\.org|microsoftedge\.microsoft\.com\/addons)[^\s"'<>)\]|`]*/gi;
+
+/** Every store URL in `text` that is not the live Chrome listing, exactly. */
+export function strayStoreUrls(text: string): string[] {
+  return [...text.matchAll(STORE_URL)].map((m) => m[0]).filter((u) => u !== CHROME_LISTING);
+}
+
+describe('the store-URL check (GO-LIVE 8.2, Chrome part)', () => {
+  it('passes the live Chrome listing, and fires on every other store URL', () => {
+    expect(strayStoreUrls(`See [Chrome Web Store](${CHROME_LISTING}).`)).toEqual([]);
+    expect(strayStoreUrls(`<a href="${CHROME_LISTING}">x</a>`)).toEqual([]);
+    for (const u of [
+      'https://addons.mozilla.org/firefox/addon/peekover/',
+      'https://microsoftedge.microsoft.com/addons/detail/peekover/abc',
+      'https://chrome.google.com/webstore/detail/peekover/bcfjejemkkoklbplcgfccboipmgiokpc',
+      'https://chromewebstore.google.com/detail/other/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      `${CHROME_LISTING}?hl=en`,
+    ]) {
+      expect(strayStoreUrls(`a (${u}) b`), u).toEqual([u]);
+    }
+  });
+});
+
 const EMAIL = /hello@peekover\.dev/i;
 /** Where each surface may name the address (G-1): its contact section. Surfaces not listed name it nowhere. */
 const EMAIL_SECTION: Partial<Record<Surface, string>> = {
@@ -178,10 +204,10 @@ describe('README and SECURITY.md say only what ships (013 task 1.2)', () => {
     expect(emailPlacement('## A\n\nEmail HELLO@peekover.dev.\n', undefined).elsewhere).toHaveLength(1);
   });
 
-  it.each(Object.keys(SURFACES) as Surface[])('%s has no install-shaped link and no store claim while no listing exists', (surface) => {
+  it.each(Object.keys(SURFACES) as Surface[])('%s has no install-shaped link, and no store URL or claim for a store with no listing', (surface) => {
     const text = docs[surface];
     expect(text, 'a link whose text says Add to / Install').not.toMatch(/\[[^\]]*\b(add to|install)\b[^\]]*\]\(/i);
-    expect(text, 'a store URL').not.toMatch(/chromewebstore\.google\.com|chrome\.google\.com\/webstore|addons\.mozilla\.org|microsoftedge\.microsoft\.com\/addons/i);
+    expect(strayStoreUrls(text), 'a store URL other than the live Chrome listing').toEqual([]);
     expect(text, 'an "available in the store" claim').not.toMatch(/available (in|on|from) (the )?(chrome web store|store|stores|firefox add-ons|amo|edge add-ons)/i);
   });
 
@@ -340,10 +366,10 @@ describe('the site says only what ships (013 task 1.3, D-12; F-3)', () => {
     expect(missing, 'in-page anchors without a target').toEqual([]);
   });
 
-  it('has no install-shaped link or button and no store claim while no listing exists', () => {
+  it('has no install-shaped link or button, and no store URL or claim for a store with no listing', () => {
     const text = siteBlocks(site).map((b) => b.text).join('\n');
     expect(text, 'an "Add to …" / "Install" call to action').not.toMatch(/\badd to (chrome|edge|firefox)\b|\binstall (now|free)\b|\bone click from your browser/i);
-    expect(site, 'a store URL').not.toMatch(/chromewebstore\.google\.com|chrome\.google\.com\/webstore|addons\.mozilla\.org|microsoftedge\.microsoft\.com\/addons/i);
+    expect(strayStoreUrls(site), 'a store URL other than the live Chrome listing').toEqual([]);
     expect(text, 'an "available in the store" claim').not.toMatch(/available (in|on|from) (the )?(chrome web store|store|stores|firefox add-ons|amo|edge add-ons)/i);
   });
 

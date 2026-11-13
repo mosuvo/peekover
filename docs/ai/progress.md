@@ -31,6 +31,10 @@ EDIT"), with the `.github/SECURITY.md` pointer. Both stores have it for review (
   ledger row 452 match. Rule: no keyword lists in store descriptions (`decisions.md`).
 - **AMO:** listed, Awaiting Review, source zip attached at submission.
 - **Edge:** deferred.
+- **2026-11-13:** Chrome Web Store **published** 0.1.0 on 2026-11-12, Public
+  (https://chromewebstore.google.com/detail/peekover/bcfjejemkkoklbplcgfccboipmgiokpc). GO-LIVE 8.1 and 8.3 (Chrome)
+  are done; 8.3's toggle check (row 303) was not reported. 8.2 and 8.4 (Chrome parts) are committed, and the site needs
+  step 3.2 after the push. The Firefox parts wait for AMO.
 
 **Current numbers (HEAD):** `.output` 6,660,128 B (Cr) / 6,660,114 B (Fx) of 7,340,032 — headroom 679,904 / 679,918 B ·
 content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,607,862 B (the v0.1.0 release's) · manifests
@@ -51,6 +55,13 @@ the second user fixture's two test files; the last product change is 8.1k) · `p
 ### Post-launch ideas
 *The release freeze's inbox: anything new between now and the `v0.1.0` tag, one line each, with its source and date.
 Sorted into § Carried items (or dropped) by M14's first session.*
+
+- **0.1.1: Chromium fallback copy** (2026-11-13, CC's diagnosis of a Brave report; https://github.com/mosuvo/peekover/issues/6;
+  `decisions.md`, "0.1.1: CHROMIUM FALLBACK COPY"). Brave has no `showDirectoryPicker`, so it shows the Firefox-named
+  notices (`FIREFOX_PICKER_NOTE`, `READ_ONLY_SNAPSHOT_NOTE`, `DRAGGED_SNAPSHOT_NOTE`). In Chrome, the Firefox
+  `REPICK_HINT` shows after Revoke and stays for good. Unmeasured: a `NotReadableError` on re-opening a changed picker
+  file in Chromium; Chromium drop-watch; the picker blocked by policy. The new wording needs the human's approval.
+  **Starts after AMO approves 0.1.0;** no new AMO version is submitted while 0.1.0 is in review.
 
 - **Protect `main`** (2026-11-12, CC at go-live, the human's call): the repository is public now. Block force-push
   and deletion; optionally require CI (`verify`, `reproducible`) and Supply chain before a merge. It is a Settings
