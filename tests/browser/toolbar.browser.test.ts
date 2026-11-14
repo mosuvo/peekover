@@ -394,10 +394,11 @@ describe('4.2 — the watch note in the notice area below the toolbar (ruling A)
   it('says what the watch has to say, for each case it covers: unavailable, stopped, changed again — and the reader says none', async () => {
     await openShell(false); // a folder this surface cannot watch — the real "not available" route
     await open('alpha.md');
-    const unavailable = watchNote();
-    expect(unavailable, 'the route explains why watching is missing').toBeTruthy();
-    await until(() => noticeNote().textContent === unavailable);
-    expect(noticeNote().hidden).toBe(false);
+    // 0.1.1: "unavailable" is said by the Watch control itself, not the notice area (`snapshotLine.browser.test.ts`).
+    expect(watchNote(), 'no banner for the unavailable route').toBeNull();
+    expect(noticeNote().hidden).toBe(true);
+    expect(container.querySelector('.peekover-toolbar .peekover-watch')?.getAttribute('aria-disabled')).toBe('true');
+    expect(container.querySelector('.peekover-toolbar__watch-why')?.textContent).toBe('To watch, drag the folder in.');
     expect(shadowOfHost().querySelector(`.${WATCH_NOTE_CLASS}`), 'no note in the reader').toBeNull();
     for (const text of [DEAD_READ_NOTE, CHANGED_AGAIN_NOTE]) {
       setWatchNote(text);
@@ -410,8 +411,9 @@ describe('4.2 — the watch note in the notice area below the toolbar (ruling A)
 
   it.each([414, 1080, 1440])('at %i px it sits in the page flow: below the header, above the reader, overlapping neither', async (width) => {
     await page.viewport(width, 900);
-    await openShell(false);
+    await openShell();
     await open('alpha.md');
+    setWatchNote(DEAD_READ_NOTE); // a stopped watch: the note the notice area still carries (0.1.1)
     await until(() => !noticeNote().hidden);
     await document.fonts.ready;
     const note = noticeNote().getBoundingClientRect();

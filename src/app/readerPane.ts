@@ -23,6 +23,7 @@ import { enhanceEditor, type EditorSave } from '../render/editorEnhancer';
 import { enhanceTables } from '../render/tableEnhancer';
 import { enhanceCode } from '../render/codeEnhancer';
 import { stopWatch } from '../watch/watchRegistry';
+import { CHANGED_AFTER_PICK } from './snapshotNotice';
 
 /**
  * The minimal file seam the reader pane consumes. Deliberately structural and tiny:
@@ -47,12 +48,15 @@ export type ReadResult =
  *   - `no-selection` — nothing is selected yet (initial / cleared).
  *   - `empty-file`   — a file was read but has no renderable content (empty/whitespace).
  *   - `unreadable`   — `read()` rejected (permission denied, IO error, revoked handle).
+ *   - `changed-after-pick` — `read()` rejected because the file changed after a snapshot folder was picked (C5,
+ *     0.1.1); the caller says when (`ReaderPaneOptions.changedAfterPick`).
  *   - `render`       — real content to hand to `mount()`.
  */
 export type ReaderOutcome =
   | { kind: 'no-selection' }
   | { kind: 'empty-file'; name: string }
   | { kind: 'unreadable'; name: string }
+  | { kind: 'changed-after-pick'; name: string }
   | { kind: 'render'; text: string };
 
 /**
@@ -63,9 +67,13 @@ export type ReaderOutcome =
  * `mount()` would otherwise produce an effectively empty reader with no signal to the
  * user that the file simply had nothing in it.
  */
-export function classifyReaderOutcome(file: ReaderFile | null, read: ReadResult): ReaderOutcome {
+export function classifyReaderOutcome(
+  file: ReaderFile | null,
+  read: ReadResult,
+  changedAfterPick: (error: unknown) => boolean = () => false,
+): ReaderOutcome {
   if (!file) return { kind: 'no-selection' };
-  if (!read.ok) return { kind: 'unreadable', name: file.name };
+  if (!read.ok) return { kind: changedAfterPick(read.error) ? 'changed-after-pick' : 'unreadable', name: file.name };
   if (read.text.trim() === '') return { kind: 'empty-file', name: file.name };
   return { kind: 'render', text: read.text };
 }
@@ -111,6 +119,7 @@ const STATE_COPY: Record<Exclude<ReaderOutcome['kind'], 'render'>, { title: stri
     title: "Couldn't read this file",
     detail: 'The file could not be opened. It may have moved, or access was revoked.',
   },
+  'changed-after-pick': CHANGED_AFTER_PICK,
 };
 
 /**
@@ -122,6 +131,9 @@ const STATE_COPY: Record<Exclude<ReaderOutcome['kind'], 'render'>, { title: stri
  */
 export interface ReaderPaneOptions {
   save?: EditorSave;
+  /** C5 (0.1.1): is this read error a file that changed after its snapshot folder was picked? The shell decides (it
+   *  knows the route); absent → never, and every failed read is `unreadable`. */
+  changedAfterPick?: (error: unknown) => boolean;
 }
 
 /** The public handle appShell (and later group 3) drives the pane through. */
@@ -167,7 +179,7 @@ function buildState(doc: Document, outcome: Exclude<ReaderOutcome, { kind: 'rend
  */
 export function createReaderPane(
   doc: Document,
-  { save }: ReaderPaneOptions = {},
+  { save, changedAfterPick }: ReaderPaneOptions = {},
 ): ReaderPaneController {
   const element = doc.createElement('main');
   element.className = PANE_CLASS;
@@ -276,7 +288,7 @@ export function createReaderPane(
       // Never-blank: a rejected read is a designed state, not an unhandled throw.
       read = { ok: false, error };
     }
-    paint(classifyReaderOutcome(file, read));
+    paint(classifyReaderOutcome(file, read, changedAfterPick));
   }
 
   return {

@@ -1,6 +1,29 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-14 · 0.1.1 NOTICE REDESIGN (HUMAN APPROVAL of CC's prototype, 2026-11-14), implemented.** Approved as
+  prototyped: the top banner (`FIREFOX_PICKER_NOTE`) is removed; on the picker route of a snapshot folder the toolbar's
+  Watch control is shown unavailable (`aria-disabled`, still focusable, no `aria-pressed`) with "To watch, drag the folder
+  in." beside it (`aria-describedby`); the sidebar box (`READ_ONLY_SNAPSHOT_NOTE` / `DRAGGED_SNAPSHOT_NOTE`) becomes one
+  line, "Snapshot" and an ⓘ button ("About this snapshot", a native `popover="auto"`, `role="dialog"`, placed by script)
+  with three lines per build and route, plus "Pick again" on the picker route (the same picker as "Open a folder");
+  `REPICK_HINT` is C4 on the Chromium build and unchanged on Firefox; C5 ("This file changed after you picked the folder"
+  / "Pick the folder again to read its latest version.") on the picker route of a snapshot when the read throws
+  `NotReadableError` (a deleted file, `NotFoundError`, keeps "Couldn't read this file"); C6 in CHANGELOG, and 0.1.0's
+  heading dated 2026-11-12. **One change from the prototype (the human's):** the "granted: <folder>" box loses its
+  rounded border — a plain row, the label truncating (the full name in its `title`), a small Revoke on the same line
+  (the small form of the mock's .iconbtn: 11.5 px, radius 6, the same colours; at the full size the 228 px pane cut
+  "agent-notes" to "agent-no…"; re-pinned in `filesOverlay.browser.test.ts`), aligned with the Snapshot line; the words
+  unchanged. The copy lives in `src/app/snapshotNotice.ts`; the build is `import.meta.env.FIREFOX`, passed by
+  `entrypoints/app/main.ts` as `AppDeps.build` (absent → Chromium, so no page names Firefox unasked). The engine-agnostic
+  rule holds for behaviour: C5 and the Watch decision branch on the source (`persistable`) and the route, never the
+  engine. Tests: `src/app/snapshotNotice.test.ts` (every string per build and route, the wiring; 9 red before it),
+  `tests/browser/snapshotLine.browser.test.ts` (Enter / Esc / focus return, the popover inside the window at 1280 and 360,
+  the unavailable Watch focusable and described, the plain row's geometry; Chromium only: C5 on a real picked folder,
+  the engine's own `NotReadableError` read first; red with the C5 check ablated). Ledger: rows 25 / 334 / 498 keep
+  their sentences (still true), their evidence names the new control and copy; CHANGELOG rows 628–633.
+  Content script −232 B (the banner string left it). Revisit: the human's walk of the built 0.1.1.
+
 - **2026-11-14 · RUNNER PINNED: every workflow runs on ubuntu-24.04 (issue #7, D5).** The same commit, `88df3dd`, built
   on ubuntu-26.04 (CI 43581036617, `reproducible`, image 20261111.196.1) and on ubuntu-24.04 (release dry run
   43581037439, image 20261111.370.1) gave the same three zips: chrome `2740c20a…2c65`, firefox `3d1d3930…de94`, sources

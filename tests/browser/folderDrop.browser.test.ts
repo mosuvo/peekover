@@ -28,7 +28,7 @@ import { openFolderFromDrop, isDirectoryPickerSupported } from '../../src/app/fo
 import { folderSourceFromDataTransfer } from '../../src/app/firefoxFolderSource';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import type { FolderSource } from '../../src/app/folderSource';
-import { DRAGGED_SNAPSHOT_NOTE } from '../../src/app/firefoxFolderSource';
+import { SNAPSHOT_LINES } from '../../src/app/snapshotNotice';
 
 let seq = 0;
 const nextName = () => `peekover-drop-${(seq += 1)}-${Math.trunc(performance.now())}`;
@@ -206,7 +206,7 @@ describe('drag-and-drop folder target — the browser default is PREVENTED (the 
         ok: true,
         source: await folderSourceFromDataTransfer(dropWithEntry(tree).items),
       });
-      mountAppShell(container, { dropToOutcome, store: fakeStore() });
+      mountAppShell(container, { build: 'firefox', dropToOutcome, store: fakeStore() });
       const shell = container.querySelector<HTMLElement>('.peekover-app')!;
 
       const drop = new DragEvent('drop', {
@@ -222,9 +222,12 @@ describe('drag-and-drop folder target — the browser default is PREVENTED (the 
       const chip = await waitFor(() => container.querySelector('.peekover-app__chip'));
       expect(chip.textContent).toContain('granted:');
       const note = container.querySelector('[data-state="read-only-snapshot"]');
-      // RE-SPELLED at M13 9.3b: a DROPPED folder gets the drag note (Watch works here); the picker keeps the old one
-      // (`firefoxFallback.browser.test.ts`).
-      expect(note?.textContent).toBe(DRAGGED_SNAPSHOT_NOTE);
+      // RE-SPELLED at 0.1.1: a DROPPED folder gets the "Snapshot" line with the drag route's words and no button (a drag
+      // cannot start from one); the picker route's are in `firefoxFallback.browser.test.ts`.
+      expect(note?.textContent).toContain('Snapshot');
+      const about = [...container.querySelectorAll('[data-state="snapshot-details"] p')].map((p) => p.textContent);
+      expect(about).toEqual([...SNAPSHOT_LINES.firefox.drop]);
+      expect(container.querySelector('[data-state="snapshot-details"] button')).toBeNull();
       const fileBtn = await waitFor(() =>
         container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]'),
       );

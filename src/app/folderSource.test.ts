@@ -24,7 +24,6 @@ vi.mock('./chromiumFolderSource', () => ({
   })),
 }));
 vi.mock('./firefoxFolderSource', () => ({
-  READ_ONLY_SNAPSHOT_NOTE: 'note',
   pickDirectoryFiles: vi.fn(async () => [{ name: 'a.md' }] as unknown as FileList),
   folderSourceFromFileList: vi.fn(async () => ({
     name: 'firefox-snapshot',

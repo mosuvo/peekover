@@ -69,6 +69,9 @@ import {
 } from '../render/diffChrome';
 import { buildAgentBadge } from '../render/agentBadge';
 
+/** Distinct ids per toolbar (a test mounts several). */
+let toolbarCount = 0;
+
 /** The toolbar's class root; every part is `${TOOLBAR_CLASS}__part`. */
 export const TOOLBAR_CLASS = 'peekover-toolbar';
 const C = TOOLBAR_CLASS;
@@ -122,6 +125,8 @@ export function toolbarCss(shell: string): string {
 .${C} .${WATCH_CONTROL_CLASS}__dot{width:7px; height:7px; border-radius:50%; background:var(--muted); flex:none}
 .${C} .${WATCH_CONTROL_CLASS}[aria-pressed="true"]{color:var(--ink); border-color:var(--ok)}
 .${C} .${WATCH_CONTROL_CLASS}[aria-pressed="true"] .${WATCH_CONTROL_CLASS}__dot{background:var(--ok)}
+.${C} .${WATCH_CONTROL_CLASS}[aria-disabled="true"]{cursor:default; opacity:.55}
+.${C}__watch-why{font:500 12px/1.3 var(--sans); color:var(--muted); white-space:nowrap}
 .${C}__badge,.${C}__watch,.${C}__status{display:contents}
 .${C}__compare{position:relative; display:inline-flex; flex:none}
 .${C} .${DIFF_AFFORDANCE_CLASS}{font:600 12.5px/1 var(--sans); color:var(--muted); background:var(--panel); cursor:pointer;
@@ -175,6 +180,7 @@ export function toolbarCss(shell: string): string {
   .${C}__more[aria-expanded="true"]{color:var(--ink); border-color:var(--ink)}
   .${C}__break{display:block; order:3; flex-basis:100%; height:0}
   .${C}__watch > *,.${C}__compare,.${C}__seg{order:4}
+  .${C} .${C}__watch-why{order:5; flex-basis:100%; white-space:normal}
   .${C}__compare{position:static}
   .${C}__seg button{padding:7px 9px}
   .${C} .${WATCH_CONTROL_CLASS}{padding:7px 9px}
@@ -240,6 +246,10 @@ export interface ToolbarController {
   /** The open document's name and its reader host (both null when none is open). Re-binds the
    *  observer to the host, so a document switch is reflected at once. */
   setDocument(name: string | null, host: HTMLElement | null): void;
+  /** 0.1.1: why Watch is not offered for the open document (`WATCH_UNAVAILABLE_REASON`), or null. With a reason and a
+   *  document, the Watch slot shows the control unavailable (`aria-disabled`, still focusable) with the reason beside it,
+   *  linked by `aria-describedby`; the reason applies from the next `setDocument` on, and at once to the one open. */
+  setWatchUnavailable(reason: string | null): void;
   /** The notice area (ruling A): the shell places it below the header, in the page flow. */
   readonly notices: HTMLElement;
   /** 4.5 (ruling D): move the bound host's remote-images load bar, if its mount built one, from the
@@ -557,8 +567,7 @@ export function createToolbar(doc: Document): ToolbarController {
       node.appendChild(name);
     }
     badgeSlot.replaceChildren(...badge);
-    const watch = host ? buildWatchControl(host) : null;
-    watchSlot.replaceChildren(...(watch ? [watch] : []));
+    renderWatch();
     const [pill, picker, status] = host ? buildDiffChrome(host) : [];
     comparePill = pill instanceof HTMLButtonElement ? pill : null;
     compareStatus = status instanceof HTMLElement ? status : null;
@@ -576,9 +585,41 @@ export function createToolbar(doc: Document): ToolbarController {
     sync();
   }
 
+  // 0.1.1 — Watch unavailable on this route: the control the user knows, unavailable, and why (never a silent gap).
+  let watchReason: string | null = null;
+  const reasonId = `${C}-watch-why-${(toolbarCount += 1)}`;
+  function renderWatch(): void {
+    const watch = host ? buildWatchControl(host) : null;
+    if (watch || !host || watchReason === null) {
+      watchSlot.replaceChildren(...(watch ? [watch] : []));
+      return;
+    }
+    const off = doc.createElement('button');
+    off.type = 'button';
+    off.className = WATCH_CONTROL_CLASS;
+    off.setAttribute('aria-disabled', 'true');
+    off.setAttribute('aria-describedby', reasonId);
+    const dot = doc.createElement('span');
+    dot.className = `${WATCH_CONTROL_CLASS}__dot`;
+    dot.setAttribute('aria-hidden', 'true');
+    const text = doc.createElement('span');
+    text.className = `${WATCH_CONTROL_CLASS}__text`;
+    text.textContent = 'Watch this file';
+    off.append(dot, text);
+    const why = doc.createElement('span');
+    why.id = reasonId;
+    why.className = `${C}__watch-why`;
+    why.textContent = watchReason;
+    watchSlot.replaceChildren(off, why);
+  }
+
   sync();
   return {
     element,
+    setWatchUnavailable: (reason) => {
+      watchReason = reason;
+      renderWatch();
+    },
     editSegment: buttons[1],
     filesButton,
     setDocument,

@@ -461,10 +461,17 @@ describe('5.1 — the folder pane, restyled', () => {
     expect([ph.color, ph.opacity], 'the placeholder').toEqual([token('--muted'), '1']);
     expect(contrastRatio(parseColor(ph.color), parseColor(s.backgroundColor)), 'the placeholder text').toBeGreaterThanOrEqual(4.5);
 
-    // Pin / revoke / unpin: the mock's .iconbtn.
+    // Pin / unpin: the mock's .iconbtn. Revoke is its small form since 0.1.1 (the human's ruling, 2026-11-14: the
+    // "granted" row is a plain row with a small Revoke on the same line), pinned below.
+    const revoke = pane().querySelector<HTMLElement>('.peekover-app__chip-revoke')!;
+    const rs = getComputedStyle(revoke);
+    expect(
+      [rs.backgroundColor, rs.color, rs.borderTopStyle, rs.borderTopWidth, rs.borderTopColor, rs.borderTopLeftRadius, rs.fontWeight, rs.fontSize],
+      'Revoke is the small .iconbtn',
+    ).toEqual([token('--panel'), token('--muted'), 'solid', '1px', token('--line'), '6px', '600', '11.5px']);
+    expect(textRatio(revoke), 'Revoke text').toBeGreaterThanOrEqual(4.5);
     const buttons = [
       pane().querySelector<HTMLElement>('.peekover-app__pin[data-pin="file"]')!,
-      pane().querySelector<HTMLElement>('.peekover-app__chip-revoke')!,
       pane().querySelector<HTMLElement>('.peekover-recents__unpin')!,
     ];
     for (const b of buttons) {
@@ -719,9 +726,15 @@ describe('5.5 — every app state: never blank, the mock vocabulary, text >= 4.5
     {
       name: 'a read-only snapshot (Firefox)',
       arrange: async (t) => void (await mountState(1440, t, folderOf({ persistable: false }))),
-      find: () => container.querySelector<HTMLElement>('.peekover-app__notice[data-state="read-only-snapshot"]'),
-      message: 'Firefox shows this folder as it was when you picked it', // the approved wording (9.3c)
-      look: (el) => expectAlert(el, 'read-only snapshot', true),
+      find: () => container.querySelector<HTMLElement>('[data-state="read-only-snapshot"]'),
+      message: 'Snapshot', // 0.1.1: the line; its popover's words are pinned in snapshotNotice.test.ts
+      look: (el) => {
+        // 0.1.1: a quiet line, not an alert box; its text and the ⓘ button meet 4.5:1 on the pane.
+        const label = el.querySelector<HTMLElement>('.peekover-app__snapshot-label')!;
+        const info = el.querySelector<HTMLElement>('.peekover-app__snapshot-info')!;
+        expect(textRatio(label), 'the Snapshot label').toBeGreaterThanOrEqual(4.5);
+        expect(textRatio(info), 'the ⓘ button').toBeGreaterThanOrEqual(4.5);
+      },
     },
     {
       name: 'a folder open, no file chosen',

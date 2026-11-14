@@ -21,10 +21,8 @@ import { isDirectoryPickerSupported, type FolderSource } from '../../src/app/fol
 import {
   folderSourceFromDataTransfer,
   folderSourceFromFileList,
-  DRAGGED_SNAPSHOT_NOTE,
-  READ_ONLY_SNAPSHOT_NOTE,
 } from '../../src/app/firefoxFolderSource';
-import { FIREFOX_PICKER_NOTE } from '../../src/watch/watchAvailability';
+import { SNAPSHOT_LINES, WATCH_UNAVAILABLE_REASON } from '../../src/app/snapshotNotice';
 import { WATCH_CONTROL_CLASS } from '../../src/watch/watchControl';
 import { CHANGED_IN_EDIT_ATTR } from '../../src/watch/watchController';
 import { stopWatch } from '../../src/watch/watchRegistry';
@@ -97,11 +95,24 @@ function droppedFolder(file: () => File): DataTransferItemList {
 }
 
 interface Observed {
-  snapshotNote: string | null;
-  pickerNoteShown: boolean;
+  /** The "Snapshot" popover's lines (0.1.1), or null with no snapshot line. */
+  snapshotLines: string[] | null;
+  /** The picker route's Watch reason is on screen (it must not be, on the drag route). */
+  watchReasonShown: boolean;
   watchOffered: boolean;
   watchPressed: string | null;
   updated: boolean;
+}
+
+/** The snapshot line's popover lines (0.1.1), or null when the sidebar has no snapshot line. */
+function popoverLines(container: HTMLElement): string[] | null {
+  if (!container.querySelector('[data-state="read-only-snapshot"]')) return null;
+  return [...container.querySelectorAll('[data-state="snapshot-details"] p')].map((p) => p.textContent ?? '');
+}
+
+/** A Watch control a person can use: present, shown, and neither disabled nor aria-disabled (0.1.1). */
+function offered(control: HTMLButtonElement | null): boolean {
+  return !!control && !control.disabled && control.getAttribute('aria-disabled') !== 'true' && control.getClientRects().length > 0;
 }
 
 /** Mount the shell, drop the folder, open notes.md, turn Watch on, append on disk, wait `ms` for the new heading.
@@ -114,7 +125,7 @@ async function dropWatchAppend(diskPath: string, file: () => File, ms: number, b
     ok: true,
     source: await folderSourceFromDataTransfer(droppedFolder(file)),
   });
-  mountAppShell(container, { dropToOutcome, store: fakeStore() });
+  mountAppShell(container, { build: 'firefox', dropToOutcome, store: fakeStore() });
   const shell = container.querySelector<HTMLElement>('.peekover-app')!;
   shell.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() }));
 
@@ -123,9 +134,9 @@ async function dropWatchAppend(diskPath: string, file: () => File, ms: number, b
   const reader = () => container.querySelector('.peekover-app__reader__host')?.shadowRoot ?? null;
   await waitFor(() => reader()?.querySelector('h1'));
 
-  const snapshotNote = container.querySelector('[data-state="read-only-snapshot"]')?.textContent ?? null;
+  const snapshotLines = popoverLines(container);
   const control = container.querySelector<HTMLButtonElement>(`.${WATCH_CONTROL_CLASS}`);
-  const watchOffered = !!control && !control.disabled && control.getClientRects().length > 0;
+  const watchOffered = offered(control);
   if (before) await commands.diskFixture('append', diskPath, APPENDED);
   control?.click();
   const watchPressed = control?.getAttribute('aria-pressed') ?? null;
@@ -142,8 +153,8 @@ async function dropWatchAppend(diskPath: string, file: () => File, ms: number, b
     updated = [...(reader()?.querySelectorAll('h2') ?? [])].some((h) => h.textContent?.includes('Appended on disk'));
   }
   return {
-    snapshotNote,
-    pickerNoteShown: (container.textContent ?? '').includes(FIREFOX_PICKER_NOTE),
+    snapshotLines,
+    watchReasonShown: (container.textContent ?? '').includes(WATCH_UNAVAILABLE_REASON),
     watchOffered,
     watchPressed,
     updated,
@@ -170,7 +181,7 @@ async function dropAndOpen(file: () => File): Promise<{ container: HTMLElement; 
     ok: true,
     source: await folderSourceFromDataTransfer(droppedFolder(file)),
   });
-  mountAppShell(container, { dropToOutcome, store: fakeStore() });
+  mountAppShell(container, { build: 'firefox', dropToOutcome, store: fakeStore() });
   container
     .querySelector<HTMLElement>('.peekover-app')!
     .dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() }));
@@ -211,14 +222,16 @@ describe.runIf(isFirefox)('Firefox — a dragged folder: the note, the Watch con
     expect(seen.updated, 'the appended heading reached the reader through Watch').toBe(true);
     expect(seen.watchOffered).toBe(true);
     expect(seen.watchPressed).toBe('true');
-    expect(seen.pickerNoteShown).toBe(false);
-    // M13 9.3b (HUMAN RULING "drag note: approve corrected"): the drag route's note says Watch works — and it does
-    // (the assertion above). The old note, which said Watch was unavailable, must not show here.
-    expect(seen.snapshotNote).toBe(DRAGGED_SNAPSHOT_NOTE);
-    // HUMAN COPY APPROVAL 2026-11-10 (walk fix 8.1g): the drag note, pinned as written. Its "drag it in again" clause is
-    // clause (d) below, and was measured on Firefox 159 with the built extension (decisions.md, "M13 TASK 8.1g").
-    expect(seen.snapshotNote).toBe('Firefox shows this folder as it was when you dragged it in. To see new or removed files, drag it in again. Watching works here.');
-    expect(seen.snapshotNote).not.toBe(READ_ONLY_SNAPSHOT_NOTE);
+    expect(seen.watchReasonShown).toBe(false);
+    // 0.1.1 (the notice redesign, approved 2026-11-14): the drag route's popover in the Firefox build, pinned as
+    // written. Its "drag it in again" line is clause (d) below, measured on Firefox 159 with the built extension
+    // (decisions.md, "M13 TASK 8.1g"); its last line is (c).
+    expect(seen.snapshotLines).toEqual([...SNAPSHOT_LINES.firefox.drop]);
+    expect(seen.snapshotLines).toEqual([
+      'Firefox shows this folder as it was when you dragged it in.',
+      'To see new or removed files, drag it in again.',
+      'Firefox can’t keep folder access, so you’ll open it again next time.',
+    ]);
     // A file entry's File keeps its drop-time size; only its text is read fresh (spec 005's TRAP 2, re-measured).
     expect(disk.size).toBe(BEFORE.length);
   }, 20000);
@@ -277,7 +290,7 @@ describe.runIf(isFirefox)('Firefox — a dragged folder: the note, the Watch con
     const notes = source.files.find((f) => f.name === 'notes.md')!;
     expect(await notes.read()).toBe(BEFORE);
     await commands.diskFixture('append', file, APPENDED);
-    // RECORDED: FIREFOX_PICKER_NOTE says this route is "a frozen copy … later changes on disk never arrive".
+    // RECORDED: the 0.1.0-era FIREFOX_PICKER_NOTE said this route is "a frozen copy … later changes on disk never arrive".
     expect(await notes.read()).toBe(BEFORE + APPENDED);
   }, 20000);
 });
@@ -323,7 +336,7 @@ async function mountAndDrop(items: () => DataTransferItemList, deps: Record<stri
     ok: true,
     source: await folderSourceFromDataTransfer(items()),
   });
-  mountAppShell(container, { dropToOutcome, store: fakeStore(), ...deps });
+  mountAppShell(container, { build: 'firefox', dropToOutcome, store: fakeStore(), ...deps });
   container
     .querySelector<HTMLElement>('.peekover-app')!
     .dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() }));
@@ -394,7 +407,7 @@ describe.runIf(isFirefox)('Firefox — the drag note, clause by clause', () => {
       source: await folderSourceFromDataTransfer(folder.items),
     });
     // The REAL store (IndexedDB): what a reload would read back.
-    mountAppShell(container, { dropToOutcome });
+    mountAppShell(container, { build: 'firefox', dropToOutcome });
     container
       .querySelector<HTMLElement>('.peekover-app')!
       .dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() }));
@@ -408,6 +421,7 @@ describe.runIf(isFirefox)('Firefox — the drag note, clause by clause', () => {
     document.body.appendChild(fresh);
     cleanup.push(() => fresh.remove());
     mountAppShell(fresh, {
+      build: 'firefox',
       dropToOutcome,
       openFolder: async () => {
         pickerOpened += 1;
@@ -449,7 +463,7 @@ describe.runIf(isFirefox)('Firefox — the drag note, clause by clause', () => {
     await waitFor(() => (treeNames(container).includes('gamma.md') ? true : null));
     expect(treeNames(container).sort()).toEqual(['alpha.md', 'gamma.md']);
     expect(folder.counter.walks).toBe(2);
-    expect(container.querySelector('[data-state="read-only-snapshot"]')?.textContent).toBe(DRAGGED_SNAPSHOT_NOTE);
+    expect(popoverLines(container)).toEqual([...SNAPSHOT_LINES.firefox.drop]);
   }, 20000);
 });
 
@@ -479,7 +493,7 @@ async function mountAndPick(dir: string, deps: Record<string, unknown> = {}): Pr
   document.body.appendChild(container);
   cleanup.push(() => container.remove());
   const picker = pickerOf(dir);
-  const app = mountAppShell(container, { openFolder: picker.openFolder, store: fakeStore(), ...deps });
+  const app = mountAppShell(container, { build: 'firefox', openFolder: picker.openFolder, store: fakeStore(), ...deps });
   await app.openFolder();
   await waitFor(() => container.querySelector('[role="treeitem"][data-kind="file"]'));
   return { container, picker };
@@ -506,16 +520,21 @@ describe.runIf(isFirefox)('Firefox — the picker route, claim by claim', () => 
     const fresh = await waitFor(
       () => [...(readerOf(container)?.querySelectorAll('h2') ?? [])].find((h) => h.textContent?.includes('Appended on disk')) ?? null,
     ).catch(() => null);
-    // The instrument that answers the question first: FIREFOX_PICKER_NOTE says "later changes on disk never arrive".
+    // The instrument that answers the question first: the popover's line 2 says an opened file shows its latest version.
     expect(fresh, 'the on-disk edit reached the reader on re-opening the file').not.toBeNull();
-    // What the product does today, unchanged: no Watch control on this route; the two picker notes are shown.
+    // Watch is not offered on this route (a choice): shown unavailable, with its reason (0.1.1).
     const control = container.querySelector<HTMLButtonElement>(`.${WATCH_CONTROL_CLASS}`);
-    expect(!!control && !control.disabled && control.getClientRects().length > 0, 'Watch offered').toBe(false);
-    expect(container.textContent).toContain(FIREFOX_PICKER_NOTE);
-    expect(container.querySelector('[data-state="read-only-snapshot"]')?.textContent).toBe(READ_ONLY_SNAPSHOT_NOTE);
-    // HUMAN RULING 2026-11-10 (picker-route wording): what this route shows, pinned as written — true of p1–p4.
-    expect(container.textContent).toContain("Watching isn't offered for folders opened with the file picker in Firefox. Opening a file again shows its latest saved version, but the page won't update on its own. Drag the folder onto this page instead and watching will work.");
-    expect(container.querySelector('[data-state="read-only-snapshot"]')?.textContent).toBe("Firefox shows this folder as it was when you picked it: files added later won’t appear, and files deleted later stay listed but can’t be opened. Opening a file again shows its latest saved version. Firefox can’t give Peekover lasting access to the folder, so there is no write-back, and next time you’ll pick the folder again. To watch a file for changes, drag the folder in instead.");
+    expect(offered(control), 'Watch offered').toBe(false);
+    expect(control?.getAttribute('aria-disabled')).toBe('true');
+    expect(container.textContent).toContain(WATCH_UNAVAILABLE_REASON);
+    // 0.1.1 (approved 2026-11-14): the picker route's popover in the Firefox build, pinned as written — line 1 is p2,
+    // line 2 p1, line 3 p4.
+    expect(popoverLines(container)).toEqual([
+      'Firefox shows this folder as it was when you picked it: new files won’t appear.',
+      'Opening a file shows its latest saved version.',
+      'Firefox can’t keep folder access, so you’ll pick it again next time.',
+    ]);
+    expect(popoverLines(container)).toEqual([...SNAPSHOT_LINES.firefox.picker]);
   }, 20000);
 
   it('(p2) a file ADDED after picking does not appear; picking the folder again shows it (firing control)', async () => {
@@ -560,7 +579,7 @@ describe.runIf(isFirefox)('Firefox — the picker route, claim by claim', () => 
     document.body.appendChild(container);
     // The REAL store (IndexedDB): what a reload would read back.
     const first = pickerOf(dir);
-    const app = mountAppShell(container, { openFolder: first.openFolder });
+    const app = mountAppShell(container, { build: 'firefox', openFolder: first.openFolder });
     await app.openFolder();
     (await waitFor(() => container.querySelector<HTMLElement>('[role="treeitem"][data-kind="file"]'))).click();
     await pause(1000);
@@ -571,6 +590,7 @@ describe.runIf(isFirefox)('Firefox — the picker route, claim by claim', () => 
     document.body.appendChild(fresh);
     cleanup.push(() => fresh.remove());
     mountAppShell(fresh, {
+      build: 'firefox',
       openFolder: async () => {
         pickerOpened += 1;
         return { ok: false, reason: 'cancelled', message: 'No folder was opened.' } as never;

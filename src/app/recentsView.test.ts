@@ -8,10 +8,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   createRecentsView,
-  REPICK_HINT,
   type RecentEntryVM,
   type PinEntryVM,
 } from './recentsView';
+import { REPICK_HINTS } from './snapshotNotice';
+
+/** Any build's hint: the view shows what the shell hands it (the per-build strings: snapshotNotice.test.ts). */
+const REPICK_HINT = REPICK_HINTS.firefox;
 
 function recent(over: Partial<RecentEntryVM> = {}): RecentEntryVM {
   return { id: 'r1', folderId: 'F', name: 'intro.md', path: 'docs/intro.md', reopen: 'rehydrate', ...over };
@@ -29,6 +32,7 @@ describe('createRecentsView', () => {
 
   it('returns element:null when there is nothing to show (never an empty box)', () => {
     const view = createRecentsView(doc, {
+      repickHint: REPICK_HINT,
       recents: [],
       pins: [],
       onOpenRecent: () => {},
@@ -40,6 +44,7 @@ describe('createRecentsView', () => {
 
   it('renders Pinned above Recent, each as labelled sections', () => {
     const view = createRecentsView(doc, {
+      repickHint: REPICK_HINT,
       recents: [recent()],
       pins: [pin()],
       onOpenRecent: () => {},
@@ -54,6 +59,7 @@ describe('createRecentsView', () => {
 
   it('a recent entry is a single reopen button carrying its name + path title', () => {
     const view = createRecentsView(doc, {
+      repickHint: REPICK_HINT,
       recents: [recent({ name: 'guide.md', path: 'docs/guide.md' })],
       pins: [],
       onOpenRecent: () => {},
@@ -72,6 +78,7 @@ describe('createRecentsView', () => {
     let opened: RecentEntryVM | null = null;
     const entry = recent({ id: 'rX' });
     const view = createRecentsView(doc, {
+      repickHint: REPICK_HINT,
       recents: [entry],
       pins: [],
       onOpenRecent: (e) => (opened = e),
@@ -86,6 +93,7 @@ describe('createRecentsView', () => {
 
   it('a Firefox (repick) entry is NOT greyed out — it shows the honest re-pick reason', () => {
     const view = createRecentsView(doc, {
+      repickHint: REPICK_HINT,
       recents: [],
       pins: [pin({ reopen: 'repick' })],
       onOpenRecent: () => {},
@@ -106,6 +114,7 @@ describe('createRecentsView', () => {
     let unpinned: PinEntryVM | null = null;
     const p = pin({ id: 'pZ', kind: 'folder', name: 'proj' });
     const view = createRecentsView(doc, {
+      repickHint: REPICK_HINT,
       recents: [],
       pins: [p],
       onOpenRecent: () => {},
@@ -126,6 +135,7 @@ describe('createRecentsView', () => {
 
   it('sets names via textContent (a markup-y folder name cannot inject)', () => {
     const view = createRecentsView(doc, {
+      repickHint: REPICK_HINT,
       recents: [],
       pins: [pin({ name: '<img src=x onerror=alert(1)>' })],
       onOpenRecent: () => {},

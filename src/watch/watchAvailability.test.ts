@@ -15,7 +15,6 @@ import { describe, it, expect } from 'vitest';
 import {
   watchCapability,
   FIREFOX_CONTENT_SCRIPT_NOTE,
-  FIREFOX_PICKER_NOTE,
   REMOTE_DOCUMENT_NOTE,
 } from './watchAvailability';
 
@@ -110,14 +109,13 @@ describe('watchCapability — the app-page surface (task 4.4 case a)', () => {
     });
   });
 
-  it('explains instead for a PICKED snapshot — Watch not offered (Firefox)', () => {
-    const decision = watchCapability({
-      surface: 'app-page',
-      persistable: false,
-      route: 'picker',
+  it('does not offer Watch for a PICKED snapshot, with no note (0.1.1: the reason is on the control)', () => {
+    // 0.1.1: the app page shows Watch unavailable with "To watch, drag the folder in." beside it
+    // (`src/app/snapshotNotice.test.ts`); the 0.1.0 banner (`FIREFOX_PICKER_NOTE`) is gone.
+    expect(watchCapability({ surface: 'app-page', persistable: false, route: 'picker' })).toEqual({
+      watchable: false,
+      note: null,
     });
-    expect(decision.watchable).toBe(false);
-    expect(decision.note).toBe(FIREFOX_PICKER_NOTE);
   });
 
   it('distinguishes the two Firefox snapshot routes — the whole point of carrying the route', () => {
@@ -127,28 +125,6 @@ describe('watchCapability — the app-page surface (task 4.4 case a)', () => {
     const dropped = watchCapability({ surface: 'app-page', persistable: false, route: 'drop' });
     const picked = watchCapability({ surface: 'app-page', persistable: false, route: 'picker' });
     expect(dropped.watchable).not.toBe(picked.watchable);
-  });
-});
-
-describe('the explanations themselves (task 4.4)', () => {
-  it.each([
-    ['picker', FIREFOX_PICKER_NOTE],
-  ])('%s: says what is not happening, why, AND what to do instead', (_name, note) => {
-    // The last clause is what makes these worth shipping rather than merely honest: in BOTH cases
-    // a working route exists, so a note that only apologised would leave the user stuck. This is
-    // the shape M2's READ_ONLY_SNAPSHOT_NOTE established.
-    expect(note).toMatch(/isn't (available|offered)/i);
-    expect(note).toMatch(/Firefox/);
-    expect(note).toMatch(/instead/i);
-    // Plain language: no error codes, no API names leaking to the user.
-    expect(note).not.toMatch(/moz-extension|NetworkError|file:\/\/\/|undefined/);
-  });
-});
-
-describe('the picker-route wording (HUMAN RULING 2026-11-10, after the real-picker check: "picker: fresh")', () => {
-  it('FIREFOX_PICKER_NOTE is the approved sentence, and no longer says the files are frozen', () => {
-    expect(FIREFOX_PICKER_NOTE).toBe("Watching isn't offered for folders opened with the file picker in Firefox. Opening a file again shows its latest saved version, but the page won't update on its own. Drag the folder onto this page instead and watching will work.");
-    expect(FIREFOX_PICKER_NOTE).not.toMatch(/frozen|never arrive/i);
   });
 });
 
@@ -165,11 +141,11 @@ describe('the tab reader\'s can\'t-watch footnotes (walk fix 8.1h)', () => {
 });
 
 describe('the content-script notes stay distinct (task 4.6-rescope; its old REMOTE shape test retired at 8.1h)', () => {
-  it('the three content-script notes are NOT interchangeable — pairwise distinct', () => {
+  it('the content-script notes are NOT interchangeable — distinct', () => {
     // The discrimination check the browser suite proves at the RENDER level; asserted here on the
     // strings themselves so a future edit that collapses two of them fails loudly. Swapping any pair
     // in the decision (the red-first mutation) makes the surface-specific tests above fail.
-    const notes = [FIREFOX_CONTENT_SCRIPT_NOTE, FIREFOX_PICKER_NOTE, REMOTE_DOCUMENT_NOTE];
+    const notes = [FIREFOX_CONTENT_SCRIPT_NOTE, REMOTE_DOCUMENT_NOTE];
     expect(new Set(notes).size).toBe(notes.length);
   });
 });

@@ -264,7 +264,7 @@ describe('appShell (task 3.2 folder grant flow)', () => {
   // DATA (`persistable:false`), and the shell renders the platform-limitation note off that
   // bit — never by sniffing the engine. (The real feature-detect ROUTING is unit-tested in
   // folderSource.test.ts; the real read path in firefoxFallback.browser.test.ts.)
-  it('a read-only SNAPSHOT source (persistable:false) shows the honest Firefox note + stores NO handle', async () => {
+  it('a read-only SNAPSHOT source (persistable:false) shows the Snapshot line + stores NO handle', async () => {
     const store = fakeStore();
     const source = sourceOf('snap', [mdFile('a.md')], { persistable: false, handle: undefined });
     const app = mountAppShell(container, { openFolder: openerReturning({ ok: true, source }), store });
@@ -273,8 +273,8 @@ describe('appShell (task 3.2 folder grant flow)', () => {
 
     const note = container.querySelector('[data-state="read-only-snapshot"]');
     expect(note).not.toBeNull();
-    // HUMAN RULING 2026-11-10: the picker-route note names what Firefox shows and the route that watches.
-    expect(note!.textContent).toMatch(/Firefox shows this folder as it was when you picked it/);
+    // 0.1.1: the "Snapshot" line, its popover the build's words (pinned per build and route in snapshotNotice.test.ts).
+    expect(note!.textContent).toContain('Snapshot');
     // The chip + tree still render (a folder IS open, just not persistable).
     expect(container.querySelector('.peekover-app__chip')).not.toBeNull();
     expect(container.querySelector('[role="treeitem"][data-kind="file"]')).not.toBeNull();
@@ -1318,12 +1318,14 @@ describe('appShell (008 task 1.4 — the app-page identity registration, D-1)', 
       sourceOf('notes', [mdFile('AGENTS.md', '# Rules')], { persistable: false }),
     );
 
-    // THE CONTROL THAT FIRES: the early-return branch really was taken. Its designed note is on
+    // THE CONTROL THAT FIRES: the early-return branch really was taken. The unavailable Watch is on
     // screen and no watch toggle exists — so the assertion below is about a registration that
     // outlived a return, not about a branch the fixture failed to reach.
     // RE-SPELLED at 4.5 (C020): the toggle is the toolbar's and the note the notice area's (ruling A).
-    expect(container.querySelector('.peekover-toolbar .peekover-watch')).toBeNull();
-    expect(container.querySelector('.peekover-app__notices .peekover-watch-note')?.hasAttribute('hidden')).toBe(false);
+    // 0.1.1: the toolbar's Watch is shown unavailable (no toggle: no aria-pressed), with its reason; no banner.
+    expect(container.querySelector('.peekover-toolbar .peekover-watch')?.getAttribute('aria-disabled')).toBe('true');
+    expect(container.querySelector('.peekover-toolbar .peekover-watch[aria-pressed]')).toBeNull();
+    expect(container.querySelector('.peekover-app__notices .peekover-watch-note')?.hasAttribute('hidden')).toBe(true);
 
     expect(getDocIdentity()).toBe('AGENTS.md');
     expect(badgeIn()!.textContent).toBe('Agent file · AGENTS.md');

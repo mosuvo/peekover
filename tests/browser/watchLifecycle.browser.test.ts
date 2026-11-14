@@ -41,7 +41,6 @@ import {
 import {
   watchCapability,
   FIREFOX_CONTENT_SCRIPT_NOTE,
-  FIREFOX_PICKER_NOTE,
   REMOTE_DOCUMENT_NOTE,
 } from '../../src/watch/watchAvailability';
 import { resetWatchControlsForTest } from '../../src/watch/watchControl';
@@ -338,13 +337,15 @@ describe('watch degraded state — the Firefox routes (task 4.4)', () => {
     expect(columnText(host)).toContain('The first document');
   });
 
-  it('(a) the Firefox file-input app page EXPLAINS, and offers no toggle at all', () => {
+  it('(a) the file-input app page offers no toggle and no note in the reader (0.1.1: the toolbar says why)', () => {
     const host = mountUnder(
       watchCapability({ surface: 'app-page', persistable: false, route: 'picker' }),
     );
 
+    // 0.1.1: the reason sits beside the toolbar's unavailable Watch control (`src/app/snapshotNotice.test.ts`); the
+    // reader itself shows neither a toggle nor the 0.1.0 banner.
     expect(controlIn(host)).toBeNull();
-    expect(noteIn(host)!.textContent).toBe(FIREFOX_PICKER_NOTE);
+    expect(noteIn(host)).toBeNull();
     expect(columnText(host)).toContain('The first document');
   });
 

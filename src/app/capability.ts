@@ -66,6 +66,8 @@ export function buildGrantChip(
   const name = doc.createElement('span');
   name.className = `${CHIP_CLASS}-name`;
   name.textContent = state.name;
+  // 0.1.1: the row is one line and a long name truncates; the full name stays reachable on hover.
+  name.title = state.name;
   label.append(prefix, name);
 
   const revokeBtn = doc.createElement('button');

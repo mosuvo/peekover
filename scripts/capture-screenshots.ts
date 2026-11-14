@@ -18,8 +18,8 @@
 //   Chromium: the `__peekoverHarness` seam (task 2.1) with an OPFS directory handle — a live handle, as "Open a folder"
 //     gives in Chrome and Edge.
 //   Firefox: the DRAG route — the real folder on disk dropped on the page by a Gecko drag session (walk-shots'
-//     `dragFolder`, the 8.1g driver), so the pane shows the drag note (`DRAGGED_SNAPSHOT_NOTE`) a Firefox user sees.
-//     The capture fails if the note is missing or differs.
+//     `dragFolder`, the 8.1g driver), so the pane shows the "Snapshot" line a Firefox user sees (0.1.1; its popover's
+//     lines are the Firefox build's drag-route words, `SNAPSHOT_LINES.firefox.drop`). The capture fails if they differ.
 // The tab reader opens `sample.md` by `file://` on both engines; on Firefox after "Access local files on your computer"
 // is turned on in about:addons (since Firefox 153 a separate setting, off by default; task 9.2b).
 // The human picks; only the picks are copied into `docs/store/assets/`.
@@ -27,7 +27,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { chromium } from 'playwright';
-import { DRAGGED_SNAPSHOT_NOTE } from '../src/app/firefoxFolderSource';
+import { SNAPSHOT_LINES } from '../src/app/snapshotNotice';
 import {
   chromiumEngine,
   firefoxEngine,
@@ -163,8 +163,13 @@ async function openApp(E: Engine, file: string): Promise<string> {
   if (!(await waitFor(E, `H.deep().filter((e) => e.matches('[role="treeitem"][data-kind="file"]')).length >= 4`, 10000))) {
     throw new Error(`the dropped folder did not list (${fired})`);
   }
-  const note = await E.evaluate<string | null>(inPage(`return H.one('[data-state="read-only-snapshot"]')?.textContent ?? null;`));
-  if (note !== DRAGGED_SNAPSHOT_NOTE) throw new Error(`the drag note is not shown (read: ${JSON.stringify(note)})`);
+  const lines = await E.evaluate<string[] | null>(
+    inPage(`const line = H.one('[data-state="read-only-snapshot"]'); if (!line) return null;
+      return [...line.querySelectorAll('[data-state="snapshot-details"] p')].map((p) => p.textContent);`),
+  );
+  if (JSON.stringify(lines) !== JSON.stringify(SNAPSHOT_LINES.firefox.drop)) {
+    throw new Error(`the snapshot line is not shown with the drag route's words (read: ${JSON.stringify(lines)})`);
+  }
   const ok = await E.evaluate<boolean>(
     inPage(`const it = H.deep().filter((e) => e.matches('[role="treeitem"][data-kind="file"]')).find((e) => (e.textContent || '').trim() === ${JSON.stringify(file)});
       if (!it) return false; it.click(); return true;`),
@@ -172,7 +177,7 @@ async function openApp(E: Engine, file: string): Promise<string> {
   if (!ok) throw new Error(`no "${file}" in the dropped folder`);
   if (!(await waitFor(E, READER_READY, 10000))) throw new Error('the reader did not render');
   await sleep(800);
-  return 'folder dragged onto the page (the Firefox drag route; the drag note shown)';
+  return 'folder dragged onto the page (the Firefox drag route; the Snapshot line shown)';
 }
 
 const SHOTS: Shot[] = [

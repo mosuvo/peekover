@@ -48,19 +48,18 @@
 //     reading `import.meta.env` here) keeps this module pure and `#imports`-free, exactly as
 //     `changeDetector` and `watchRelay` are.
 //
-// ══ WHAT SHIPS IS AN EXPLANATION, NOT A DISABLED CONTROL ══════════════════════════════════════
+// ══ WHAT SHIPS IS AN EXPLANATION ═══════════════════════════════════════════════════════════════
 //
-// Spec §4 Degradation, and the same honesty posture M2 took for Firefox's read-only folder
-// snapshot (`READ_ONLY_SNAPSHOT_NOTE`). A user told nothing assumes a bug; a user given a greyed-out
-// button assumes they did something wrong. The two Firefox notes below therefore say WHAT is not
-// happening, WHY, and — the part that makes them worth shipping — WHAT TO DO INSTEAD, because in
-// both those cases there genuinely is a working route the user can take.
+// Spec §4 Degradation. A user told nothing assumes a bug. The content-script note below says WHAT is
+// not happening and WHERE watching works instead. On the app page's picker route (0.1.1) the
+// explanation sits on the control itself: Watch is shown unavailable (`aria-disabled`, focusable)
+// with a visible one-line reason beside it — a greyed button WITH its reason, which is not the
+// unexplained greyed button this header used to rule out (`src/app/snapshotNotice.ts`, toolbar.ts).
 //
-// The THIRD note (task 4.6-rescope) is a different shape ON PURPOSE: the REMOTE `http(s)` raw
-// surface is not a limitation to work around but a SCOPE boundary (spec §6 — remote watching is out
-// of scope). Its note names no fault and no fix, because there is neither; it just states that watch
-// follows local files. The three notes are deliberately non-interchangeable, and that is red-first
-// proven — swapping any pair fails, the same discrimination check that caught 4.4's engine leak.
+// The REMOTE note (task 4.6-rescope) is a different shape ON PURPOSE: the `http(s)` raw surface is
+// not a limitation to work around but a SCOPE boundary (spec §6 — remote watching is out of scope).
+// Its note names no fault and no fix, because there is neither. The notes are deliberately
+// non-interchangeable, and that is red-first proven — swapping them fails.
 //
 // Whether the copy READS as honest rather than broken is human-gate 7.1, not a test.
 
@@ -100,16 +99,13 @@ export interface WatchDecision {
  */
 export const FIREFOX_CONTENT_SCRIPT_NOTE = "Watching isn't available here. To watch, open the folder in Peekover's app page.";
 
-/**
- * (a) The Firefox app page, folder chosen through the file picker rather than dragged. HUMAN RULING 2026-11-10: a
- * real picker on Firefox 159 reads files fresh (the human's hand check; `firefoxDragWatch.browser.test.ts` p1), so
- * "a frozen copy … never arrive" was false. Watch is still not offered on this route — a choice for 0.1.0, carried
- * in progress.md until freshness is measured on the floor version (Firefox 153 ESR), Linux and macOS.
+/*
+ * (a) The app page, a snapshot folder chosen through the file picker (Firefox, or a browser without
+ * `showDirectoryPicker`). Until 0.1.1 this was `FIREFOX_PICKER_NOTE`, a banner over the reader. Since 0.1.1 (the
+ * notice redesign, approved 2026-11-14) the decision carries NO note: the toolbar shows the Watch control unavailable
+ * with its one-line reason (`WATCH_UNAVAILABLE_REASON`, `src/app/snapshotNotice.ts`), and the sidebar's "Snapshot"
+ * line explains the rest. Watch is still not offered on this route — a choice since 0.1.0, carried in progress.md.
  */
-export const FIREFOX_PICKER_NOTE =
-  "Watching isn't offered for folders opened with the file picker in Firefox. " +
-  "Opening a file again shows its latest saved version, but the page won't update on its own. " +
-  'Drag the folder onto this page instead and watching will work.';
 
 /**
  * (c) A REMOTE `http(s)` raw document — raw.githubusercontent / gist / gitlab-raw / bitbucket-raw,
@@ -158,7 +154,7 @@ export function watchCapability(input: WatchSurface): WatchDecision {
   // metadata, and why this route is watchable at all.
   if (input.route === 'drop') return { watchable: true, note: null };
 
-  // The picker route is frozen through and through. Nothing re-reads; say so, and point at the
-  // route that works.
-  return { watchable: false, note: FIREFOX_PICKER_NOTE };
+  // The picker route: Watch is not offered (a choice, see (a) above). No note — the app page says why beside its
+  // Watch control, which this pure module does not draw.
+  return { watchable: false, note: null };
 }

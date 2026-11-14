@@ -42,7 +42,13 @@ import {
   GRANT_PROMPT_LINE,
   type GrantState,
 } from './capability';
-import { DRAGGED_SNAPSHOT_NOTE, READ_ONLY_SNAPSHOT_NOTE } from './firefoxFolderSource';
+import {
+  buildSnapshotLine,
+  REPICK_HINTS,
+  SNAPSHOT_CSS,
+  WATCH_UNAVAILABLE_REASON,
+  type AppBuild,
+} from './snapshotNotice';
 import {
   putFolder as defaultPutFolder,
   deleteFolder as defaultDeleteFolder,
@@ -374,6 +380,9 @@ export interface AppDeps {
   /** The extension's version, `runtime.getManifest().version`, read by the app entrypoint (013 task 4.7) — the
    *  status line's third statement. Absent (a test page) → the line states no version. */
   version?: string;
+  /** Which build is running (`import.meta.env.FIREFOX`, read by the app entrypoint; 0.1.1). It picks the snapshot
+   *  copy where the engines' facts differ (`snapshotNotice.ts`). Absent → Chromium, so no page names Firefox unasked. */
+  build?: AppBuild;
 }
 
 // The shell's light and dark token sets, each written ONCE and reused by every rule that needs
@@ -669,13 +678,12 @@ ${statusLineCss(SHELL_CLASS)}
 
 /* Grant chip — "granted: <name> — revoke" (capability.ts). */
 .${SHELL_CLASS}__chip{
-  display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
-  padding:.35rem .5rem .35rem .6rem; margin-bottom:.7rem;
-  border:1px solid var(--line); border-radius:999px; background:var(--paper);
-  font-size:.82rem; color:var(--muted);
+  display:flex; align-items:center; gap:.5rem; padding:0 2px; margin-bottom:.45rem; font-size:.82rem; color:var(--muted);
 }
+.${SHELL_CLASS}__chip-label{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .${SHELL_CLASS}__chip-prefix{color:var(--muted)}
-.${SHELL_CLASS}__chip-name{color:var(--ink); font-weight:600; word-break:break-word}
+.${SHELL_CLASS}__chip-name{color:var(--ink); font-weight:600}
+.${SHELL_CLASS}__chip .${SHELL_CLASS}__chip-revoke{flex:none; font-size:11.5px; padding:4px 8px; border-radius:6px}
 .${SHELL_CLASS}__chip-revoke,.${SHELL_CLASS}__pin{
   font:600 12.5px/1 var(--sans); color:var(--muted); background:var(--panel);
   border:1px solid var(--line); border-radius:8px; padding:7px 11px; cursor:pointer; transition:transform .15s,color .15s;
@@ -708,7 +716,7 @@ ${statusLineCss(SHELL_CLASS)}
 /** Build the shell style element. */
 function buildStyle(doc: Document): HTMLStyleElement {
   const style = doc.createElement('style');
-  style.textContent = APP_CSS;
+  style.textContent = APP_CSS + SNAPSHOT_CSS;
   return style;
 }
 
@@ -766,6 +774,7 @@ export interface AppController {
 export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppController {
   const doc = container.ownerDocument;
   const openFolderFn = deps.openFolder ?? defaultOpenFolder;
+  const build: AppBuild = deps.build ?? 'chromium';
   const dropToOutcomeFn = deps.dropToOutcome ?? defaultOpenFolderFromDrop;
   const reopenFromHandleFn = deps.reopenFromHandle ?? defaultReopenFromHandle;
   const store: AppStore = deps.store ?? {
@@ -980,7 +989,16 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
   }
   const renderEnhanced = renderWithEnhancements(saveActiveDocument, (host) => toolbar.adoptChrome(host));
 
-  const readerPane: ReaderPaneController = createReaderPane(doc, { save: saveActiveDocument });
+  // C5 (0.1.1): on the picker route of a snapshot folder, a file that changed after the pick cannot be read
+  // (`NotReadableError`, measured in Chromium 149); the pane says so and how to read it. Any other route, a live
+  // folder, or another error (a deleted file is `NotFoundError`) keeps "Couldn't read this file".
+  const readerPane: ReaderPaneController = createReaderPane(doc, {
+    save: saveActiveDocument,
+    changedAfterPick: (error) =>
+      activeSource?.persistable === false &&
+      activeRoute === 'picker' &&
+      (error as { name?: unknown } | null)?.name === 'NotReadableError',
+  });
 
   // EXIT 1 OF THE GUARD — Read and Raw in the toolbar (012 task 6.1; 013 task 4.3, ruling E: the
   // hook moved here from the removed "Stop editing" control). In CAPTURE, so the shell hears the
@@ -1721,6 +1739,7 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     return createRecentsView(doc, {
       recents,
       pins,
+      repickHint: REPICK_HINTS[build],
       onOpenRecent: (e) => void guarded(() => reopenFolder(e.folderId, e.path)),
       onOpenPin: (e) => void guarded(() => reopenFolder(e.folderId, e.kind === 'file' ? e.path : undefined)),
       onUnpin: (e) => void unpin(e.id),
@@ -1863,8 +1882,11 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
       persistable: activeSource?.persistable === true,
       route: activeRoute,
     });
+    // 0.1.1: a snapshot folder from the picker cannot watch; the toolbar shows Watch unavailable, with its reason, in
+    // place of the 0.1.0 banner (`snapshotNotice.ts`). Set before `selectFile`, whose `setDocument` renders the slot.
+    toolbar.setWatchUnavailable(decision.watchable ? null : WATCH_UNAVAILABLE_REASON);
     if (!decision.watchable) {
-      // No target at all — `buildWatchChrome` then renders the explanation ALONE, never a toggle.
+      // No target at all — `buildWatchChrome` then renders the explanation ALONE (none on this route), never a toggle.
       resetWatchTarget();
       setWatchNote(decision.note);
       activeWatch = null;
@@ -2148,19 +2170,14 @@ export function mountAppShell(container: HTMLElement, deps: AppDeps = {}): AppCo
     const chip = buildGrantChip(doc, grantState, () => void guarded(revokeAccess));
     if (chip) wrap.append(chip);
 
-    // The read-only-snapshot honesty note, driven by the SEAM's `persistable` bit — never by
-    // sniffing the engine (plan.md §seam). Chromium sources are `persistable` and show
-    // nothing here; a Firefox (or picker-disabled) snapshot is `persistable:false` and gets
-    // its note: the picker route's READ_ONLY_SNAPSHOT_NOTE, or the drag route's DRAGGED_SNAPSHOT_NOTE.
+    // The snapshot line, driven by the SEAM's `persistable` bit — never by sniffing the engine (plan.md §seam).
+    // A live (persistable) source shows nothing here; a snapshot (Firefox, or a browser without the folder picker)
+    // shows "Snapshot" and its ⓘ popover (0.1.1, `snapshotNotice.ts`): the BUILD picks the facts, the ROUTE the
+    // action. `activeRoute` is set before `applyOutcome` runs. "Pick again" runs the same picker as "Open a folder".
     if (!source.persistable) {
-      const note = doc.createElement('p');
-      note.className = `${SHELL_CLASS}__notice`;
-      note.setAttribute('data-state', 'read-only-snapshot');
-      note.setAttribute('data-tone', 'warn');
-      // The ROUTE picks the words (M13 9.3b): a DRAGGED folder can be watched (Firefox re-reads its files), so it gets
-      // the drag note; the picker route keeps the original. `activeRoute` is set before `applyOutcome` runs.
-      note.textContent = activeRoute === 'drop' ? DRAGGED_SNAPSHOT_NOTE : READ_ONLY_SNAPSHOT_NOTE;
-      wrap.append(note);
+      wrap.append(
+        buildSnapshotLine(doc, { build, route: activeRoute, onPickAgain: () => void guarded(runOpenFolder) }),
+      );
     }
 
     // Pin bar (rebuilt on file select / pin toggle via renderPinBar).

@@ -48,6 +48,9 @@ export interface RecentsViewOptions {
   onOpenPin(entry: PinEntryVM): void;
   /** Remove a pin (the "remove" in pin add/remove/order). */
   onUnpin(entry: PinEntryVM): void;
+  /** The reason line on an entry that must be picked again (no stored handle), per build: `REPICK_HINTS` in
+   *  `snapshotNotice.ts` (0.1.1). The shell passes it; this view names no engine. */
+  repickHint: string;
 }
 
 export interface RecentsViewController {
@@ -89,9 +92,6 @@ function buildStyle(doc: Document): HTMLStyleElement {
   return style;
 }
 
-/** The plain "why re-pick" reason for a non-rehydratable (Firefox) entry — honest, not a
- *  dead end. Framed as the platform limitation, mirroring the snapshot note. */
-export const REPICK_HINT = 'Firefox can’t remember folder access — click to pick it again.';
 
 /**
  * Build one reopen entry button. A `repick` entry carries a plain reason line so the honest
@@ -103,6 +103,7 @@ function buildEntry(
   path: string,
   reopen: ReopenKind,
   kindTag: string | null,
+  repickHint: string,
   onOpen: () => void,
 ): HTMLButtonElement {
   const btn = doc.createElement('button');
@@ -127,7 +128,7 @@ function buildEntry(
   if (reopen === 'repick') {
     const hint = doc.createElement('span');
     hint.className = `${RV_CLASS}__hint`;
-    hint.textContent = REPICK_HINT;
+    hint.textContent = repickHint;
     btn.append(hint);
   }
 
@@ -165,7 +166,7 @@ function buildSection(
  * recents (a pin is a deliberate keep; a recent is incidental history).
  */
 export function createRecentsView(doc: Document, opts: RecentsViewOptions): RecentsViewController {
-  const { recents, pins, onOpenRecent, onOpenPin, onUnpin } = opts;
+  const { recents, pins, onOpenRecent, onOpenPin, onUnpin, repickHint } = opts;
   if (recents.length === 0 && pins.length === 0) return { element: null };
 
   const element = doc.createElement('div');
@@ -183,6 +184,7 @@ export function createRecentsView(doc: Document, opts: RecentsViewOptions): Rece
       pin.path,
       pin.reopen,
       pin.kind === 'folder' ? '📁' : null,
+      repickHint,
       () => onOpenPin(pin),
     );
     entry.dataset.pinKind = pin.kind;
@@ -201,7 +203,7 @@ export function createRecentsView(doc: Document, opts: RecentsViewOptions): Rece
     const row = doc.createElement('div');
     row.className = `${RV_CLASS}__row`;
     row.setAttribute('role', 'listitem');
-    row.append(buildEntry(doc, rec.name, rec.path, rec.reopen, null, () => onOpenRecent(rec)));
+    row.append(buildEntry(doc, rec.name, rec.path, rec.reopen, null, repickHint, () => onOpenRecent(rec)));
     return row;
   });
 

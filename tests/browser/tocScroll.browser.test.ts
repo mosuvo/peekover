@@ -1061,6 +1061,8 @@ function shellChromeHits(s: LookSurface): string[] {
   const misses: string[] = [];
   for (const [name, sel] of [['the toolbar', '.peekover-toolbar'], ['the notice area', '.peekover-app__notices'], ['the status line', '.peekover-status']] as const) {
     const el = app.querySelector(sel);
+    // The notice area takes no height when it has nothing to say (0.1.1: no banner for a picked snapshot folder).
+    if (sel === '.peekover-app__notices' && el && el.getBoundingClientRect().height === 0 && ![...el.querySelectorAll('*')].some((c) => c.getClientRects().length > 0)) continue;
     if (!el || el.getBoundingClientRect().height === 0) {
       misses.push(`${name}: not laid out`);
       continue;

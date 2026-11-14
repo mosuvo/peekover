@@ -31,38 +31,9 @@ import {
   type WalkFileNode,
 } from './walkPolicy';
 
-/**
- * The note appShell renders for a folder opened through the Firefox PICKER (a `persistable:false` source; the
- * drag route has its own, below). HUMAN RULING 2026-11-10 ("picker-route wording: approved, with one change"),
- * every clause measured on this route (`firefoxDragWatch.browser.test.ts`, p1–p4): the listing is read once at the
- * pick (added files do not appear; deleted ones stay listed and open to "Couldn't read this file"); an opened file
- * is re-read from disk; there is no live handle, so no write-back and no reopen without a re-pick. The old text
- * framed the missing Watch as a platform limit "for the same reason" — false once files read fresh: Watch is not
- * offered here by Peekover's choice for 0.1.0 (carried, progress.md). Exported so the browser test asserts the
- * exact copy the shell shows.
- */
-export const READ_ONLY_SNAPSHOT_NOTE =
-  'Firefox shows this folder as it was when you picked it: files added later won’t appear, and files deleted ' +
-  'later stay listed but can’t be opened. Opening a file again shows its latest saved version. Firefox can’t ' +
-  'give Peekover lasting access to the folder, so there is no write-back, and next time you’ll pick the folder ' +
-  'again. To watch a file for changes, drag the folder in instead.';
-
-/**
- * The note for a folder DRAGGED onto the app page (M13 task 9.3b; HUMAN RULING "drag note: approve corrected",
- * 2026-11-07). On this route Watch works — a watched file is re-read from disk (measured in Firefox,
- * `tests/browser/firefoxDragWatch.browser.test.ts`) — so `READ_ONLY_SNAPSHOT_NOTE`'s "Watch mode … unavailable here" was
- * false here. Every clause was measured on the drag route before it landed: files added later never appear (the listing
- * is walked once); a file deleted later stays listed and opens to "Couldn't read this file"; after a reload the folder
- * is offered again only through the picker. The picker clause was re-worded after the real-picker check
- * (final-review step 1(c), "picker: fresh"; HUMAN RULING 2026-11-10): Watch isn't OFFERED for a picked folder —
- * Peekover's choice for 0.1.0, not a platform limit. Ledger rows 25 / 334 / 498 stay as they are (still true).
- * Re-worded at walk fix 8.1g (HUMAN COPY APPROVAL 2026-11-10): shorter, and it names the way to refresh the listing —
- * a second drag of the same folder shows the files added and removed since (measured on Firefox 159 with the built
- * extension, a real Gecko drag session; `decisions.md`, "M13 TASK 8.1g"; clause (d) in the test above).
- */
-export const DRAGGED_SNAPSHOT_NOTE =
-  'Firefox shows this folder as it was when you dragged it in. To see new or removed files, drag it in again. ' +
-  'Watching works here.';
+// The notes appShell showed for a snapshot folder (`READ_ONLY_SNAPSHOT_NOTE`, `DRAGGED_SNAPSHOT_NOTE`) lived here until
+// 0.1.1; the notice redesign replaced them with the "Snapshot" line and its per-build, per-route popover
+// (`snapshotNotice.ts`). Their measured clauses still hold: `tests/browser/firefoxDragWatch.browser.test.ts`.
 
 // --- (A) the `<input webkitdirectory>` FileList adapter --------------------------
 //

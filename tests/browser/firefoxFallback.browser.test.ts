@@ -23,11 +23,11 @@
 // that silently persisted a handle would fail it.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { SNAPSHOT_LINES } from '../../src/app/snapshotNotice';
 // 5.8: read the zero only after a later request has landed (helpers/diagramWindow.ts).
 import { isSentinel, wireSettled } from './helpers/diagramWindow';
 import {
   folderSourceFromFileList,
-  READ_ONLY_SNAPSHOT_NOTE,
 } from '../../src/app/firefoxFolderSource';
 import { mount } from '../../src/render/mount';
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
@@ -139,19 +139,18 @@ describe('Firefox read-only fallback — real FileList → walk → tree → ren
       // Inject an opener returning the REAL snapshot source — the stand-in for the chooser,
       // whose downstream (walk/read/render) is entirely real.
       const opener = async (): Promise<{ ok: true; source: FolderSource }> => ({ ok: true, source });
-      const app = mountAppShell(container, { openFolder: opener, store: fakeStore() });
+      const app = mountAppShell(container, { build: 'firefox', openFolder: opener, store: fakeStore() });
 
       await app.openFolder();
 
       // Chip shows the granted folder…
       expect(container.querySelector('.peekover-app__chip')?.textContent).toContain('granted:');
-      // …the read-only-snapshot honesty note is shown (the exact copy the impl exports)…
+      // …the "Snapshot" line is shown, its popover the picker route's words with "Pick again" (0.1.1)…
       const note = container.querySelector('[data-state="read-only-snapshot"]');
-      expect(note?.textContent).toBe(READ_ONLY_SNAPSHOT_NOTE);
-      // HUMAN RULING 2026-11-10 (picker-route wording): files read fresh, so the note no longer calls the missing
-      // Watch a platform limitation; it names the route that watches.
-      expect(note?.textContent).not.toMatch(/platform limitation/i);
-      expect(note?.textContent).toMatch(/drag the folder in instead/i);
+      expect(note?.textContent).toContain('Snapshot');
+      const about = [...container.querySelectorAll('[data-state="snapshot-details"] p')].map((p) => p.textContent);
+      expect(about).toEqual([...SNAPSHOT_LINES.firefox.picker]);
+      expect(container.querySelector('[data-state="snapshot-details"] button')?.textContent).toBe('Pick again');
       // …and the walked file appears as a file treeitem.
       const fileBtn = container.querySelector<HTMLButtonElement>('[role="treeitem"][data-kind="file"]');
       expect(fileBtn?.textContent).toBe('hello.md');

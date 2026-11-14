@@ -67,12 +67,16 @@ if (root) {
   // defensively: a page outside the extension (the test harness imports this module) has no runtime, and then
   // the line states no version rather than a guessed one.
   const version = browser?.runtime?.getManifest?.()?.version;
+  // 0.1.1: which build this is, a build-time constant (never a runtime engine sniff) — it picks the snapshot copy
+  // where the engines' facts differ (`src/app/snapshotNotice.ts`).
+  const build = import.meta.env.FIREFOX ? 'firefox' : 'chromium';
 
   const app = mountAppShell(
     root,
     isHarness
       ? {
           version,
+          build,
           openFolder: async (): Promise<OpenFolderOutcome> => {
             if (!harnessHandle) {
               return { ok: false, reason: 'error', message: '__peekoverHarness: no handle provided' };
@@ -80,7 +84,7 @@ if (root) {
             return { ok: true, source: await folderSourceFromHandle(harnessHandle) };
           },
         }
-      : { version },
+      : { version, build },
   );
 
   if (isHarness) {
