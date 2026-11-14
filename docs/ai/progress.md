@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-11 (M13 CLOSED - 67 / 67 tasks; 9.5 close figures at HEAD: .output 6,660,128 / 6,660,114 B, content script 350,235 B; the 9.3 pick made by the reviewer under the human's delegation; M13's narrative moved to progress-archive.md. Next: docs/store/GO-LIVE.md. Earlier bylines: progress-archive.md, M13.)*
+*Updated: 2026-11-14 (v0.1.1 RELEASED - Release run 43596256620, all four jobs green; the Chrome Web Store job submitted 0.1.1, PENDING_REVIEW, the first sign-in under the repository-ID WIF condition; issues #6 and #7 closed. Next: Chrome approval, then the Chrome screenshots; AMO 0.1.1 after AMO approves 0.1.0; then 0.1.2.) Earlier: 2026-11-11 (M13 CLOSED - 67 / 67 tasks; 9.5 close figures at HEAD: .output 6,660,128 / 6,660,114 B, content script 350,235 B; the 9.3 pick made by the reviewer under the human's delegation; M13's narrative moved to progress-archive.md. Next: docs/store/GO-LIVE.md. Earlier bylines: progress-archive.md, M13.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,12 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**v0.1.1 RELEASED (2026-11-14), on `b06d7f1`** (`decisions.md`, "v0.1.1 RELEASED"; GO-LIVE Done notes, Later
+releases). Release run 43596256620: four jobs green, `REPRODUCIBLE`; the Chrome Web Store job uploaded and submitted
+0.1.1 (`PENDING_REVIEW`), the first sign-in under the repository-ID WIF condition, now tested. **Next:** (1) Google
+approves 0.1.1, then retake the Chrome screenshots (Chrome screenshot 1 shows the old Firefox drag note); (2) AMO: upload
+0.1.1 only after AMO approves 0.1.0 (D1), then retake the AMO set; (3) 0.1.2, the collapsible sidebar.
 
 **v0.1.0 RELEASED (2026-11-12), on `216cf7b`. Next: `docs/store/GO-LIVE.md` section 6 (the dashboards), then 7
 (the stores).** Sections 0–5 are done; the evidence is in GO-LIVE's Done notes (`decisions.md`, "v0.1.0 RELEASED").
@@ -71,7 +77,8 @@ Sorted into § Carried items (or dropped) by M14's first session.*
   CHANGELOG C6. Not in 0.1.1: the collapsible sidebar (0.1.2, below) and F2 (dropped, below). **Hand check PASSED
   2026-11-14** (the human: the built 0.1.1 in Chrome, Brave and Firefox). CHANGELOG dated `## 0.1.1 - 2026-11-14`; its
   two "without the folder picker" lines reworded by the human to "In Chromium-based browsers…" (ledger rows 630, 632).
-  Next: the human pushes, tags `v0.1.1` (GO-LIVE 5.x) and approves the Chrome upload (10.2).
+  ~~Next: the human pushes, tags `v0.1.1` (GO-LIVE 5.x) and approves the Chrome upload (10.2).~~ **RELEASED
+  2026-11-14** (Release run 43596256620; Chrome `PENDING_REVIEW`; issues #6 and #7 closed).
 - **0.1.2: collapsible left sidebar** (2026-11-14, the human's request; CC's rating: effort M, risk medium; prototype
   in the 0.1.1 proposal). Above 1189 px only (below it the sidebar is already the "Files" drawer); its remembered state
   is a new stored setting, so it joins the Stored data panel, PRIVACY and the ledger.
@@ -124,7 +131,8 @@ measurement-driven or explicitly deferred.*
   "M13 TASK 5.9 (measurement)"). *Home:* a fix task once ruled, with an A-B-A against `618d37b`.
 
 #### POST-RELEASE (after M13) — FIRST ON THE LIST
-- **M14: Chrome Web Store uploads automated — committed 2026-11-13; sign-in PROVEN, first upload at 0.1.1.**
+- **M14: Chrome Web Store uploads automated — committed 2026-11-13; sign-in PROVEN; first upload DONE at 0.1.1
+  (2026-11-14, Release run 43596256620, `PENDING_REVIEW`; the repository-ID condition tested).**
   (`decisions.md`, "CHROME UPLOADS AUTOMATED" and "CHROME UPLOADS: SIGN-IN PROVEN"; GO-LIVE section 10.) `release.yml`
   has the job `chrome-web-store`: approval-gated, Workload Identity Federation, API V2 upload and publish, with the zip
   checked against `SHA256SUMS` first. `cws-check.yml` signs in and calls only `fetchStatus`. Both workflows trim and
@@ -132,9 +140,9 @@ measurement-driven or explicitly deferred.*
   run 43372743291, attempt 3, read the item as `PUBLISHED` 0.1.0 (GO-LIVE Done note 10.3). It took two failed
   attempts first: the WIF condition, then a pasted line break in a secret. The condition then moved to the repository
   ID (`assertion.repository_id=='1454048576' && assertion.environment=='chrome-web-store'`; `decisions.md`, "WIF
-  CONDITION BY REPOSITORY ID"), and that one is **not re-tested**. **Next:** the first real upload at 0.1.1 (10.2),
-  which also proves the new condition. Its upload and publish calls, and their jq parsing,
-  have not yet run against Google. fetchStatus's response has been parsed: the check run's jq `itemId` check passed.
+  CONDITION BY REPOSITORY ID"). **Done 2026-11-14:** the 0.1.1 release's job signed in under that condition, uploaded
+  and submitted 0.1.1 in 19 s, summary `PENDING_REVIEW` (`decisions.md`, "v0.1.1 RELEASED"); the upload and publish
+  calls and their jq parsing have now run against Google.
 - **M14's first session: place the two adopted retro rules (HUMAN RULING 2026-11-11, "YES to both").** (a)
   Engine-only human checks happen in the group that needs them. (b) A claim-bearing in-app string gets a test that pins
   it to its state. They go into `WORKFLOW.md` or `AGENTS.md`. **(b) is test-pinned, NOT ledgered** (the human's

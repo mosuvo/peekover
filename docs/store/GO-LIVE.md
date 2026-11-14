@@ -449,10 +449,10 @@ retired.*
     from a job that runs in that environment of this repository. `1454048576` is the repository's numeric ID
     (`gh api repos/mosuvo/peekover --jq .id`). The ID does not change on a rename, and a repository created later
     under the same name gets a new one. The repository is bound to the service account with
-    `roles/iam.workloadIdentityUser`. **Not re-tested:** the human set this condition on 2026-11-13, after the 10.3
-    check. No run has signed in under it yet, and the first 0.1.1 release (10.2) will prove it. If that run fails at
-    "Sign in to Google" with "rejected by the attribute condition", run 10.3 on the release tag to test the sign-in
-    alone.
+    `roles/iam.workloadIdentityUser`. **Tested 2026-11-14:** the human set this condition on 2026-11-13, after the
+    10.3 check. The first sign-in under it was the 0.1.1 release's upload job (Release run 43596256620, 10.2), which
+    signed in, uploaded and submitted 0.1.1 (Done notes, Later releases). If a later run fails at "Sign in to Google"
+    with "rejected by the attribute condition", run 10.3 on the release tag to test the sign-in alone.
     History: the first condition, `assertion.sub=='repo:mosuvo/peekover:environment:chrome-web-store'`, rejected the
     check run's token ("The given credential is rejected by the attribute condition", 10.3, attempt 1). Why the `sub`
     claim did not match was not diagnosed. The human replaced it with `assertion.repository=='mosuvo/peekover' &&
@@ -469,7 +469,8 @@ retired.*
     (`iamcredentials.googleapis.com`) is enabled in `peekover-release`: the auth action mints the access token
     through it. Sign-in worked on 2026-11-13 (Done note 10.3), so each of these was right then.
 
-- [ ] **10.2 A release: approve the upload.** It runs on each `v*` tag push (step 5.1).
+- [ ] **10.2 A release: approve the upload.** It runs on each `v*` tag push (step 5.1). First done for 0.1.1,
+  2026-11-14 (Done notes, Later releases); the box stays open because the step repeats each release.
   - **What runs:** `release.yml`'s job `chrome-web-store` ("Upload to the Chrome Web Store and submit for review"). It
     runs only when build, tests, attestation and the draft release have all succeeded, and never on a dry run. It
     downloads the release files the draft release was made from, and checks `peekover-<version>-chrome.zip` against
@@ -550,3 +551,9 @@ retired.*
 - **3.2 re-run after 8.2 · 2026-11-13 · the human:** Pages run 43364785025 succeeded, on `5f0da1b` (checked by CC with `gh run view`). On peekover.dev, the human checked that the Chrome Web Store buttons open the listing, that Setup reads "From install to reading.", and that /privacy/ loads. **At phone width the nav button wrapped onto two lines and overflowed the header.** The next commit fixes that, and its redeploy (step 3.2 again) is pending. The run carries an annotation: `ubuntu-latest` moves to Ubuntu 26 from 2026-10-19 (queued for 0.1.1, https://github.com/mosuvo/peekover/issues/7).
 - **Site fix, the nav button at phone width · 2026-11-13 · CC:** below the 880 px breakpoint, where the nav collapses to ☰, the nav's Chrome Web Store button is hidden. The ☰ menu gained a "Chrome Web Store" link to the listing (row 64; step 3.6's table names #64). Every `.cta` has `white-space: nowrap`. Measured in Playwright Chromium, with the site served locally and its own fonts: at 320, 375, 380, 414 and 768 px the nav is 64 px high with no overflow, the button is hidden, and the menu lists the link. At 1280 px the header screenshot is byte-identical to the previous commit's, and so is every width from 931 px up (swept 881–1101). From 881 to about 925 px the old button wrapped onto two lines (151×64); now it is one line (166×43), and the nav links' wrapping range ("Agent output", 881–921 px) is unchanged. The old page reproduced the bug: a 64 px two-line button at 320–414 px, and the nav overflowing at 320 px. Red-first: row 64 first (2 reds), then the site (green).
 - **10.3 · 2026-11-13 · the human, checked by CC with `gh`:** cws-check run 43372743291 (ref `v0.1.0-cws-check`, on `7f25e7d`), attempt 3, `completed success`. It signed in and read the item: published `PUBLISHED`, version `0.1.0`; nothing was uploaded (the job has no upload or publish call). Attempt 1 failed at sign-in: "The given credential is rejected by the attribute condition". The human changed the provider condition to `assertion.repository=='mosuvo/peekover' && assertion.environment=='chrome-web-store'` (10.1). Attempt 2 failed with curl "(3) URL rejected: Malformed input to a URL function", most likely a line break in a pasted secret. The human re-entered `CWS_ITEM_ID` and `CWS_PUBLISHER_ID`, and both workflows now trim and check the two IDs before any call (10.1). The side effect ran as 10.3 says: Release run 43372737530 on the same tag failed in 6 s at "Check the tag equals package.json's version" ("tag v0.1.0-cws-check does not match package.json version 0.1.0"). Install and every later build step were skipped, and so were attest, the draft release and the Chrome Web Store job: no release, no upload, no approval asked. The check tag was deleted afterwards. Only `v0.1.0` remains (`gh api .../git/refs/tags`).
+
+### Later releases
+
+*From 0.1.1 on: one note per release, with the same evidence as 5.1–5.5 and 10.2.*
+
+- **0.1.1 (5.1–5.5, 10.2) · 2026-11-14 · the human, checked by CC with `gh`:** the human pushed `v0.1.1` on `b06d7f1`. Release run #4, 43596256620: all four jobs `success` (build, test and package; attest; the draft release; the Chrome Web Store upload). The log shows unit 1,779 / 1,779 and `REPRODUCIBLE`. Hashes: chrome `cb4f28a1…172d`, firefox `145dfbed…c6f6`, sources `df165ecf…e1eb`, SBOM `eece450a…06bb`, THIRD_PARTY_LICENSES `b3aa4628…aedf`. 5.3: the human ran `sha256sum -c`, 5 OK. 5.4: `gh attestation verify` passed for each file. 10.2: the human approved the deployment; the job "Upload to the Chrome Web Store and submit for review" uploaded and submitted 0.1.1 in 19 s (13:53:48Z–13:54:07Z), and its summary reads `PENDING_REVIEW`. It was the first sign-in under the repository-ID condition, which is now tested (10.1). 5.5: the human published the release at 14:16:15Z; `gh release list` shows it as Latest. Next: Google's review; after approval, retake the Chrome screenshots. AMO gets 0.1.1 only after it approves 0.1.0 (`decisions.md`, "0.1.1 RULINGS", D1). Issues #6 and #7 closed, pointing to v0.1.1.

@@ -1,6 +1,18 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-14 · v0.1.1 RELEASED; WIF CONDITION BY REPOSITORY ID TESTED.** The human pushed `v0.1.1` on `b06d7f1`.
+  Release run #4, 43596256620: all four jobs succeeded; unit 1,779 / 1,779, `REPRODUCIBLE`. Hashes: chrome
+  `cb4f28a1…172d`, firefox `145dfbed…c6f6`, sources `df165ecf…e1eb`, SBOM `eece450a…06bb`, THIRD_PARTY_LICENSES
+  `b3aa4628…aedf`. The human ran `sha256sum -c` (5 OK) and `gh attestation verify` for each file, and published the
+  release. The Chrome Web Store job uploaded and submitted 0.1.1 in 19 s; its summary reads `PENDING_REVIEW`. It was
+  the first sign-in under `assertion.repository_id=='1454048576' && assertion.environment=='chrome-web-store'`
+  (entry "WIF CONDITION BY REPOSITORY ID (NOT RE-TESTED)" below), so the condition is now tested: GO-LIVE 10.1 and
+  ledger row 622 (THREAT-MODEL) say so, with this run as evidence. The upload and publish calls and their jq parsing
+  have now run against Google too. Issues #6 and #7 closed, pointing to v0.1.1. Next: Google's review, then the Chrome
+  screenshots retaken; AMO 0.1.1 after AMO approves 0.1.0 (D1); then 0.1.2 (the collapsible sidebar). Revisit: at
+  Google's decision on 0.1.1.
+
 - **2026-11-14 · F2 DROPPED (the stacked-render report).** The user confirmed that another extension caused the double
   rendering, so 0.1.1 changes nothing in the content script. The diagnosis stands as optional hardening for M14
   (`progress.md`, POST-RELEASE): F2 (render only the pristine raw-text shape, `body > pre` with a text content type),
