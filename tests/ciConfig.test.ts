@@ -122,6 +122,17 @@ describe('CI config (013 task 1.1, D-13)', () => {
     expect(jobSteps.some((s) => /pnpm install --frozen-lockfile/.test(s)), 'a frozen install').toBe(true);
   });
 
+  // Issue #7 (0.1.1, D5): the same commit built on ubuntu-26.04 (CI 43581036617) and ubuntu-24.04 (release dry run
+  // 43581037439) gave the same three zips, so every workflow names ubuntu-24.04 (decisions.md, "RUNNER PINNED").
+  it('every job in every workflow runs on ubuntu-24.04, never ubuntu-latest', () => {
+    const runners = workflows.flatMap(({ file, text }) =>
+      [...text.matchAll(/^\s+runs-on:\s*(.+)$/gm)].map((m) => `${file}: ${m[1].trim()}`),
+    );
+    // Firing control: the scan sees every job (ci 2, supply-chain 4, pages 1, cws-check 1, ai-hygiene 1, release 4).
+    expect(runners.length, 'runs-on lines across the workflows').toBe(13);
+    expect(runners.filter((r) => !r.endsWith(': ubuntu-24.04')), 'jobs not on ubuntu-24.04').toEqual([]);
+  });
+
   it('dependabot.yml states no runtime-dependency count', () => {
     const text = read('.github/dependabot.yml');
     const COUNT = '\\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|\\d+)\\s+';
@@ -165,15 +176,6 @@ describe('the release workflow (013 task 7.4, D-14; G-9)', () => {
     const push = /^ {2}push:\n((?: {4,}.*\n)*)/m.exec(on)?.[1] ?? '';
     expect(keysAt(push, 4), 'release.yml push filters').toEqual(['tags']);
     expect(push).toMatch(/^ {4}tags: \['v\*'\]\s*$/m);
-  });
-
-  // Issue #7 (0.1.1): `ubuntu-latest` moved to 26.04, so a release could be built on an image nobody chose. Every job
-  // names one fixed image (the same-commit comparison decides which; decisions.md, "0.1.1 RULINGS").
-  it('every job runs on one fixed Ubuntu image, never ubuntu-latest', () => {
-    const runners = [...text().matchAll(/^ {4}runs-on: (.+)$/gm)].map((m) => m[1].trim());
-    // Firing control: the scan sees all four jobs (build, attest, release, chrome-web-store).
-    expect(runners.length, 'runs-on lines in release.yml').toBe(4);
-    expect(new Set(runners), 'release.yml runners').toEqual(new Set(['ubuntu-24.04']));
   });
 
   it('a hand run is a dry run by default, and a dry run creates no release', () => {

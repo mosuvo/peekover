@@ -24,8 +24,8 @@
 # chrome-web-store job only, the four environment secrets of `chrome-web-store` (no key among them).
 #
 # Every job runs on a fixed image, ubuntu-24.04, never ubuntu-latest (issue #7): that label moved to 26.04, which built
-# v0.1.0 (Release run 43150291963). This pin is provisional until the same-commit comparison against a 26.04 build
-# shows the same Firefox zip and sources zip; if they differ, the pin becomes ubuntu-26.04 (decisions.md, "0.1.1 RULINGS").
+# v0.1.0 (Release run 43150291963). The same commit built on 26.04 and on 24.04 gave the same zips (decisions.md,
+# "RUNNER PINNED"). Every other workflow names the same image.
 
 name: Release
 

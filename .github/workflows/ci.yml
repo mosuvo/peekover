@@ -5,7 +5,7 @@ on:
   pull_request:
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
@@ -30,7 +30,7 @@ jobs:
   # without SOURCE_DATE_EPOCH, one with it), and fail on any difference — every packaged file and every zip. The
   # hashes go to the run summary, to compare with a local build of the same commit (docs/trust/REPRODUCING.md).
   reproducible:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0

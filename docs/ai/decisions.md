@@ -1,6 +1,15 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-14 · RUNNER PINNED: every workflow runs on ubuntu-24.04 (issue #7, D5).** The same commit, `88df3dd`, built
+  on ubuntu-26.04 (CI 43581036617, `reproducible`, image 20261111.196.1) and on ubuntu-24.04 (release dry run
+  43581037439, image 20261111.370.1) gave the same three zips: chrome `2740c20a…2c65`, firefox `3d1d3930…de94`, sources
+  `c036555d…eb92`. The Firefox zip is also v0.1.0's (Release run 43150291963, built on 26.04). So `ci.yml`,
+  `supply-chain.yml`, `pages.yml`, `cws-check.yml` and `ai-hygiene.yml` follow `release.yml` to ubuntu-24.04, pinned by
+  `tests/ciConfig.test.ts` over every workflow (13 jobs, firing control; one workflow put back on `ubuntu-latest` reads
+  red). `SOURCE_CODE_REVIEW.md` and `REPRODUCING.md` already say Ubuntu 24.04: unchanged, and now true of the release
+  runner too. Revisit: when GitHub retires the 24.04 image, with the same comparison.
+
 - **2026-11-14 · SITE D7: the ☰ breakpoint moves from 880 to 940 px; `.herogrid > *` gets `min-width: 0`.** Measured in
   Chromium with the site's own fonts (a scratch Playwright probe, not committed). Before: "Agent output" wrapped to two
   lines from 881 to 924 px (row 42 px tall); the hero grid's min-content pushed the hero past the viewport at phone
