@@ -3,7 +3,24 @@
 All notable changes to Peekover are recorded in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and version numbers follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.1.0 - Unreleased
+## 0.1.1 - Unreleased
+
+### Changed
+
+- On the app page, a folder opened as a snapshot shows one line, "Snapshot", with the details behind an ⓘ button.
+- On the app page, when watching isn't offered for a folder, the Watch control says why.
+
+### Fixed
+
+- In a browser without the folder picker, the app page no longer names Firefox.
+- In Chrome, after Revoke, the folder's recent and pinned entries no longer say "Firefox can't remember folder access".
+- In a browser without the folder picker, opening a file that changed after you picked its folder now says so.
+
+### Known limits
+
+- In a Chromium-based browser without the folder picker, a file changed after you picked its folder can't be opened until you pick the folder again; a folder dragged in doesn't have this limit.
+
+## 0.1.0 - 2026-11-12
 
 The first release.
 

@@ -103,8 +103,8 @@ describe('built manifests carry no forbidden key (013 task 9.2)', () => {
 });
 
 describe('the version (013 task 7.1)', () => {
-  it('package.json says 0.1.0', () => {
-    expect(pkg.version).toBe('0.1.0');
+  it('package.json says 0.1.1', () => {
+    expect(pkg.version).toBe('0.1.1');
   });
 
   it.each(['chrome', 'firefox'])('the %s config writes no version of its own', (browser) => {
