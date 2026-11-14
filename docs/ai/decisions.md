@@ -1,6 +1,38 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-14 · 0.1.1 RULINGS (HUMAN RULING), after CC's 0.1.1 plan.**
+  - **D1:** 0.1.1 ships to Chrome (the automated job, GO-LIVE 10.2) and to GitHub Releases now. It goes to AMO only
+    after AMO approves 0.1.0; no AMO version is uploaded while 0.1.0 is in review. This replaces the recorded "starts
+    after AMO approves 0.1.0" timing (entries "0.1.1: CHROMIUM FALLBACK COPY" and "SITE BANNER KEPT" below; issues #6
+    and #7).
+  - **D2 replaced by a redesign** (the human's request): the folder notices are too long and repeat each other. The top
+    banner (`FIREFOX_PICKER_NOTE`) goes; the Watch control carries the limit (disabled, with a one-line reason, on the
+    picker route). The sidebar box becomes one compact line with an ⓘ popover (at most 3 short lines per route and build,
+    a "Pick again" / "Drag in again" action where it fits; keyboard, focus, Esc, a screen-reader label). Wording is per
+    build where the facts differ, and the Firefox build gets the new design too. `REPICK_HINT`: C4 on Chromium
+    ("Peekover no longer has access to this folder — click to pick it again."); Firefox keeps today's line. Nothing is
+    implemented until the human approves CC's design proposal.
+  - **D4 yes:** C5, a distinct error for a file changed after the pick on the fallback route.
+  - **D5:** run the same-commit comparison (release.yml on ubuntu-24.04 against a 26.04 build of the same commit). If
+    the Firefox zip and the sources zip match, pin ubuntu-24.04 in every workflow; otherwise pin ubuntu-26.04 and
+    correct `SOURCE_CODE_REVIEW.md`, `REPRODUCING.md` and their ledger rows. Commit 1 pins `release.yml` only.
+  - **D6:** the stacked-rendering report waits for the user's extension list; no F2 yet.
+  - **D7 yes:** the site's nav breakpoint moves to about 940 px and `.herogrid > *` gets `min-width: 0`, measured at
+    the edges, as their own commit and a separate site deploy.
+  - **D8:** the human sets the branch and tag rulesets.
+  - **D9 yes:** upload 0.1.1 to AMO after 0.1.0 is approved. **D10 yes:** Brave hand checks done; the policy-blocked
+    picker fallback goes to M14 (risk: a fallback `input.click()` without user activation never settles).
+  - **Brave hand checks (2026-11-14, the human):** `'showDirectoryPicker' in window` → false. Picker route: a changed
+    file gives "Couldn't read this file". Drag route: watching updated the page, and a changed file opened with its new
+    text. So the "drag works" variants are used. CC's measurement the same day (Playwright Chromium 149 and Firefox
+    151, Windows, a real `<input webkitdirectory>`): Chromium throws `NotReadableError` for any file changed after the
+    pick, even one never opened, and `NotFoundError` for a deleted one; Firefox reads changed files fresh.
+  - **Found:** v0.1.0 was built on ubuntu-26.04 (image 20261101.186.1, Release run 43150291963), not 24.04 as issue #7
+    assumed; CI's `reproducible` job is on 26.04 too. **Checklist:** retake the store screenshots (Chrome screenshot 1
+    shows the Firefox drag note) and the AMO set after the redesign. Revisit: at the comparison's result; at the
+    proposal's approval.
+
 - **2026-11-13 · WIF CONDITION BY REPOSITORY ID (NOT RE-TESTED).** The human set the `peekover` provider's attribute
   condition to `assertion.repository_id=='1454048576' && assertion.environment=='chrome-web-store'`. 1454048576 is this
   repository's ID (`gh api repos/mosuvo/peekover --jq .id`, checked by CC the same day). It replaces

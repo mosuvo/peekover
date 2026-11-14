@@ -167,6 +167,15 @@ describe('the release workflow (013 task 7.4, D-14; G-9)', () => {
     expect(push).toMatch(/^ {4}tags: \['v\*'\]\s*$/m);
   });
 
+  // Issue #7 (0.1.1): `ubuntu-latest` moved to 26.04, so a release could be built on an image nobody chose. Every job
+  // names one fixed image (the same-commit comparison decides which; decisions.md, "0.1.1 RULINGS").
+  it('every job runs on one fixed Ubuntu image, never ubuntu-latest', () => {
+    const runners = [...text().matchAll(/^ {4}runs-on: (.+)$/gm)].map((m) => m[1].trim());
+    // Firing control: the scan sees all four jobs (build, attest, release, chrome-web-store).
+    expect(runners.length, 'runs-on lines in release.yml').toBe(4);
+    expect(new Set(runners), 'release.yml runners').toEqual(new Set(['ubuntu-24.04']));
+  });
+
   it('a hand run is a dry run by default, and a dry run creates no release', () => {
     const on = topLevelBlock(text(), 'on');
     expect(on).toMatch(/^ {6}dry_run:\n(?: {8}.*\n)*? {8}type: boolean\n(?: {8}.*\n)*? {8}default: true\n/m);

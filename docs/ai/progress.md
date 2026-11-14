@@ -62,12 +62,23 @@ Sorted into § Carried items (or dropped) by M14's first session.*
   notices (`FIREFOX_PICKER_NOTE`, `READ_ONLY_SNAPSHOT_NOTE`, `DRAGGED_SNAPSHOT_NOTE`). In Chrome, the Firefox
   `REPICK_HINT` shows after Revoke and stays for good. Unmeasured: a `NotReadableError` on re-opening a changed picker
   file in Chromium; Chromium drop-watch; the picker blocked by policy. The new wording needs the human's approval.
-  **Starts after AMO approves 0.1.0;** no new AMO version is submitted while 0.1.0 is in review.
+  ~~Starts after AMO approves 0.1.0~~ — **superseded 2026-11-14 (`decisions.md`, "0.1.1 RULINGS", D1):** 0.1.1 ships
+  to Chrome and GitHub now; only its AMO upload waits for AMO's approval of 0.1.0. Measured 2026-11-14: Chromium 149
+  throws `NotReadableError` for any file changed after the pick; the human's Brave checks confirm it and show drop-watch
+  works. Scope grew to a notice redesign (the Watch control carries the limit; the sidebar box becomes one line and a
+  popover), awaiting the human's approval of the design proposal.
+- **0.1.1 checklist** (2026-11-14, the human): retake the store screenshots — Chrome screenshot 1 shows the Firefox
+  drag note — and retake the AMO set after the notice redesign lands. Site fixes (D7) deploy separately (GO-LIVE 3.2).
+  The same-commit runner comparison (#7) gates the pin in `ci.yml`, `supply-chain.yml`, `pages.yml`, `cws-check.yml`
+  and `ai-hygiene.yml`.
 - **0.1.1: pin the release workflow runner to a fixed Ubuntu version** (2026-11-13, the human, from an annotation
   on Pages run 43364785025; https://github.com/mosuvo/peekover/issues/7). GitHub's `ubuntu-latest` moves to Ubuntu
   26 from 2026-10-19. `release.yml` runs every job on it, and the AMO reviewer notes (`SOURCE_CODE_REVIEW.md`,
   REPRODUCING) promise a reproducible Ubuntu 24.04 x64 build. Decide then whether `ci.yml`, `supply-chain.yml` and
-  `pages.yml` follow. Same timing as above: after AMO approves 0.1.0.
+  `pages.yml` follow. ~~Same timing as above~~ — now (D1). **Correction (2026-11-14):** v0.1.0 was built on
+  ubuntu-26.04 (Release run 43150291963's log), not 24.04. Commit 1 pins `release.yml` to ubuntu-24.04; the
+  same-commit comparison decides (D5): matching Firefox and sources zips → 24.04 everywhere; otherwise 26.04 and the
+  docs corrected.
 
 - **Protect `main`** (2026-11-12, CC at go-live, the human's call): the repository is public now. Block force-push
   and deletion; optionally require CI (`verify`, `reproducible`) and Supply chain before a merge. It is a Settings

@@ -22,6 +22,10 @@
 # build (run 42164163720), so the release build is that build. No dependency cache: a release build installs from
 # the lockfile alone. Every action is pinned by full commit SHA. The secrets are GITHUB_TOKEN and, in the
 # chrome-web-store job only, the four environment secrets of `chrome-web-store` (no key among them).
+#
+# Every job runs on a fixed image, ubuntu-24.04, never ubuntu-latest (issue #7): that label moved to 26.04, which built
+# v0.1.0 (Release run 43150291963). This pin is provisional until the same-commit comparison against a 26.04 build
+# shows the same Firefox zip and sources zip; if they differ, the pin becomes ubuntu-26.04 (decisions.md, "0.1.1 RULINGS").
 
 name: Release
 
@@ -44,7 +48,7 @@ concurrency:
 jobs:
   build:
     name: Build, test and package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: read
@@ -146,7 +150,7 @@ jobs:
     name: Attest the release files (public repository only)
     needs: build
     if: ${{ !github.event.repository.private }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -169,7 +173,7 @@ jobs:
       && (needs.attest.result == 'success' || needs.attest.result == 'skipped')
       && github.ref_type == 'tag'
       && (github.event_name == 'push' || !inputs.dry_run) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
@@ -204,7 +208,7 @@ jobs:
       && needs.release.result == 'success'
       && github.ref_type == 'tag'
       && (github.event_name == 'push' || !inputs.dry_run) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: chrome-web-store
     permissions:
