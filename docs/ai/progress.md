@@ -68,7 +68,10 @@ Sorted into § Carried items (or dropped) by M14's first session.*
   works. Scope grew to a notice redesign (the Watch control carries the limit; the sidebar box becomes one line and a
   popover), awaiting the human's approval of the design proposal.
 - **0.1.1 notice redesign: IMPLEMENTED 2026-11-14** (`decisions.md`, "0.1.1 NOTICE REDESIGN"); version 0.1.1,
-  CHANGELOG C6. Not in 0.1.1: the collapsible sidebar (0.1.2, below) and F2 (dropped, below).
+  CHANGELOG C6. Not in 0.1.1: the collapsible sidebar (0.1.2, below) and F2 (dropped, below). **Hand check PASSED
+  2026-11-14** (the human: the built 0.1.1 in Chrome, Brave and Firefox). CHANGELOG dated `## 0.1.1 - 2026-11-14`; its
+  two "without the folder picker" lines reworded by the human to "In Chromium-based browsers…" (ledger rows 630, 632).
+  Next: the human pushes, tags `v0.1.1` (GO-LIVE 5.x) and approves the Chrome upload (10.2).
 - **0.1.2: collapsible left sidebar** (2026-11-14, the human's request; CC's rating: effort M, risk medium; prototype
   in the 0.1.1 proposal). Above 1189 px only (below it the sidebar is already the "Files" drawer); its remembered state
   is a new stored setting, so it joins the Stored data panel, PRIVACY and the ledger.
