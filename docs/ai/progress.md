@@ -37,10 +37,10 @@ EDIT"), with the `.github/SECURITY.md` pointer. Both stores have it for review (
   parts) landed in `5f0da1b`, and step 3.2 ran (Pages 43364785025). The banner (row 71) stays, by the human's ruling.
   The phone-width nav fix is committed, and its redeploy (3.2) is pending. The Firefox parts wait for AMO.
 
-**Current numbers (HEAD):** `.output` 6,660,128 B (Cr) / 6,660,114 B (Fx) of 7,340,032 — headroom 679,904 / 679,918 B ·
-content script 350,235 B, md5 `3eb9a205` / `093beff4` · zips 2,035,046 B each · sources zip 6,607,862 B (the v0.1.0 release's) · manifests
-864 / 978 B, `permissions: []` · lint 0 · unit 1,723 (`pnpm test`: unit 1,722 + unit-perf 1) · browser 2,810 passed / 82 skipped (`c43865f`, EXIT 0, 2026-11-11; +22 from
-the second user fixture's two test files; the last product change is 8.1k) · `pnpm audit --prod` EXIT 0 (1 low, ignored) · tasks 67 / 67.
+**Current numbers (HEAD, 0.1.1, 2026-11-14):** `.output` 6,663,900 B (Cr) / 6,663,885 B (Fx) of 7,340,032 — headroom
+676,132 / 676,147 B · content script 350,003 B (−232 B), md5 `3b50e8b3` / `bd8101e2` · zips 2,035,894 / 2,035,902 B ·
+sources zip 6,637,123 B · lint 0 · unit 1,779 · browser 2,819 passed / 83 skipped (both engines, EXIT 0) · `pnpm audit
+--prod` EXIT 0 (1 low, ignored).
 
 ## Up next
 
@@ -67,6 +67,13 @@ Sorted into § Carried items (or dropped) by M14's first session.*
   throws `NotReadableError` for any file changed after the pick; the human's Brave checks confirm it and show drop-watch
   works. Scope grew to a notice redesign (the Watch control carries the limit; the sidebar box becomes one line and a
   popover), awaiting the human's approval of the design proposal.
+- **0.1.1 notice redesign: IMPLEMENTED 2026-11-14** (`decisions.md`, "0.1.1 NOTICE REDESIGN"); version 0.1.1,
+  CHANGELOG C6. Not in 0.1.1: the collapsible sidebar (0.1.2, below) and F2 (dropped, below).
+- **0.1.2: collapsible left sidebar** (2026-11-14, the human's request; CC's rating: effort M, risk medium; prototype
+  in the 0.1.1 proposal). Above 1189 px only (below it the sidebar is already the "Files" drawer); its remembered state
+  is a new stored setting, so it joins the Stored data panel, PRIVACY and the ledger.
+- **M14, optional hardening: the stacked-render guard** (`decisions.md`, "F2 DROPPED"): another extension caused the
+  2026-11 report. F2 / F3 / F4 as diagnosed there, none needed now.
 - **0.1.1 checklist** (2026-11-14, the human): retake the store screenshots — Chrome screenshot 1 shows the Firefox
   drag note — and retake the AMO set after the notice redesign lands. Site fixes (D7) deploy separately (GO-LIVE 3.2).
   ~~The same-commit runner comparison (#7) gates the pin in `ci.yml`, `supply-chain.yml`, `pages.yml`, `cws-check.yml`

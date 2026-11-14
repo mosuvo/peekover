@@ -1,6 +1,12 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-14 · F2 DROPPED (the stacked-render report).** The user confirmed that another extension caused the double
+  rendering, so 0.1.1 changes nothing in the content script. The diagnosis stands as optional hardening for M14
+  (`progress.md`, POST-RELEASE): F2 (render only the pristine raw-text shape, `body > pre` with a text content type),
+  F3 (a z-index on the reader host, with its trade-off), F4 (a notice when another renderer got there first).
+  Revisit: a second report, or M14 scoping.
+
 - **2026-11-14 · 0.1.1 NOTICE REDESIGN (HUMAN APPROVAL of CC's prototype, 2026-11-14), implemented.** Approved as
   prototyped: the top banner (`FIREFOX_PICKER_NOTE`) is removed; on the picker route of a snapshot folder the toolbar's
   Watch control is shown unavailable (`aria-disabled`, still focusable, no `aria-pressed`) with "To watch, drag the folder
