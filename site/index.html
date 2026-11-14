@@ -74,13 +74,14 @@ nav .right{margin-left:auto;display:flex;gap:9px;align-items:center}
 .mnav{display:none;position:fixed;top:64px;left:0;right:0;z-index:49;background:var(--paper);border-bottom:1px solid var(--line);padding:14px min(5vw,44px) 20px;flex-direction:column;gap:4px}
 .mnav.open{display:flex}
 .mnav a{text-decoration:none;font-weight:700;font-size:15px;padding:11px 4px;border-bottom:1px solid var(--line)}
-@media (max-width:880px){.navlinks{display:none}.burger{display:grid;place-items:center}nav .ghost,nav .cta{display:none}}
+@media (max-width:940px){.navlinks{display:none}.burger{display:grid;place-items:center}nav .ghost,nav .cta{display:none}}
 .peek .lid{transform-origin:center;animation:blink 6s infinite}
 @keyframes blink{0%,94%,100%{transform:scaleY(1)}96%,98%{transform:scaleY(.08)}}
 
 /* ===== hero ===== */
 .hero{padding-block:clamp(120px,16vh,170px) clamp(30px,4vw,50px);scroll-margin-top:0}
 .herogrid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(30px,4vw,60px);align-items:center}
+.herogrid>*{min-width:0}
 @media (max-width:980px){.herogrid{grid-template-columns:1fr}}
 .hero h1{font-size:clamp(44px,7vw,86px);font-weight:800;letter-spacing:-.035em;line-height:.97}
 .hero h1 .flip{color:var(--accent);position:relative;display:inline-block}

@@ -1,6 +1,16 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-14 · SITE D7: the ☰ breakpoint moves from 880 to 940 px; `.herogrid > *` gets `min-width: 0`.** Measured in
+  Chromium with the site's own fonts (a scratch Playwright probe, not committed). Before: "Agent output" wrapped to two
+  lines from 881 to 924 px (row 42 px tall); the hero grid's min-content pushed the hero past the viewport at phone
+  width (at 360 px the demo card ran to 393 px and the left gutter was gone; `overflow-x:clip` hid the overflow, so no
+  sideways scroll). After: the links show from 941 px with none wrapped (941, 945, 960, 1280); the ☰ menu carries them,
+  and the nav's GitHub and Chrome Web Store buttons, up to 940 px (they now hide below 940, not 880: the "SITE BANNER
+  KEPT" entry's boundary). The demo card sits inside the viewport at 320–414, 600 and 980 px. Element geometry
+  (excluding the moving `.track` marquee) is identical to before at 941, 981, 1280 and 1440 px; the same check reads
+  "different" at 920 and 360 px, its controls. Live after GO-LIVE 3.2. Revisit: if the nav's links or labels change.
+
 - **2026-11-14 · 0.1.1 RULINGS (HUMAN RULING), after CC's 0.1.1 plan.**
   - **D1:** 0.1.1 ships to Chrome (the automated job, GO-LIVE 10.2) and to GitHub Releases now. It goes to AMO only
     after AMO approves 0.1.0; no AMO version is uploaded while 0.1.0 is in review. This replaces the recorded "starts
