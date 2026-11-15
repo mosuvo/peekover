@@ -1,6 +1,20 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-15 · SITE: ☰ BREAKPOINT 1100 PX (revises D7's 940 px), with the Firefox Add-ons buttons (GO-LIVE 8.2,
+  Firefox part).** The human asked for a Firefox Add-ons button beside each Chrome Web Store button, the phone layout
+  kept working, measured 320–1440 px. Measured in Playwright Chromium with the site's own fonts (a scratch probe, not
+  committed; the old page from HEAD, served the same way): with the nav's second button at the old 940 px breakpoint,
+  every width from 941 to 1080 px failed (the button past the viewport at 941, 960 and 980 px; "Agent output" wrapping to
+  two lines, 42 px, up to 1080 px); from 1081 px everything fits. So the nav collapses to ☰ up to 1100 px (20 px of
+  margin), and the ☰ menu gained the Firefox Add-ons link. After: at 320, 360, 375, 390, 414, 480, 600, 768, 880,
+  900, 940, 941, 960, 980, 1000, 1024, 1100, 1280 and 1440 px, and every width 936–1100: no sideways scroll, the nav
+  64 px high with nothing outside it, no nav link wrapped, every button one line and inside the viewport, none
+  overlapping. The old page reads "ok" on the same probe at every width (the control), and the 940 px version reads
+  BAD at 941–1080 (the firing control). Trade-off: from 941 to 1100 px the nav links move into the ☰ menu. The
+  AMO URL used is `https://addons.mozilla.org/firefox/addon/peekover/`, the form AMO's API reports without its
+  locale prefix; the email's `/addon/peekover/` opens the same add-on. Revisit: if the nav's links or labels change.
+
 - **2026-11-14 · v0.1.1 RELEASED; WIF CONDITION BY REPOSITORY ID TESTED.** The human pushed `v0.1.1` on `b06d7f1`.
   Release run #4, 43596256620: all four jobs succeeded; unit 1,779 / 1,779, `REPRODUCIBLE`. Hashes: chrome
   `cb4f28a1…172d`, firefox `145dfbed…c6f6`, sources `df165ecf…e1eb`, SBOM `eece450a…06bb`, THIRD_PARTY_LICENSES

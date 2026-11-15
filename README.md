@@ -4,9 +4,7 @@ Peekover is a free, open-source browser extension that turns raw markdown files 
 It works on markdown files opened from your own disk and on raw files from GitHub, GitLab and Bitbucket.
 It asks for no browser permissions and makes no network requests unless you ask it to.
 
-> Peekover is in the [Chrome Web Store](https://chromewebstore.google.com/detail/peekover/bcfjejemkkoklbplcgfccboipmgiokpc).
-> The Firefox version is in review at Mozilla and is not listed yet.
-> To use it in Firefox before then, build it from source (below).
+> Peekover is in the [Chrome Web Store](https://chromewebstore.google.com/detail/peekover/bcfjejemkkoklbplcgfccboipmgiokpc) and in [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/peekover/).
 
 ## What it does today
 
@@ -48,12 +46,9 @@ It asks for no browser permissions and makes no network requests unless you ask 
 
 ## Planned
 
-For the first public release:
-
-- A listing in Firefox Add-ons, in review at Mozilla (Edge Add-ons later).
-
 Later, not yet scheduled:
 
+- A listing in Edge Add-ons.
 - DOCX and ZIP export, AI features, and publishing.
 
 ## Build from source

@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-14 (v0.1.1 RELEASED - Release run 43596256620, all four jobs green; the Chrome Web Store job submitted 0.1.1, PENDING_REVIEW, the first sign-in under the repository-ID WIF condition; issues #6 and #7 closed. Next: Chrome approval, then the Chrome screenshots; AMO 0.1.1 after AMO approves 0.1.0; then 0.1.2.) Earlier: 2026-11-11 (M13 CLOSED - 67 / 67 tasks; 9.5 close figures at HEAD: .output 6,660,128 / 6,660,114 B, content script 350,235 B; the 9.3 pick made by the reviewer under the human's delegation; M13's narrative moved to progress-archive.md. Next: docs/store/GO-LIVE.md. Earlier bylines: progress-archive.md, M13.)*
+*Updated: 2026-11-15 (AMO approved 0.1.0, tentatively; GO-LIVE 8.1, 8.2 and 8.4 Firefox parts.) Earlier: 2026-11-14 (v0.1.1 RELEASED - Release run 43596256620, all four jobs green; the Chrome Web Store job submitted 0.1.1, PENDING_REVIEW, the first sign-in under the repository-ID WIF condition; issues #6 and #7 closed. Next: Chrome approval, then the Chrome screenshots; AMO 0.1.1 after AMO approves 0.1.0; then 0.1.2.) Earlier: 2026-11-11 (M13 CLOSED - 67 / 67 tasks; 9.5 close figures at HEAD: .output 6,660,128 / 6,660,114 B, content script 350,235 B; the 9.3 pick made by the reviewer under the human's delegation; M13's narrative moved to progress-archive.md. Next: docs/store/GO-LIVE.md. Earlier bylines: progress-archive.md, M13.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -10,6 +10,14 @@
 > milestones · Baselines).**
 
 ## Now (start here)
+
+**AMO APPROVED 0.1.0 (2026-11-15), tentatively** ("passed our automated screening and is tentatively approved"; a
+human review may still follow). Listing https://addons.mozilla.org/firefox/addon/peekover/ (GO-LIVE Done note 8.1
+(Firefox)). GO-LIVE 8.1 done; 8.2 and 8.4 (Firefox parts) committed: README and the site name the AMO listing, the
+site has a Firefox Add-ons button beside each Chrome one, and the ☰ breakpoint moved from 940 to 1100 px
+(`decisions.md`, "SITE: ☰ BREAKPOINT 1100 PX"). **Next:** (1) the human pushes, then runs GO-LIVE 3.2; (2) 8.3
+(Firefox), the fresh-profile store install, not yet reported; (3) the AMO 0.1.1 upload (D1, D9), its version and
+reviewer notes drafted for the human's approval, not uploaded; (4) the Chrome and AMO screenshot retakes.
 
 **v0.1.1 RELEASED (2026-11-14), on `b06d7f1`** (`decisions.md`, "v0.1.1 RELEASED"; GO-LIVE Done notes, Later
 releases). Release run 43596256620: four jobs green, `REPRODUCIBLE`; the Chrome Web Store job uploaded and submitted
