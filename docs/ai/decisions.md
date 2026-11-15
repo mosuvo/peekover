@@ -1,6 +1,19 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-15 · HUMAN APPROVALS after GO-LIVE 8.2 / 8.4 (Firefox parts); 8.3 (Firefox) PASSED.**
+  - **The ☰ breakpoint is 1100 px (HUMAN APPROVAL), replacing D7's 940 px** ("SITE D7", 2026-11-14), on the
+    measurements in the entry below; the trade-off (the nav links in the ☰ menu from 941 to 1100 px) accepted.
+  - **The AMO URL form:** `https://addons.mozilla.org/firefox/addon/peekover/` (approved).
+  - **The AMO 0.1.1 version notes:** approved as drafted. **The reviewer notes:** approved, with the validator-warnings
+    paragraph added back from the 0.1.0 notes, its counts to be confirmed against 0.1.1's validation report. CC ran
+    addons-linter 10.15.0 locally on both release zips: 0 errors, 17 warnings each (4 `DANGEROUS_EVAL`, 13
+    `UNSAFE_VAR_ASSIGNMENT`), at the same code sites, only line and column shifted in Peekover's own chunks (the
+    2026-11-09 entry traces each site). Both texts are in GO-LIVE (Done notes, Later releases). Not uploaded yet.
+  - **8.3 (Firefox) PASSED (the human):** a fresh profile, the store install: the guide opened once and not after a
+    restart; a raw GitHub file rendered; the app page opened; a local `.md` file rendered after the file-access setup.
+    Rows 303 and 325 updated. Revisit: AMO's human review of 0.1.0, if it comes; the 0.1.1 validation report.
+
 - **2026-11-15 · SITE: ☰ BREAKPOINT 1100 PX (revises D7's 940 px), with the Firefox Add-ons buttons (GO-LIVE 8.2,
   Firefox part).** The human asked for a Firefox Add-ons button beside each Chrome Web Store button, the phone layout
   kept working, measured 320–1440 px. Measured in Playwright Chromium with the site's own fonts (a scratch probe, not
