@@ -543,6 +543,39 @@ retired.*
 - **4.1 · 2026-11-12 · the human:** a test message to `hello@peekover.dev` arrived (registrar forwarding). The email edit follows as its own agent task.
 - **5.1–5.5 · 2026-11-12:** 5.1 the human pushed `v0.1.0`, an annotated tag (`3cdd985c`) on `216cf7b`, tagged 03:45:05Z. 5.2 Release 43150291963: all three jobs success, Attest RAN — 6 subjects, SLSA provenance v1, Sigstore-signed and in Rekor (https://github.com/mosuvo/peekover/attestations/66530573); the log shows `REPRODUCIBLE` and unit 1,723 / 1,723. 5.3 the draft's five files and `SHA256SUMS`: `sha256sum -c` all OK (EXIT 0); the zip hashes = the clean-clone hashes in the log = a local build (chrome `2740c20a…`, firefox `3d1d3930…`, sources `058307a2…`). 5.4 `gh attestation verify` EXIT 0 for all five (ref `refs/tags/v0.1.0`, commit `216cf7b9dcdd`); a tampered file fails both checks (EXIT 1). 5.5 the human published it at 03:55:19Z; signed out, the release page opens.
 - **7.2 · 2026-11-12 · the human:** AMO 0.1.0 submitted, listed, status **Awaiting Review**. The flow: upload `peekover-0.1.0-firefox.zip`, then **Do you need to submit source code?** appeared, and the answer was Yes with `peekover-0.1.0-sources.zip` uploaded there, during submission, not on the version page afterwards (7.2's step corrected to this order). Before submission, CC reproduced AMO's validation locally (addons-linter 10.15.0 on the release zip: 0 errors, 17 warnings, each traced and explained). CC also rebuilt the Firefox zip from the sources zip alone, and it matched `SHA256SUMS` (`3d1d3930…`).
+  - **Notes for reviewers, as pasted for 0.1.0** (quoted 2026-11-15 from the local copy `peekover-amo-reviewer-note.txt`, dated 2026-11-12, which is then deleted):
+    ```
+    BUILD ENVIRONMENT (not the default one)
+    - OS: Ubuntu, x64. The release was built on GitHub's ubuntu-26.04 x64 runner; Ubuntu 24.04 x64 also gives the same bytes. Not tested on ARM64.
+    - Node.js 22 (.nvmrc). The release used 22.23.4. For example: nvm install 22
+    - pnpm 10.33.0 (package.json "packageManager"). Either run "corepack enable", or put "npx --yes pnpm@10.33.0" in place of "pnpm" below.
+
+    BUILD (in the folder extracted from peekover-0.1.0-sources.zip, which includes pnpm-lock.yaml)
+      pnpm install --frozen-lockfile
+      pnpm zip -b firefox
+    Output: .output/peekover-0.1.0-firefox.zip
+
+    COMPARE
+      sha256sum .output/peekover-0.1.0-firefox.zip
+    It must print 3d1d3930a283f53b41ec8fbce51401c3d0ac94a98208362e59857cc81901de94, the line for this file in SHA256SUMS on the release: https://github.com/mosuvo/peekover/releases/tag/v0.1.0
+    The same steps are in SOURCE_CODE_REVIEW.md and docs/trust/REPRODUCING.md inside the sources zip.
+
+    VALIDATOR WARNINGS (17, no errors)
+    "The Function constructor is eval" (4): chunks/graphlib-DS17s2tU.js, chunks/cytoscape.esm-CQFVGiJu.js, chunks/chunk-KEIR6QF5-Dj-OpFgW.js (2).
+    - What it is: lodash's global lookup, freeGlobal || freeSelf || Function("return this")(), bundled with Mermaid 11.16.1.
+    - The string is a constant, and in a window "self" is found first, so Function is never called. The MV3 default CSP would block it anyway.
+    - These chunks load only on the add-on's own page, app.html. The content script loads no chunks.
+
+    "Unsafe assignment to innerHTML" (13):
+    - Peekover (5): content-scripts/peekover.js line 778; chunks/app-GzHRDlFU.js lines 846, 847, 850, 1012.
+      Source: src/render/mount.ts, diagramEnhancer.ts, mathEnhancer.ts, diffView.ts.
+      The string is DOMPurify output, written into an inert <template>, then adopted.
+    - DOMPurify 3.4.17 itself (2): content-scripts/peekover.js line 15, chunks/app-GzHRDlFU.js line 16.
+    - Mermaid and d3-selection (6): chunks/mermaid.core-B7Zc4WOp.js (2), chunks/src-DaDhgKd6.js (2), chunks/chunk-NSK5VX7P-DmMQEPx2.js, chunks/chunk-I66GZJ75-CnXN3oTU.js.
+      These run on app.html only. Peekover calls only mermaid.render(), with securityLevel "strict", htmlLabels false and startOnLoad false; it never calls run() or init().
+      Directives cannot set themeCSS, fontFamily, altFontFamily or themeVariables. A diagram containing $$ is not rendered, so the KaTeX helper is never reached.
+      Every diagram is sanitized with DOMPurify before it is shown.
+    ```
 - **7.1 · 2026-11-12 · the human:** Chrome Web Store item submitted for review; item ID `bcfjejemkkoklbplcgfccboipmgiokpc`. Package `peekover-0.1.0-chrome.zip` from the v0.1.0 release. The listing fields and the Privacy tab are from `docs/store/chrome.md` as written: single purpose; host permission justification (the file's "Permission justification"); data usage **Website content** only, with all three certifications ticked; privacy policy URL https://peekover.dev/privacy/. Distribution: free, Public, all regions. Auto-publish ON, so it goes live when approved. The dashboard warned that the host access may mean an in-depth review, which can take longer. **The first submission was rejected for "Keyword Spam" (violation reference Yellow Argon).** The flagged text was the description's language list ("JavaScript, TypeScript, TSX, Python, JSON, CSS, HTML, Bash, diff, YAML, Markdown, TOML and SQL"). The human shortened that bullet in the dashboard to "…highlights code in common programming languages." and resubmitted on 2026-11-12. `docs/store/chrome.md` and ledger row 452 now match.
 - **8.1 (Chrome) · 2026-11-12 · the human:** Chrome Web Store published Peekover 0.1.0 on 2026-11-12 (the store's email "Item successfully published"), visibility Public. Listing: https://chromewebstore.google.com/detail/peekover/bcfjejemkkoklbplcgfccboipmgiokpc. Checked by CC 2026-11-13, signed out (`curl -sSL`): 200, page title "Peekover - Chrome Web Store". Control: an unknown item id also returns 200, but titled only "Chrome Web Store", so the title is the evidence, not the status. The AMO URL follows when AMO approves 0.1.0; Edge is deferred with 7.3.
 - **8.3 (Chrome) · 2026-11-13 · the human:** installed from the store listing in a clean Chrome profile. The setup guide opened once, on install, and not again after a restart (row 325, PERMISSIONS.md's install note). A raw GitHub markdown file rendered, and the toolbar button opened the app page. **Not reported:** turning on "Allow access to file URLs" while the guide is open (row 303), so that half of 8.3 is still open for Chrome. The Firefox install follows when AMO approves.

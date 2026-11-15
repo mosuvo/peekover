@@ -1,5 +1,10 @@
 CLAUDE.local.md
 *.local.md
+
+# Local-only working files (probes, notes, captures): never committed, never in a store or sources zip
+# (wxt.config.ts excludeSources; scripts/check-sources-zip.ts). Things kept for safety live outside the repo
+# (docs/ai/decisions.md, "LOCAL FILES AND THE SOURCES ZIP").
+.local/
 .env
 .env.*
 

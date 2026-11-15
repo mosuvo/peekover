@@ -17,7 +17,9 @@ human review may still follow). Listing https://addons.mozilla.org/firefox/addon
 site has a Firefox Add-ons button beside each Chrome one, and the ☰ breakpoint moved from 940 to 1100 px
 (`decisions.md`, "SITE: ☰ BREAKPOINT 1100 PX"). **Next:** (1) the human pushes, then runs GO-LIVE 3.2; (2) AMO 0.1.1 SUBMITTED 2026-11-15 (Upload New
 Version, listed; both zips from the v0.1.1 release; the approved notes), status Awaiting Review, 0.1.0 stays public
-(GO-LIVE Done notes, Later releases); compare its validation report with the 17 warnings; (3) the Chrome and AMO screenshot retakes. 8.3 (Firefox) PASSED 2026-11-15,
+(GO-LIVE Done notes, Later releases); compare its validation report with the 17 warnings; (3) the Chrome and AMO screenshot retakes; (4) the post-launch cleanup (`decisions.md`, "LOCAL FILES AND THE
+SOURCES ZIP"): the human's deletions (the signed-in Edge profiles, the sensitive screenshots), then the moves to
+`D:\Dev\peekover-keep\`, and the human's choice for `video/`. 8.3 (Firefox) PASSED 2026-11-15,
 so GO-LIVE 8.1 and 8.3 are done for both stores.
 
 **v0.1.1 RELEASED (2026-11-14), on `b06d7f1`** (`decisions.md`, "v0.1.1 RELEASED"; GO-LIVE Done notes, Later

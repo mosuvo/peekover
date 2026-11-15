@@ -18,6 +18,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
+import { checkSourcesZip, sourcesZipPath } from './check-sources-zip';
 
 /** The unpacked packages compared file by file. */
 export const TREES = ['chrome-mv3', 'firefox-mv3'] as const;
@@ -162,6 +163,10 @@ function cloneAndBuild(repo: string, into: string, ref: string | null, expected:
   run('pnpm', ['install', '--frozen-lockfile'], env);
   run('pnpm', ['zip'], env);
   run('pnpm', ['zip', '-b', 'firefox'], env);
+  // The sources zip holds only tracked files (scripts/check-sources-zip.ts): in a clean clone that catches WXT itself
+  // adding something the tree does not hold.
+  const stray = checkSourcesZip(sourcesZipPath(into), into);
+  if (stray.length > 0) throw new Error(`${into}: the sources zip holds files git does not track: ${stray.join(', ')}`);
   console.log(`${into}: ${git(['rev-parse', 'HEAD'])}, SOURCE_DATE_EPOCH ${env.SOURCE_DATE_EPOCH ?? 'unset'}`);
   return path.join(into, '.output');
 }

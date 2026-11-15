@@ -1,6 +1,42 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-15 · LOCAL FILES AND THE SOURCES ZIP; POST-LAUNCH CLEANUP (HUMAN APPROVAL of CC's plan, 2026-11-15).**
+  - **Layout.** Local-only working files go in `.local/` inside the repo (gitignored; a local README says what goes
+    there). Things kept for safety go in one folder outside the repo, `D:\Dev\peekover-keep\`, whose `README.md` lists
+    every item and why it is kept. Everything else is deleted.
+  - **Old paths in the records.** Records written before today cite these by path and stay as written (append-only):
+    `D:\Dev\peekover-shots\` → `D:\Dev\peekover-keep\shots\`, and `D:\Dev\peekover-amo-test\` →
+    `D:\Dev\peekover-keep\amo-test-0.0.9\` (both moved once the human has deleted
+    `peekover-shots\8.1\edge\_originals-with-account\`, which shows the human's Microsoft account; no file in the repo
+    links to or embeds it, checked 2026-11-15: three prose mentions of the folder and one of the file names only).
+    `D:\Dev\peekover-archive\` (the pre-rewrite clone, "HISTORY REWRITTEN") → `D:\Dev\peekover-keep\
+    peekover-pre-rewrite.bundle` (`git bundle create --all`: 11 refs, 603 commits, 14,485,121 B; `git bundle verify`
+    OK; a mirror clone of it had the same refs and object ids, 603 commits, `main` tree `a9026103`, fsck clean; then the
+    folder was deleted). The bundle carries the old commit email: local only, never pushed or synced; delete it when M14
+    closes. `D:\Dev\peekover-commit-map.txt` was byte-identical to `docs/ai/commit-map.txt` and is deleted. The 0.1.0 AMO
+    reviewer notes (`D:\Dev\peekover-amo-reviewer-note.txt`) are quoted in GO-LIVE's 7.2 Done note, byte-identical
+    (checked), and the file is deleted.
+  - **The sources zip holds only tracked files (new check).** WXT zips the working directory, leaving out dotfiles and
+    `zip.excludeSources`, not the git tree. Found: the local 0.1.1 sources zip (built 2026-11-14) held an untracked
+    scratch script, `scripts/_scratch-shots-fx.ts` (since deleted), which is why its hash differed from the release's.
+    The released sources zip (the one AMO has) holds 338 files, all tracked at `v0.1.1` (checked). Now:
+    `excludeSources` adds `.local/**` and `video/**`; eslint ignores both; `scripts/check-sources-zip.ts` fails on any
+    file entry of a sources zip that `git ls-files` does not list, and `scripts/compare-builds.ts` runs it on each
+    clean-clone build (CI's reproducible job and the release workflow); `tests/sourcesZip.test.ts` pins the
+    exclusions, tests the instrument on a zip it builds, and checks the local `.output` sources zip when one exists.
+    **Red first:** the new test read red on the 2026-11-14 zip (`scripts/_scratch-shots-fx.ts`). **Firing control**
+    (canaries in `.local/`, `video/` and the repository root, then `pnpm zip -b firefox`): arm 1, the new list — the
+    check named the root canary only (and the new script, not yet staged); arm 2, `.local/**` and `video/**` removed —
+    199 untracked files, all of `video/` with its captures (`raw/` 93, `out/` 70) and the `video/` canary, plus the
+    root canary; `.local/` stayed out in both arms (WXT already leaves dotfolders out, so the `.local/**` pattern is a
+    second guard, and the tracked-files check would catch a change in WXT); arm 3, canaries removed, the list restored
+    — every file entry tracked.
+  - **`video/` reads the repo** (`tools/session.mjs`: `ROOT` two levels up; the built extension in
+    `.output/chrome-mv3`, `site/fonts/`, `assets/icons/icon-128.svg`, `git config user.email` in the repo for its
+    on-screen privacy check), so it is not moved yet: the human chooses between `.local/video/` and outside the repo.
+  - Revisit: M14 close (delete the bundle); AMO's approval of 0.1.1 (delete `C:\Users\User\peekover-v0.1.1\`).
+
 - **2026-11-15 · HUMAN APPROVALS after GO-LIVE 8.2 / 8.4 (Firefox parts); 8.3 (Firefox) PASSED.**
   - **The ☰ breakpoint is 1100 px (HUMAN APPROVAL), replacing D7's 940 px** ("SITE D7", 2026-11-14), on the
     measurements in the entry below; the trade-off (the nav links in the ☰ menu from 941 to 1100 px) accepted.

@@ -5,7 +5,7 @@ import tseslint from 'typescript-eslint';
 // service) to keep `eslint .` fast; enable it when the pipeline lands.
 export default tseslint.config(
   {
-    ignores: ['node_modules/**', '.output/**', '.wxt/**', 'dist/**'],
+    ignores: ['node_modules/**', '.output/**', '.wxt/**', 'dist/**', '.local/**', 'video/**'],
   },
   {
     files: ['**/*.{js,mjs,cjs,ts,tsx,mts,cts}'],

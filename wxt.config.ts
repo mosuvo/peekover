@@ -22,10 +22,12 @@ export default defineConfig({
   },
   // The Firefox sources zip (M13 task 7.3). WXT zips the working directory, dotfiles excluded: `.nvmrc` (the Node pin
   // a reviewer builds with) is added back; gitignored scratch that is not a dotfile is kept out, so a local zip holds
-  // what a clean clone holds.
+  // what a clean clone holds. `.local/` (local-only working files; a dotfolder, so WXT already leaves it out) and
+  // `video/` (the promo-video tooling, kept outside the repo) are named too, so neither depends on a default
+  // (2026-11-15; scripts/check-sources-zip.ts checks the built zip).
   zip: {
     includeSources: ['.nvmrc'],
-    excludeSources: ['**/__screenshots__/**', '**/*.local.md', 'sbom.cdx.json'],
+    excludeSources: ['**/__screenshots__/**', '**/*.local.md', 'sbom.cdx.json', '.local/**', 'video/**'],
   },
   // Target Manifest V3 on every browser. WXT defaults Firefox (and Safari) to
   // MV2, but our security posture (spec §6) claims MV3 + a non-persistent
