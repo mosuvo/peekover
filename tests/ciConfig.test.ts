@@ -502,6 +502,31 @@ describe('workflow hygiene (013 tasks 7.4, 7.4a)', () => {
     expect(offenders, 'actions not pinned by full commit SHA').toEqual([]);
   });
 
+  // 0.1.2 (decisions.md, "0.1.2 B1: ACTIONS ON NODE 24"). GitHub deprecated Node 20 for JavaScript actions; these four
+  // targeted it at their old pins. The floor is each action's first major whose action.yml says `using: node24`
+  // (read from the action's own repository at the pinned commit, 2026-11-16): checkout v5, setup-node v5,
+  // pnpm/action-setup v5, upload-artifact v6 (v5 still defaulted to Node 20).
+  it('no workflow pins an action major that targets Node 20, and each action has one pin across workflows', () => {
+    const FLOOR: Record<string, number> = { 'actions/checkout': 5, 'actions/setup-node': 5, 'pnpm/action-setup': 5, 'actions/upload-artifact': 6 };
+    const uses = workflows.flatMap(({ file, text: t }) =>
+      [...t.matchAll(/^\s*(?:- )?uses: ([\w.-]+\/[\w.-]+)(?:\/[\w./-]+)?@([0-9a-f]{40}) # v(\d+)\.\d+\.\d+$/gm)].map((m) => ({ file, action: m[1], sha: m[2], major: Number(m[3]) })),
+    );
+    // Firing control: every floored action is in use somewhere.
+    expect(Object.keys(FLOOR).filter((a) => !uses.some((u) => u.action === a))).toEqual([]);
+    const below = uses.filter((u) => FLOOR[u.action] !== undefined && u.major < FLOOR[u.action]).map((u) => `${u.file}: ${u.action} v${u.major}`);
+    expect(below, 'actions pinned below their first Node 24 major').toEqual([]);
+    const shas = new Map<string, Set<string>>();
+    for (const u of uses) shas.set(u.action, (shas.get(u.action) ?? new Set()).add(u.sha));
+    expect([...shas].filter(([, s]) => s.size > 1).map(([a]) => a), 'actions pinned to more than one commit').toEqual([]);
+  });
+
+  it('release.yml turns setup-node’s automatic cache off explicitly (no cache on the release path)', () => {
+    const t = read('.github/workflows/release.yml');
+    const setup = /uses: actions\/setup-node@.*\n((?: {8,}.*\n)*)/.exec(t)?.[1] ?? '';
+    expect(setup).toMatch(/^\s*package-manager-cache: false\s*$/m);
+    expect(setup).not.toMatch(/^\s*cache:/m);
+  });
+
   it('no workflow still attaches the SBOM to a release itself — release.yml does', () => {
     const offenders = workflows.filter(({ text: t }) => /Attach SBOM to release/i.test(t)).map((w) => w.file);
     expect(offenders, 'workflows with an "Attach SBOM to release" step').toEqual([]);

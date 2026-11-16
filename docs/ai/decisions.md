@@ -1,6 +1,35 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-16 · 0.1.2 B1: ACTIONS ON NODE 24.** GitHub deprecated Node 20 for JavaScript actions; four pins targeted it
+  (each `action.yml` read at the pinned commit): `actions/checkout` v4.4.0 → **v7.0.1** `3d3c42e5…b1` (pages.yml's pin),
+  `actions/setup-node` v4.4.0 → **v7.1.0** `949feb24…c1`, `pnpm/action-setup` v4.3.0 → **v6.1.1** `73e46992…15`,
+  `actions/upload-artifact` v4.6.2 → **v7.0.2** `cf430e03…d9` (release.yml's pin). All four `using: node24` at the
+  new commits. The rest were already node24, composite or docker and are unchanged (osv-scanner v2.2.4 is docker:
+  no warning; Dependabot #1 left alone). Breaking notes read: setup-node v5 auto-cache, narrowed to npm in v6 (we use
+  pnpm), so `release.yml` gains `package-manager-cache: false` as an explicit guard; setup-node v7 dropped the dummy
+  `NODE_AUTH_TOKEN` (no `registry-url` here); checkout v6 keeps credentials out of `.git/config`, v7 refuses fork code
+  under `pull_request_target` / `workflow_run` (neither used); pnpm/action-setup v6 adds pnpm 11 support, and our
+  version still comes from `packageManager: pnpm@10.33.0`. **Tests (red first):** `tests/ciConfig.test.ts` gains a
+  floor per action (its first node24 major: checkout 5, setup-node 5, pnpm/action-setup 5, upload-artifact 6), one
+  commit per action across all workflows, and the release cache guard; red at HEAD (22 pins below the floor; no
+  guard), green after. **Proof still owed (CI, not local):** a push, CI and Supply chain with no Node 20 annotation,
+  and a `release.yml` dry run whose log shows pnpm 10.33.0 and `REPRODUCIBLE`. Revisit: at that dry run.
+
+- **2026-11-16 · 0.1.2 PHASE A APPROVED (HUMAN RULING).** D1 (the guide's wording), D2 (Ready / One step left / Check
+  one setting), D4 (Try it opens a bundled sample on the app page, nothing stored), D5 (the sidebar's labels, Stored data
+  line and PRIVACY row 357), D6 (Brave named in the site-access line) and D7 (the flake fixes and action versions) as
+  proposed. **D3 yes:** the Firefox build gains `options_ui`; the 0.1.2 AMO reviewer notes must state this manifest
+  change. **Sidebar design changed:** the collapse toggle moves onto the divider between the sidebar and the main
+  column: a round button of about 32 px straddling the divider, vertically centred in the viewport and sticky while
+  scrolling, a larger, heavier chevron (‹ open, › collapsed), not covering the sidebar's scrollbar, the reader text or
+  the TOC; a visible focus ring; "Hide files" / "Show files" (aria and tooltip); 3:1 contrast in both themes; hidden in
+  print; collapsed, the same button on the rail's edge; ≤ 1189 px unchanged. Prototype screenshots of the toggle (open,
+  collapsed, hover, focus; light and dark; 1190 and 1440 px; sidebar scrolled) come before the sidebar is implemented.
+  **Phase B order, one commit each:** actions, flakes, guide (with `options_ui`), then the sidebar after the toggle is
+  approved; full Verify at the end; version 0.1.2 and CHANGELOG with ledger rows (wording for approval). Commit on
+  `main`, no push, no tag. Dependabot #2–#5 left alone; CC says which to close after the actions commit.
+
 - **2026-11-16 · 0.1.1 APPROVED IN BOTH STORES; SCREENSHOT RETAKES POSTPONED; 0.1.2 STARTED (HUMAN RULING).**
   Chrome Web Store: Google approved and published 0.1.1 (by 2026-11-16). AMO: 0.1.1 approved Sun 2026-11-15, 8:46 PM
   local, "tentatively approved". The 0.1.1 download folder (`C:\Users\User\peekover-v0.1.1\`, the "Revisit" of
