@@ -15,6 +15,7 @@
 // THIS import stops type-checking under `tsc --noEmit`. That is the drift guard the mirror relies on.
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
+import { commands } from 'vitest/browser';
 
 // Hoisted so the vi.mock factory (hoisted above the imports) can read it — the readerSource.browser
 // precedent. Off by default; the fallback test flips it around the single failing enterDiff.
@@ -143,8 +144,9 @@ interface Surface {
 
 const fullPageHosts: HTMLElement[] = [];
 const containers: HTMLElement[] = [];
-afterEach(() => {
+afterEach(async () => {
   injected.parseShouldThrow = false;
+  await commands.emulateReducedMotion(null);
   for (const h of fullPageHosts.splice(0)) h.remove();
   for (const c of containers.splice(0)) c.remove();
 });
@@ -247,9 +249,17 @@ describe.each(SURFACES)('diffView — $name surface (task 6.1, D-15)', ({ mount:
   });
 
   it('restores the reading place across enter→exit (the hidden-column rung), non-vacuously', async () => {
+    // 0.1.2 B2 (decisions.md, "0.1.2 B2: THE TWO FLAKES"): the full-page :host scrolls SMOOTHLY, and settle() takes
+    // three equal reads 20 ms apart as "done" — which a smooth scroll that has not started yet also gives. With
+    // Firefox's frames slower than that window this measured before the scroll landed (red 9/9 at 8–30 fps, once
+    // the recorded 13105.27). This test is about the reading place, not motion: reduced motion makes the product's
+    // own rule (`:host{scroll-behavior:auto}`) govern, so every write lands at once. tocScroll covers smooth.
+    await commands.emulateReducedMotion('reduce');
     const s = await mountSurface();
     const scroller = s.scroller;
     await waitForScrollable(scroller);
+    // Fails loudly if the reduce rule ever stops applying (then the race above is back).
+    expect(getComputedStyle(scroller).scrollBehavior).toBe('auto');
 
     // Read mid-document, scrolled 40px PAST Section 5's top (a non-zero delta the anchor carries).
     const target = 'Section 5';

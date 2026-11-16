@@ -441,10 +441,10 @@ R29's CARRY).
   the cooldown"** — a KNOWN FLAKE, **CI-only (Firefox), NOT REPRODUCED** (5 / 5 alone at 5.0; 35 runs at 4.4; 0 in every
   full suite). CI run 54 failed it twice ("the instrument saw every key: expected 1 to be 8"); run 55 passed. Its message
   (4.4) names the deep `activeElement`, `hasFocus()`, dispatches per keydown, the viewport and the files before it — keep it.
-- **Probably identified 2026-11-07 (8.1 prep):** `tests/thirdPartyLicences.test.ts` › "matches what the build shipped,
+- **FIXED 2026-11-16 (0.1.2 B2; `decisions.md`, "0.1.2 B2: THE TWO FLAKES"): cold disk reads, derived once per engine now.** ~~**Probably identified 2026-11-07 (8.1 prep):**~~ `tests/thirdPartyLicences.test.ts` › "matches what the build shipped,
   entry for entry" timed out (16,242 ms vs 5,000) in `pnpm test` run right after `pnpm lint` — the same shape as 7.4's
   red; alone 16 / 16, the suite again 1,652 / 1,652. Cause: a timeout under load. Not fixed (a test-only task).
-- **`tests/browser/diffView.browser.test.ts` › diffView — 'full-page' surface (task 6.1, D-15) › "restores the reading
+- **FIXED 2026-11-16 (0.1.2 B2; `decisions.md`, "0.1.2 B2: THE TWO FLAKES"): `settle()` read a smooth scroll before it started; the test now runs under reduced motion.** `tests/browser/diffView.browser.test.ts` › diffView — 'full-page' surface (task 6.1, D-15) › "restores the reading
   place across enter→exit (the hidden-column rung), non-vacuously"** — a KNOWN FLAKE, **local (Firefox), REPRODUCIBLE,
   2 in 5, cause not found** (2026-11-15, the post-launch cleanup's Verify; `decisions.md`, "LOCAL FILES AND THE
   SOURCES ZIP"). "expected 13105.266860961914 to be less than 8", once in the full browser suite (1 failed / 2,818

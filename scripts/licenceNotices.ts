@@ -234,8 +234,9 @@ export function entriesFor(root: string, inv: Inventory): Entry[] {
     const knownTexts = words([text, ...[...via.components].map((c) => (BUNDLED[c] ? bundledText(root, c) : ''))].join('\n'));
     const names = [p.name, ...[...via.components].map((c) => splitKey(c).name)].map((n) => words(stem(n))).filter((n) => n.length >= 4);
     const apacheEmbedded = embedded.some((e) => e.spdx === 'Apache-2.0');
-    for (const f of p.files) {
-      for (const n of noticeLines(fs.readFileSync(path.join(dir, f), 'utf8'))) {
+    // Each shipped file is read once (`sources`, above): a second read doubled a cold-disk derivation (0.1.2 B2).
+    for (const [i, f] of p.files.entries()) {
+      for (const n of noticeLines(sources[i])) {
         if (embedded.some((e) => n.comment.includes(e.marker))) continue;
         // The Apache License's own text, carried by code an EMBEDDED row already names under Apache-2.0.
         if (apacheEmbedded && n.comment.includes('TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION')) continue;

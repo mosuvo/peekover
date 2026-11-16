@@ -1,6 +1,30 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-16 · 0.1.2 B2: THE TWO FLAKES, fixed at the cause.**
+  - **`thirdPartyLicences` (5 s timeout under load).** Cause: cold disk reads. The session's first run took 10,004 ms
+    (Chromium arm) and timed out; the Firefox arm right after 126 ms; warm reruns 151–171 ms. Each `entriesFor` opened
+    868 shipped files twice plus 96 source maps (~31 MB), and the file derived 8 times per run (`checkFile`, the
+    ablation's own `entriesFor`, and two `checkFile`s in the text/version ablation, per engine). Fix: `entriesFor`
+    reads each shipped file once (`scripts/licenceNotices.ts` reuses `sources` for the notice scan; the build's guard
+    output is unchanged: both builds pass it); the test derives once per engine in a `beforeAll` (a 60 s budget for
+    disk reads) and every check uses `checkEntries` over those entries (`checkFile` is exactly that, and still runs at
+    every build). 8 derivations → 2. **Red first:** new `tests/licenceReads.test.ts` wraps `node:fs` and requires each
+    shipped file read exactly once per derivation: red at HEAD (files read twice), green after, red again with the
+    script fix stashed. One exemption by name: a shipped `package.json` (mermaid's) is also read as metadata. A cold
+    disk cannot be forced on demand, so the timeout itself has no red run; the read count is the instrument.
+  - **`diffView` full-page "restores the reading place" (Firefox, 2 in 5).** Cause: the full-page `:host` scrolls
+    smoothly (the contained twin does not, and always passed); `settle()` takes three equal reads 20 ms apart as done,
+    which a smooth scroll that has not started also gives. Shown by forcing Firefox's refresh rate
+    (`layout.frame_rate`, a scratch config): red 9 / 9 at 8–30 fps, one run giving the recorded
+    `expected 13105.266860961914 to be less than 8` exactly; green 5 / 5 at the default rate. `watchAnchor` and
+    `watchRemount` stay green at 30 fps. Fix: this test runs under reduced motion (`emulateReducedMotion`), so the
+    product's `:host{scroll-behavior:auto}` rule governs, asserts `scroll-behavior: auto` first, and resets after each
+    test. Smooth scrolling stays covered by `tocScroll`'s "instant under reduce, smooth without". After: 10 / 10 at
+    30 fps and at 8 fps; with the fix stashed, red at 30 fps. Both engines green with the real config.
+  - Verify: lint 0; unit 1,787 / 1,787; diffView 20 / 20 (both engines); both builds pass the licence guard. Revisit:
+    the next red in either file.
+
 - **2026-11-16 · 0.1.2 B1: ACTIONS ON NODE 24.** GitHub deprecated Node 20 for JavaScript actions; four pins targeted it
   (each `action.yml` read at the pinned commit): `actions/checkout` v4.4.0 → **v7.0.1** `3d3c42e5…b1` (pages.yml's pin),
   `actions/setup-node` v4.4.0 → **v7.1.0** `949feb24…c1`, `pnpm/action-setup` v4.3.0 → **v6.1.1** `73e46992…15`,

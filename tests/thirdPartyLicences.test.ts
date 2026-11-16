@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 import { ENGINES, LICENCE_FILE, LICENCE_SOURCE, inventoryPath } from '../scripts/licenceInventory';
-import { checkEntries, checkFile, entriesFor, parseFile, renderFile, type Engine, type Inventory } from '../scripts/licenceNotices';
+import { checkEntries, entriesFor, parseFile, renderFile, type Engine, type Entry, type Inventory } from '../scripts/licenceNotices';
 import { PERMISSIVE } from '../scripts/licenceSources';
 
 // THIRD-PARTY LICENCES (M13 task 7.2a). public/THIRD_PARTY_LICENSES.txt ships at the package root of both engines
@@ -88,8 +88,18 @@ describe('the third-party licence file (task 7.2a)', () => {
   for (const engine of ENGINES) {
     const inv = inventory(engine);
     describe.skipIf(!inv)(`against the last ${engine} build's inventory`, () => {
+      // 0.1.2 B2 (decisions.md, "0.1.2 B2: THE TWO FLAKES"): the derivation reads every shipped file and source map of
+      // the build (about 20 MB); on a cold disk it took 10 s and timed the first test out. It runs ONCE per engine,
+      // here, and both tests below use it (`checkFile` is `checkEntries` over `entriesFor`, so nothing is weakened).
+      // The hook's budget is for disk reads; no test body waits on the disk.
+      let generated: Entry[] = [];
+      beforeAll(() => {
+        generated = entriesFor(ROOT, inv!);
+      }, 60_000);
+
       it('matches what the build shipped, entry for entry', () => {
-        expect(checkFile(ROOT, inv!, text)).toEqual([]);
+        expect(generated.length).toBeGreaterThan(100);
+        expect(checkEntries(ROOT, engine, generated, text)).toEqual([]);
       });
 
       it('lists every package of the inventory (module graph) and every package pre-bundled inside one', () => {
@@ -100,7 +110,6 @@ describe('the third-party licence file (task 7.2a)', () => {
       });
 
       it('ABLATION: removing any one entry makes the guard red, naming that package', () => {
-        const generated = entriesFor(ROOT, inv!);
         const silent: string[] = [];
         for (const e of entries.filter((x) => x.engines.includes(engine))) {
           const problems = checkEntries(ROOT, engine, generated, without(text, e.key));
@@ -112,9 +121,9 @@ describe('the third-party licence file (task 7.2a)', () => {
       it('ABLATION: a changed licence text or version is red, naming the package', () => {
         const edited = text.replace('Copyright (c) 2016-2026, The Cytoscape Consortium.', 'Copyright (c) 2016, Someone.');
         expect(edited).not.toBe(text);
-        expect(checkFile(ROOT, inv!, edited)).toContain(`cytoscape@3.34.0: its entry differs from what the ${engine} build renders`);
+        expect(checkEntries(ROOT, engine, generated, edited)).toContain(`cytoscape@3.34.0: its entry differs from what the ${engine} build renders`);
         const moved = text.replace('Package: diff@9.0.0\n', 'Package: diff@9.0.1\n');
-        expect(checkFile(ROOT, inv!, moved)).toEqual(
+        expect(checkEntries(ROOT, engine, generated, moved)).toEqual(
           expect.arrayContaining([
             `diff@9.0.0 ships in the ${engine} build but has no entry for it in the file`,
             `diff@9.0.1 is listed for ${engine} but does not ship in that build`,
