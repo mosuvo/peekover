@@ -36,6 +36,18 @@
     `.output/chrome-mv3`, `site/fonts/`, `assets/icons/icon-128.svg`, `git config user.email` in the repo for its
     on-screen privacy check), so it is not moved yet: the human chooses between `.local/video/` and outside the repo.
   - Revisit: M14 close (delete the bundle); AMO's approval of 0.1.1 (delete `C:\Users\User\peekover-v0.1.1\`).
+  - **DONE 2026-11-16 (HUMAN RULINGS, after a power cut; nothing was mid-step).** The human deleted
+    `peekover-shots\8.1\edge\_originals-with-account\`, the signed-in Edge profiles and `D:\peekover-watch`. Each move:
+    copy, then file count, total bytes, folder count and `diff -r` identical before the source was deleted.
+    `D:\Dev\peekover-shots\` → `D:\Dev\peekover-keep\shots\` (1,704 files, 180,415,368 B); `D:\Dev\peekover-amo-test\` →
+    `D:\Dev\peekover-keep\amo-test-0.0.9\` (9 files, 8,888,985 B; its `SHA256SUMS` checks). `peekover-walk-profiles`
+    and `walk-scratch` deleted. **`video/` → `.local/video/`** (the human chose (a); 4,859 files, 1,274,882,561 B):
+    `tools/session.mjs` now takes `VIDEO` as its own parent folder and `ROOT` two levels above that; every plates
+    module and `v4/netprobe.mjs` read `ROOT` / `VIDEO` from it, so none needed an edit. Smoke render (a probe importing
+    `session.mjs` and the three plates modules, then one launch2 plate set): the four PNGs are byte-identical to a run
+    from `video/` before the move; firing control, the unedited `session.mjs` at the new place, failed (`ROOT` =
+    `.local`). The old `video/` was deleted after the verified copy but before the smoke render — the ruling said
+    after; no loss (the copy was identical). `excludeSources` and eslint keep `video/**` as a guard.
 
 - **2026-11-15 · HUMAN APPROVALS after GO-LIVE 8.2 / 8.4 (Firefox parts); 8.3 (Firefox) PASSED.**
   - **The ☰ breakpoint is 1100 px (HUMAN APPROVAL), replacing D7's 940 px** ("SITE D7", 2026-11-14), on the

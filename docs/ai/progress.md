@@ -17,9 +17,9 @@ human review may still follow). Listing https://addons.mozilla.org/firefox/addon
 site has a Firefox Add-ons button beside each Chrome one, and the ☰ breakpoint moved from 940 to 1100 px
 (`decisions.md`, "SITE: ☰ BREAKPOINT 1100 PX"). **Next:** (1) the human pushes, then runs GO-LIVE 3.2; (2) AMO 0.1.1 SUBMITTED 2026-11-15 (Upload New
 Version, listed; both zips from the v0.1.1 release; the approved notes), status Awaiting Review, 0.1.0 stays public
-(GO-LIVE Done notes, Later releases); compare its validation report with the 17 warnings; (3) the Chrome and AMO screenshot retakes; (4) the post-launch cleanup (`decisions.md`, "LOCAL FILES AND THE
-SOURCES ZIP"): the human's deletions (the signed-in Edge profiles, the sensitive screenshots), then the moves to
-`D:\Dev\peekover-keep\`, and the human's choice for `video/`. 8.3 (Firefox) PASSED 2026-11-15,
+(GO-LIVE Done notes, Later releases); compare its validation report with the 17 warnings; (3) the Chrome and AMO screenshot retakes; ~~(4) the post-launch cleanup~~ **DONE 2026-11-16** (`decisions.md`,
+"LOCAL FILES AND THE SOURCES ZIP", the DONE addendum): shots and the AMO test kit in `D:\Dev\peekover-keep\`, `video/`
+now `.local/video/`. 8.3 (Firefox) PASSED 2026-11-15,
 so GO-LIVE 8.1 and 8.3 are done for both stores.
 
 **v0.1.1 RELEASED (2026-11-14), on `b06d7f1`** (`decisions.md`, "v0.1.1 RELEASED"; GO-LIVE Done notes, Later
@@ -437,6 +437,12 @@ R29's CARRY).
 - **Probably identified 2026-11-07 (8.1 prep):** `tests/thirdPartyLicences.test.ts` › "matches what the build shipped,
   entry for entry" timed out (16,242 ms vs 5,000) in `pnpm test` run right after `pnpm lint` — the same shape as 7.4's
   red; alone 16 / 16, the suite again 1,652 / 1,652. Cause: a timeout under load. Not fixed (a test-only task).
+- **`tests/browser/diffView.browser.test.ts` › diffView — 'full-page' surface (task 6.1, D-15) › "restores the reading
+  place across enter→exit (the hidden-column rung), non-vacuously"** — a KNOWN FLAKE, **local (Firefox), REPRODUCIBLE,
+  2 in 5, cause not found** (2026-11-15, the post-launch cleanup's Verify; `decisions.md`, "LOCAL FILES AND THE
+  SOURCES ZIP"). "expected 13105.266860961914 to be less than 8", once in the full browser suite (1 failed / 2,818
+  passed). Alone: 10 / 10 twice, then a red; 2 of 5 at HEAD `d8d25c4` and 2 of 5 with that commit's change, so it
+  predates it. The 'contained' surface's twin passes. Not fixed (a test-only task, with `thirdPartyLicences` above).
 - **An unidentified unit failure (`pnpm test`)** — a KNOWN FLAKE, **local, UNIDENTIFIED, 1 in 10** (M13 tasks 7.4 / 7.4a).
   One run at 7.4 (2026-11-06, Windows, right after `pnpm lint`) reported "1 failed | 1611 passed"; its output was not kept,
   so the test is not known. Since: 9 full runs green (4 at 7.4, 5 alone at 7.4a). On the next red, keep the output
@@ -459,6 +465,7 @@ R29's CARRY).
   slow test: 2.4–2.7 s → 0.23–0.34 s in-suite.
 - **The known flakes, as they now stand: THREE, none locally reproducible — `watchRemount`'s Raw place (CI-only, named),
   `editorPreview`'s keystroke count (CI-only, diagnostic) and the contrast-census inventory (not seen since 4.5).**
+  Since added (2026-11-15), and locally reproducible: `diffView`'s full-page reading place on Firefox, 2 in 5 (above).
   `pipeline.perf`, `uiFonts` and `diagramEnhancer` are fixed (5.0); copyAsHtml and diagramActions resolved earlier.
   `gh` is installed (2026-11-04): count CI reds with `gh run list` / `gh run view --log-failed`.
 
