@@ -1,6 +1,52 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-16 · 0.1.2 B3: THE SETUP GUIDE, redesigned as approved, with `options_ui` (D1–D6).**
+  - **Page** (`src/app/onboarding.ts`): a full-width page — a bar with the mark ("Peekover · Setup guide"), one column of
+    at most 880 px with a 16 px gutter, 17 px text, the title in Literata 700; a status block (label + the state's
+    sentence, one `role="status"` region; Ready / One step left / Check one setting, D2) with "This page checks again by
+    itself when you come back to it." until ready (the focus / visibility re-read exists since 6.1); "These steps are for
+    Chrome, Edge and Brave." / "…for Firefox."; numbered step cards; the drawing in the setting's step (hidden in the
+    blocked state, whose step has no switch); "Try it"; the raw-files note. Ready hides the heading, browsers line and
+    steps, as before. Below 641 px the type steps down and each drawing shows its narrow form. Every current sentence
+    kept; the site-access lines name Brave (D6, rows 587 / 592 reworded in place). The state machine, part names and
+    detection are unchanged. Constructed DOM only.
+  - **Drawings** (`src/app/onboardingFigures.ts`): inline SVG from DOM calls, coloured from the page tokens, a wide and a
+    narrow form; the entry passes its build's one under `import.meta.env.FIREFOX`, so each bundle carries only its own
+    (pinned by viewBox in `onboarding.test.ts`). The logo mark moved to `src/theme/mark.ts`, shared with the toolbar
+    (toolbar output unchanged; its tests pass).
+  - **Firefox button (D3):** `options_ui: { page: 'onboarding.html?embedded', open_in_tab: false }` in the Firefox
+    manifest only (PERMISSIONS.md; `tests/manifest.test.ts`). Step 1 is "Open Peekover in the Add-ons Manager." with
+    the button "Open the Add-ons Manager" (`runtime.openOptionsPage()`), the typed `about:addons` line kept beneath it
+    (row 581), and a refusal shows the existing fallback (row 574). **Measured on Firefox 160 with the built add-on**
+    (installed as a temporary add-on over the remote debugging protocol): the click opened about:addons on Peekover's
+    card, tabs "Details, Options (selected), Permissions and data, Release Notes", the Options frame loading
+    `onboarding.html?embedded`. Embedded, the page has no bar and no add-ons button and flows instead of filling a
+    fixed viewport: the frame stayed at 250 px when fixed, 1,417 px after (measured). **The 0.1.2 AMO reviewer notes
+    must state this manifest change** (the human's condition).
+  - **Try it (D4):** `src/app/sample.md` (745 B) bundled as a `?raw` import (`src/app/sample.ts`); the guide opens
+    `app.html?sample` (`tabs.create`, own URL, no permission) and the app entry shows it through
+    `AppController.selectFile`, the store-free seam: no folder, recent or pin is written (a recording store saw no
+    write) and nothing goes off-origin (`tests/browser/sample.browser.test.ts`, both engines). Export stays disabled for
+    it (it is not a folder file). The sample is a new ledger surface, "sample": its prose is checked sentence by
+    sentence (`tests/truthPins.test.ts`, with a firing control); its table rows and task items are example content and
+    have no rows (a table row cannot sit in a ledger cell).
+  - **Ledger:** rows 587 and 592 reworded (D6); new rows 635–649 (onboarding) and 650–654 (sample). Five import fences
+    treat a `.md` import as an asset leaf, like a font (necessary ripple: their traversal failed on the new edge).
+  - **Tests:** `onboarding.test.ts` +7 (9 red against the pre-redesign module, including the two D6 strings), the bundle
+    split; `onboarding.browser.test.ts`: the layout test re-measured for the column (gutters per part, ≤ 880 px,
+    centred at 1440, one drawing form per width), the keyboard test steps past the scroll box the taller page now
+    makes a Tab stop, the status region; a new contrast test (8 cases: both themes, ready and not, every new text part
+    at 4.5:1 or 3:1 for large text; the helpers' firing controls are the established ones in `tocScroll`); `sample`
+    unit and browser tests.
+  - **Sizes** (both builds, against the 0.1.1 snapshot): content script byte-identical (md5 `3b50e8b3` / `bd8101e2`);
+    guide chunk 11,168 → 18,180 B (Chromium) / 18,383 B (Firefox); the Literata 700 title face +22,004 B (a packaged
+    file; the reader's faces are inlined into its own chunk); `.output` 6,693,986 / 6,694,371 B of 7,340,032, headroom
+    646,046 / 645,661 B. The drawings: 2,208 B raw / 669 B gzip (Chromium pair), 2,728 / 734 B (Firefox pair), as
+    authored in the prototype.
+  - Not verified by automation: the Firefox Options tab's look inside about:addons (no screenshot path); for the
+    human's hand check. Revisit: that hand check.
+
 - **2026-11-16 · 0.1.2 B2: THE TWO FLAKES, fixed at the cause.**
   - **`thirdPartyLicences` (5 s timeout under load).** Cause: cold disk reads. The session's first run took 10,004 ms
     (Chromium arm) and timed out; the Firefox arm right after 126 ms; warm reruns 151–171 ms. Each `entriesFor` opened

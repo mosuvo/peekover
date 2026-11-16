@@ -68,6 +68,7 @@ import {
   LABEL_EXIT,
 } from '../render/diffChrome';
 import { buildAgentBadge } from '../render/agentBadge';
+import { buildMark } from '../theme/mark';
 
 /** Distinct ids per toolbar (a test mounts several). */
 let toolbarCount = 0;
@@ -75,7 +76,6 @@ let toolbarCount = 0;
 /** The toolbar's class root; every part is `${TOOLBAR_CLASS}__part`. */
 export const TOOLBAR_CLASS = 'peekover-toolbar';
 const C = TOOLBAR_CLASS;
-const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** The compact breakpoint (approved at 3.1): at this width and below, the compact toolbar. */
 export const COMPACT_MAX = 863;
@@ -204,31 +204,6 @@ export function toolbarCss(shell: string): string {
 `;
 }
 
-/** The two-eyed mark from the design's 128 drawing, drawn with tokens; the lids blink. */
-function buildMark(doc: Document): SVGSVGElement {
-  const el = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string>): SVGElementTagNameMap[K] => {
-    const node = doc.createElementNS(SVG_NS, tag);
-    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
-    return node;
-  };
-  const ink = 'var(--logo-ink)';
-  const svg = el('svg', { class: `${C}__mark`, viewBox: '0 0 60 52', 'aria-hidden': 'true', focusable: 'false' });
-  svg.append(
-    el('rect', { x: '4', y: '26', width: '52', height: '24', rx: '5', fill: 'var(--hl)', stroke: ink, 'stroke-width': '2.5' }),
-    el('line', { x1: '14', y1: '36', x2: '46', y2: '36', stroke: ink, 'stroke-width': '2.5', 'stroke-linecap': 'round', opacity: '.55' }),
-    el('line', { x1: '14', y1: '43', x2: '36', y2: '43', stroke: ink, 'stroke-width': '2.5', 'stroke-linecap': 'round', opacity: '.55' }),
-  );
-  for (const cx of [21, 41]) {
-    const lid = el('g', { class: `${C}__lid` });
-    lid.append(
-      el('circle', { cx: String(cx), cy: '17', r: '9', fill: 'var(--logo-eye)', stroke: ink, 'stroke-width': '2.5' }),
-      el('circle', { cx: String(cx + 2), cy: '19', r: '3.4', fill: ink }),
-    );
-    svg.append(lid);
-  }
-  return svg;
-}
-
 /** What the shell holds. */
 export interface ToolbarController {
   readonly element: HTMLElement;
@@ -280,7 +255,7 @@ export function createToolbar(doc: Document): ToolbarController {
   const word = doc.createElement('span');
   word.className = `${C}__word`;
   word.textContent = 'Peekover';
-  brand.append(buildMark(doc), word);
+  brand.append(buildMark(doc, C), word);
 
   const file = doc.createElement('span');
   file.className = `${C}__file`;

@@ -446,6 +446,31 @@ export function onboardingSentences(src: string): string[] {
   return out;
 }
 
+// ── 0.1.2 (D4): the bundled sample (`src/app/sample.md`, surface "sample"), opened by the setup guide's "Try it". Its
+// prose is checked sentence by sentence; its table rows and task items are example content, not claims, and a table
+// row cannot sit in a ledger cell, so they are left out here and have no rows.
+const SAMPLE = 'src/app/sample.md';
+export function sampleSentences(md: string): string[] {
+  return sentences(md)
+    .map((s) => s.text)
+    .filter((t) => !t.startsWith('|') && !/^\[[ x]\] /.test(t));
+}
+
+describe('the bundled sample says only what the ledger holds (0.1.2 D4)', () => {
+  it('every prose sentence of the sample has a "sample" ledger row', () => {
+    const said = sampleSentences(read(SAMPLE));
+    expect(said.length, 'the reader finds the sample prose (non-vacuous)').toBeGreaterThanOrEqual(4);
+    const known = new Set(ledgerRows().filter((r) => r.surface === 'sample' && r.status !== 'withdrawn').map((r) => r.sentence));
+    expect(said.filter((t) => !known.has(t)), 'sample sentences with no ledger row').toEqual([]);
+  });
+
+  it('the reader fires on a changed sentence', () => {
+    const changed = read(SAMPLE).replace('This file comes with Peekover.', 'This file comes with Peekover today.');
+    const known = new Set(ledgerRows().filter((r) => r.surface === 'sample').map((r) => r.sentence));
+    expect(sampleSentences(changed).filter((t) => !known.has(t))).toEqual(['This file comes with Peekover today.']);
+  });
+});
+
 describe('the setup guide says only what the ledger holds (013 task 9.2)', () => {
   it('every sentence of ONBOARDING_COPY has an "onboarding" ledger row', () => {
     const sentences = onboardingSentences(read(ONBOARDING));
@@ -685,6 +710,7 @@ function surfaceSentences(surface: string): Set<string> | null {
   if (surface in SURFACES) return new Set(sentences(docs[surface as Surface]).map((s) => s.text));
   if (surface in LISTINGS) return new Set(sentences(listingText(surface as Listing)).map((s) => s.text));
   if (surface === 'onboarding') return new Set(onboardingSentences(read(ONBOARDING)));
+  if (surface === 'sample') return new Set(sampleSentences(read(SAMPLE)));
   if (surface === 'site') {
     const privacy = siteBlocks(read('site/privacy/index.html')).flatMap((b) => b.text.split(/(?<=\.)\s+(?=[A-Z])/));
     // The privacy page's meta description is shown by search engines; it is the one <head> text with a row.

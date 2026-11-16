@@ -83,6 +83,18 @@ describe.each(['chrome', 'firefox'])('manifest zero-permission trust-pin (%s)', 
   });
 });
 
+// 0.1.2 (D3, HUMAN RULING 2026-11-16; PERMISSIONS.md, "options_ui"): Firefox only, the setup guide as the options page,
+// shown inside about:addons (`open_in_tab: false`) so `runtime.openOptionsPage()` opens Peekover's card there. A key, not a
+// permission: `permissions: []` above still holds on both engines.
+describe('options_ui (0.1.2, Firefox only)', () => {
+  it('Firefox declares the guide, embedded, as its options page; Chrome declares none', () => {
+    expect(manifestFor('firefox').options_ui).toEqual({ page: 'onboarding.html?embedded', open_in_tab: false });
+    expect(manifestFor('chrome').options_ui).toBeUndefined();
+    expect(manifestFor('chrome').options_page).toBeUndefined();
+    expect(manifestFor('firefox').options_page).toBeUndefined();
+  });
+});
+
 // 013 task 7.1 (gate-1 Q1; ADDITIVE, G-14). The version has ONE source, `package.json`: the config writes no
 // `version` / `version_name`, so WXT copies package.json's into both built manifests. When `.output` holds a
 // build, each built manifest's version is read and must equal package.json's (CI builds after the unit run, so

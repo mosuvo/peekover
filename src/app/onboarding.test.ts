@@ -225,8 +225,8 @@ describe('the deep link (D-11)', () => {
 // follows its own site-access answer. Firefox: `file:///*` is always granted there (measured, 159), so only
 // its web line asks.
 // The approved step-2 site lines, as written (HUMAN COPY APPROVAL 2026-11-10, walk fix 8.1g).
-const SITE_STEP = 'Under site access, turn on file:///* (in Chrome and Edge: “Automatically allow access on the following sites”).';
-const SITE_STEP_IF_OFF = 'If site access for file:///* is off, turn it on too (in Chrome and Edge: “Automatically allow access on the following sites”).';
+const SITE_STEP = 'Under site access, turn on file:///* (in Chrome, Edge and Brave: “Automatically allow access on the following sites”).';
+const SITE_STEP_IF_OFF = 'If site access for file:///* is off, turn it on too (in Chrome, Edge and Brave: “Automatically allow access on the following sites”).';
 
 describe('8.1f — site access (Chromium file:// and the raw hosts on both engines)', () => {
   type Site = OnboardingDeps['readSiteAccess'];
@@ -386,6 +386,17 @@ describe('the bundle: both builds reference the file-access API; only Chromium t
       expect(b, `firefox=${fx}`).toMatch(/getManifest\?\.\(\)/);
     }
   }, 30_000);
+  // 0.1.2 (D3, the drawings): each build carries only its own drawing (told apart by its viewBox) and its own opener.
+  it('each build carries only its own drawing and opener: Chromium the deep link, Firefox openOptionsPage', async () => {
+    const [cr, fx] = await Promise.all([bundle(false), bundle(true)]);
+    expect(cr, 'Chromium drawing').toContain('0 0 560 210');
+    expect(cr).not.toContain('0 0 560 230');
+    expect(cr).not.toContain('openOptionsPage');
+    expect(fx, 'Firefox drawing').toContain('0 0 560 230');
+    expect(fx).not.toContain('0 0 560 210');
+    expect(fx).toContain('openOptionsPage');
+    for (const b of [cr, fx]) expect(b, 'both open the sample').toContain('app.html?sample');
+  }, 30_000);
   // 2026-11-10 (HUMAN RULING, floor 153): the Firefox build now reads the setting too — the same call, no permission.
   it('the Firefox bundle references it too (Firefox 153+ reports the local-file setting)', async () => {
     const fx = await bundle(true);
@@ -394,4 +405,106 @@ describe('the bundle: both builds reference the file-access API; only Chromium t
     // …and never the Chromium-only deep link.
     expect(fx).not.toContain('chrome://extensions/?id=');
   }, 30_000);
+});
+
+// ── 0.1.2 B3: the redesign (decisions.md, "0.1.2 B3: THE SETUP GUIDE"; the human's approval, 2026-11-16) ──────────
+describe('0.1.2 — the status block: a label over the state sentence, one live region', () => {
+  it('Ready / One step left / Check one setting follow the answer; the re-check note shows until ready', async () => {
+    const cases: Array<[string, OnboardingDeps, string, boolean]> = [
+      ['on', { engine: 'chromium', readFileAccess: async () => true, readSiteAccess: async () => true }, ONBOARDING_COPY.ready, false],
+      ['off', { engine: 'chromium', readFileAccess: async () => false }, ONBOARDING_COPY.oneLeft, true],
+      ['blocked', { engine: 'chromium', readFileAccess: async () => true, readSiteAccess: async (w) => w === 'web' }, ONBOARDING_COPY.oneLeft, true],
+      ['unknown', { engine: 'chromium' }, ONBOARDING_COPY.checkLabel, true],
+      ['firefox on', { engine: 'firefox', readFileAccess: async () => true }, ONBOARDING_COPY.ready, false],
+      ['firefox off', { engine: 'firefox', readFileAccess: async () => false }, ONBOARDING_COPY.oneLeft, true],
+    ];
+    for (const [name, deps, label, notReady] of cases) {
+      const { doc } = mount(deps);
+      await flush();
+      const status = part(doc, 'status')!;
+      expect(status.getAttribute('role'), name).toBe('status');
+      expect(status.contains(part(doc, 'access')), `${name}: the sentence is inside the live region`).toBe(true);
+      expect(part(doc, 'label')?.textContent, name).toBe(label);
+      expect(status.dataset.tone, name).toBe(notReady ? 'warn' : 'ok');
+      expect(part(doc, 'recheck')?.hidden, `${name}: the re-check note`).toBe(!notReady);
+      expect(part(doc, 'recheck')?.textContent).toBe(ONBOARDING_COPY.recheck);
+      const browsers = doc.querySelector<HTMLElement>(`.${C}__browsers`)!;
+      expect(browsers.hidden, `${name}: the browsers line goes with the steps`).toBe(!notReady);
+      expect(browsers.textContent).toBe(deps.engine === 'chromium' ? ONBOARDING_COPY.browsersChromium : ONBOARDING_COPY.browsersFirefox);
+    }
+  });
+
+  it('a page bar names Peekover and the guide; the mark is decoration', async () => {
+    const { doc } = mount({ engine: 'chromium' });
+    const bar = doc.querySelector(`.${C}__bar`)!;
+    expect(bar.textContent).toBe(`${ONBOARDING_COPY.brand}· ${ONBOARDING_COPY.bar}`);
+    expect(bar.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+  });
+});
+
+describe('0.1.2 — Firefox: the Add-ons Manager button (D3)', () => {
+  it('with an opener: step 1 is the button, the typed address beneath; a refusal shows the fallback', async () => {
+    let calls = 0;
+    let refuse = false;
+    const { doc, win } = mount({ engine: 'firefox', readFileAccess: async () => false, openAddons: async () => { calls += 1; if (refuse) throw new Error('no'); } });
+    await flush();
+    const first = doc.querySelector(`.${C}__step`)!;
+    expect(first.querySelector(`.${C}__step-head`)?.textContent).toBe(ONBOARDING_COPY.step1FirefoxButton);
+    expect(first.textContent).toContain(ONBOARDING_COPY.step1Firefox);
+    const button = first.querySelector<HTMLButtonElement>(`.${C}__cta`)!;
+    expect(button.textContent).toBe(ONBOARDING_COPY.openAddons);
+    button.dispatchEvent(new win.MouseEvent('click'));
+    await flush();
+    expect(calls).toBe(1);
+    expect(part(doc, 'open-failed')?.hidden).toBe(true);
+    refuse = true;
+    button.dispatchEvent(new win.MouseEvent('click'));
+    await flush();
+    await flush();
+    expect(part(doc, 'open-failed')?.hidden, 'a refused opener shows the fallback').toBe(false);
+    expect(doc.querySelectorAll(`.${C}__step`).length).toBe(4);
+  });
+
+  it('embedded in about:addons (or with no opener): no button, the typed step first; embedded flows', async () => {
+    for (const deps of [
+      { engine: 'firefox', readFileAccess: async () => false, openAddons: async () => undefined, embedded: true },
+      { engine: 'firefox', readFileAccess: async () => false },
+    ] as OnboardingDeps[]) {
+      const { doc } = mount(deps);
+      await flush();
+      expect(doc.querySelector(`.${C}__steps .${C}__cta`), 'no add-ons button').toBeNull();
+      expect(doc.querySelector(`.${C}__step .${C}__step-head`)?.textContent).toBe(ONBOARDING_COPY.step1Firefox);
+      expect(doc.querySelector(`.${C}`)!.hasAttribute('data-embedded')).toBe(deps.embedded === true);
+    }
+  });
+});
+
+describe('0.1.2 — Try it (D4) and the drawing', () => {
+  it('"Open the sample" calls the opener; no opener, no block', async () => {
+    let opened = 0;
+    const { doc, win } = mount({ engine: 'chromium', openSample: async () => (opened += 1) });
+    const block = part(doc, 'try')!;
+    expect(block.textContent).toBe(`${ONBOARDING_COPY.tryText}${ONBOARDING_COPY.tryCta}`);
+    block.querySelector('button')!.dispatchEvent(new win.MouseEvent('click'));
+    await flush();
+    expect(opened).toBe(1);
+    const { doc: bare } = mount({ engine: 'chromium' });
+    expect(part(bare, 'try')).toBeNull();
+    expect(bare.body.textContent).not.toContain(ONBOARDING_COPY.tryHeading);
+  });
+
+  it('the injected drawing sits in the setting step, hidden in the blocked state (that step has no switch)', async () => {
+    const figure = (d: Document): HTMLElement => Object.assign(d.createElement('div'), { className: 'fig' });
+    const { doc } = mount({ engine: 'chromium', readFileAccess: async () => false, figure });
+    await flush();
+    const steps = doc.querySelectorAll(`.${C}__step`);
+    expect(steps[1].querySelector('.fig')).not.toBeNull();
+    expect((steps[1].querySelector('.fig') as HTMLElement).hidden).toBe(false);
+    const { doc: blocked } = mount({ engine: 'chromium', readFileAccess: async () => true, readSiteAccess: async (w) => w === 'web', figure });
+    await flush();
+    expect((blocked.querySelector('.fig') as HTMLElement).hidden).toBe(true);
+    const { doc: fx } = mount({ engine: 'firefox', readFileAccess: async () => false, figure });
+    await flush();
+    expect(fx.querySelectorAll(`.${C}__step`)[2].querySelector('.fig'), 'Firefox: the toggle step').not.toBeNull();
+  });
 });

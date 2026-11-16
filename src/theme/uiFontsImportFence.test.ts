@@ -86,7 +86,7 @@ function resolveLocal(from: string, spec: string): { module?: string; asset?: st
   const abs = bare.startsWith('@/')
     ? path.resolve(ROOT, bare.slice(2))
     : path.resolve(path.dirname(path.join(ROOT, from)), bare);
-  if (/\.(woff2?|ttf|otf|css|svg|png|json|html)$/i.test(bare)) return { asset: rel(abs) };
+  if (/\.(woff2?|ttf|otf|css|svg|png|json|html|md)$/i.test(bare)) return { asset: rel(abs) };
   for (const c of [`${abs}.ts`, path.join(abs, 'index.ts'), abs]) {
     if (fs.existsSync(c) && c.endsWith('.ts')) return { module: rel(c) };
   }

@@ -1,4 +1,5 @@
 import { mountOnboarding, ONBOARDING_COPY, type OnboardingDeps } from '../../src/app/onboarding';
+import { chromiumFigure, firefoxFigure } from '../../src/app/onboardingFigures';
 import { browser } from 'wxt/browser';
 import { getSettings, putSettings } from '../../src/app/store';
 import { directPort } from '../../src/settings/settingsPort';
@@ -43,8 +44,28 @@ function chromiumDeps(): OnboardingDeps {
     readSiteAccess: siteAccessReader(),
     openDetails: () =>
       browser.tabs.create({ url: `chrome://extensions/?id=${encodeURIComponent(browser.runtime.id)}` }),
+    figure: chromiumFigure,
   };
 }
+
+// Firefox (0.1.2, D3): the build declares `options_ui` (wxt.config.ts), so `runtime.openOptionsPage()` opens
+// about:addons on Peekover's own card — Options selected, "Permissions and data" one tab over (measured on Firefox
+// 160; `tabs.create('about:addons')` is refused there as an illegal URL). No permission. The options page is this
+// guide with `?embedded`: inside about:addons the button is not offered.
+function firefoxDeps(): OnboardingDeps {
+  return {
+    engine: 'firefox',
+    readFileAccess: fileAccessReader(),
+    readSiteAccess: siteAccessReader(),
+    openAddons: () => browser.runtime.openOptionsPage(),
+    embedded: new URL(location.href).searchParams.has('embedded'),
+    figure: firefoxFigure,
+  };
+}
+
+// "Try it" (0.1.2, D4): the app page with `?sample` shows the bundled sample through its store-free seam
+// (`entrypoints/app/main.ts`). `tabs.create` with the extension's own URL needs no permission (background.ts (1)).
+const openSample = (): Promise<unknown> => browser.tabs.create({ url: browser.runtime.getURL('/app.html?sample') });
 
 // The saved theme (6.2): this page is extension-origin, so it reads the settings store directly —
 // the app page's `directPort` (bounded, falls back to Auto). No permission, no request.
@@ -55,7 +76,7 @@ if (root) {
   try {
     mountOnboarding(
       root,
-      import.meta.env.FIREFOX ? { engine: 'firefox', readFileAccess: fileAccessReader(), readSiteAccess: siteAccessReader(), loadTheme } : { ...chromiumDeps(), loadTheme },
+      { ...(import.meta.env.FIREFOX ? firefoxDeps() : chromiumDeps()), openSample, loadTheme },
     );
   } catch {
     // Never a blank page (AGENTS.md #5): plain text, no sheet needed.

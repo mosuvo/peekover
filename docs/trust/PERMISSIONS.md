@@ -8,7 +8,8 @@ manifest declares **`permissions: []`** on both engines — re-proven every run 
 `permissions: []`, adds no `host_permissions` / `web_accessible_resources` / `webRequest`, and never
 requests `tabs` / `activeTab` / `scripting`. The only manifest key M2 added is the toolbar `action`
 (documented below), which is not a permission; M13 added the icon keys `icons` and `action.default_icon`
-(also below), which are not permissions either.
+(also below), which are not permissions either; 0.1.2 added `options_ui` to the Firefox build only (below), not a
+permission.
 
 ## Why a manifest ledger became a *capability* ledger
 
@@ -133,6 +134,16 @@ permission:** both are manifest keys that only name image files inside the exten
 the extension's own icon; they reach no page and no network, and need no `web_accessible_resources`.
 `tests/manifest.test.ts` pins both keys alongside `permissions: []`; `tests/icons.test.ts` checks that each file
 exists at its declared size.
+
+### `options_ui` — Firefox only (added 0.1.2)
+The Firefox build declares `options_ui: { page: "onboarding.html?embedded", open_in_tab: false }`. **This adds no
+permission:** it is a manifest key that names Peekover's own setup guide as its options page. Why: Firefox refuses to
+let an extension open `about:addons` itself (`tabs.create` rejects it as an illegal URL, measured on Firefox 160), but
+`runtime.openOptionsPage()` opens about:addons on Peekover's own card when this key is declared, one tab away from the
+"Access local files on your computer" switch. The setup guide's **"Open the Add-ons Manager"** button calls it, only
+when the user clicks. The card gains an **Options** tab, which shows the same guide (without that button). The Chrome
+build has no `options_ui`: its guide already opens Peekover's details on the extensions page. `tests/manifest.test.ts`
+pins the key on Firefox and its absence on Chrome.
 
 ### The app page (`app.html`) — a bundled extension page
 The second surface M2 introduces is an ordinary bundled extension page (`entrypoints/app/`). It is

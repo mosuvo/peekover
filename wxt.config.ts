@@ -81,6 +81,11 @@ export default defineConfig({
               data_collection_permissions: { required: ['none'] },
             },
           },
+          // 0.1.2 (D3, HUMAN RULING 2026-11-16): a manifest key, not a permission. It lets the setup guide's
+          // button open about:addons on Peekover's own card (`runtime.openOptionsPage()`; Firefox refuses
+          // `tabs.create('about:addons')`). The Options tab there shows the guide itself, `?embedded`. Firefox only:
+          // the Chromium guide already deep-links the extensions page. PERMISSIONS.md records it.
+          options_ui: { page: 'onboarding.html?embedded', open_in_tab: false },
         }
       : {}),
   }),

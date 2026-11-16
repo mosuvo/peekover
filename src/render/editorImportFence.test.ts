@@ -190,7 +190,7 @@ function resolveLocal(fromFile: string, spec: string): string | null | undefined
   const abs = bare.startsWith('@/')
     ? resolve(ROOT, bare.slice(2))
     : resolve(dirname(join(ROOT, fromFile)), bare);
-  if (/\.(woff2?|css|svg|png|json|html)$/i.test(bare)) return null; // an asset leaf, not a module
+  if (/\.(woff2?|css|svg|png|json|html|md)$/i.test(bare)) return null; // an asset leaf, not a module
   for (const candidate of [`${abs}.ts`, join(abs, 'index.ts'), abs]) {
     if (existsSync(candidate) && candidate.endsWith('.ts')) return rel(candidate);
   }

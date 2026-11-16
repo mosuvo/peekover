@@ -16,6 +16,7 @@ import { mountOnboarding, ONBOARDING_CLASS, ONBOARDING_COPY, type OnboardingCont
 import { mountAppShell, type AppStore } from '../../src/app/appShell';
 import { TOOLBAR_CLASS } from '../../src/app/toolbar';
 import { isOffOrigin, networkedUrls, offOriginProbeUrl, wireSettled } from './helpers/diagramWindow';
+import { backdropOf, inkOf, isLargeText, ratioOver, LARGE_TEXT_BAR, TEXT_BAR } from './helpers/contrast';
 import { resetThemeHostsForTest } from '../../src/theme/themeRegistry';
 import { resetThemeControlsForTest } from '../../src/theme/themeControl';
 import { setThemeSetting } from '../../src/theme/reader';
@@ -113,7 +114,7 @@ describe('8.1f — site access off, on screen', () => {
     const lines = [...step2.querySelectorAll('p')].filter(shown).map((p) => p.textContent);
     expect(lines).toEqual([
       ONBOARDING_COPY.step2Off,
-      'If site access for file:///* is off, turn it on too (in Chrome and Edge: “Automatically allow access on the following sites”).',
+      'If site access for file:///* is off, turn it on too (in Chrome, Edge and Brave: “Automatically allow access on the following sites”).',
     ]);
     expect([...step2.querySelectorAll('code')].filter(shown).map((c) => c.textContent)).toEqual([ONBOARDING_COPY.siteCode]);
     expect(ctl.element.scrollWidth, 'no sideways scroll').toBeLessThanOrEqual(ctl.element.clientWidth);
@@ -125,27 +126,72 @@ describe('8.1f — site access off, on screen', () => {
     await waitFor(() => access(ctl).textContent === ONBOARDING_COPY.siteOff, 'blocked');
     const step2 = ctl.element.querySelectorAll<HTMLElement>(`.${C}__step`)[1]!;
     const lines = [...step2.querySelectorAll('p')].filter(shown).map((p) => p.textContent);
-    expect(lines).toEqual(['Under site access, turn on file:///* (in Chrome and Edge: “Automatically allow access on the following sites”).']);
+    expect(lines).toEqual(['Under site access, turn on file:///* (in Chrome, Edge and Brave: “Automatically allow access on the following sites”).']);
     expect([...step2.querySelectorAll('code')].filter(shown).map((c) => c.textContent)).toEqual([ONBOARDING_COPY.siteCode]);
     expect(ctl.element.scrollWidth, 'no sideways scroll').toBeLessThanOrEqual(ctl.element.clientWidth);
   });
 });
 
-describe('6.1 — layout at 414 and 1440 px, both themes', () => {
+describe('6.1 / 0.1.2 — layout at 414 and 1440 px, both themes', () => {
+  // 0.1.2 (decisions.md, "0.1.2 B3: THE SETUP GUIDE"): a full-width page; its column is at most 880 px, centred, with
+  // a 16 px gutter at any width; the drawing shows its wide form above 640 px and its narrow form at phone width.
   for (const width of [414, 1440]) {
     for (const theme of ['light', 'dark'] as const) {
-      it(`${width} px, ${theme}: the card fits the window with a 16 px gutter, no sideways scroll; themed from tokens`, async () => {
+      it(`${width} px, ${theme}: the column keeps a 16 px gutter, at most 880 px; no sideways scroll; themed from tokens`, async () => {
         await page.viewport(width, 900);
-        const ctl = open({ engine: 'chromium', readFileAccess: async () => false }, theme);
+        const figure = (d: Document): HTMLElement => {
+          const w = d.createElement('div');
+          w.className = `${C}__figs`;
+          for (const form of ['wide', 'narrow']) {
+            const f = d.createElement('div');
+            f.className = `${C}__fig ${C}__fig--${form}`;
+            f.textContent = form;
+            w.append(f);
+          }
+          return w;
+        };
+        const ctl = open({ engine: 'chromium', readFileAccess: async () => false, figure, openSample: async () => undefined }, theme);
         await waitFor(() => access(ctl).textContent === ONBOARDING_COPY.off, 'off');
         await document.fonts.ready;
         const card = ctl.element.querySelector<HTMLElement>(`.${C}__card`)!.getBoundingClientRect();
-        expect(card.left, 'left gutter').toBeGreaterThanOrEqual(16 - 0.5);
-        expect(width - card.right, 'right gutter').toBeGreaterThanOrEqual(16 - 0.5);
-        expect(card.width).toBeLessThanOrEqual(440.5);
+        expect(card.width, 'the column is at most 880 px').toBeLessThanOrEqual(880.5);
+        for (const part of [`.${C}__title`, `.${C}__status`, `.${C}__steps`, `.${C}__try`, `.${C}__web`]) {
+          const r = ctl.element.querySelector<HTMLElement>(part)!.getBoundingClientRect();
+          expect(r.left, `${part}: left gutter`).toBeGreaterThanOrEqual(16 - 0.5);
+          expect(width - r.right, `${part}: right gutter`).toBeGreaterThanOrEqual(16 - 0.5);
+        }
+        if (width === 1440) expect(Math.abs(card.left - (width - card.right)), 'centred').toBeLessThanOrEqual(1);
         expect(ctl.element.scrollWidth, 'no sideways scroll').toBeLessThanOrEqual(ctl.element.clientWidth);
+        const wide = ctl.element.querySelector(`.${C}__fig--wide`)!;
+        const narrow = ctl.element.querySelector(`.${C}__fig--narrow`)!;
+        expect([shown(wide), shown(narrow)], 'one drawing form shows').toEqual(width > 640 ? [true, false] : [false, true]);
         const paper = getComputedStyle(ctl.element).backgroundColor;
         expect(paper).toBe(theme === 'light' ? 'rgb(251, 251, 248)' : 'rgb(18, 20, 28)');
+      });
+    }
+  }
+});
+
+describe('0.1.2 — contrast of the new parts, both themes, both tones', () => {
+  // Every text the redesign added or restyled, read against what is painted behind it (the tinted status blocks
+  // included), at the WCAG 1.4.3 bars: 4.5:1, or 3:1 for large text.
+  for (const theme of ['light', 'dark'] as const) {
+    for (const ready of [false, true]) {
+      it(`${theme}, ${ready ? 'ready' : 'one step left'}: the status, notes, steps and buttons meet the text bars`, async () => {
+        await page.viewport(1440, 900);
+        const ctl = open({ engine: 'chromium', readFileAccess: async () => ready, readSiteAccess: async () => true, openDetails: async () => undefined, openSample: async () => undefined }, theme);
+        await waitFor(() => access(ctl).textContent === (ready ? ONBOARDING_COPY.on : ONBOARDING_COPY.off), 'the state');
+        const parts = [`.${C}__label`, `.${C}__notice`, `.${C}__badge`, `.${C}__crumb`, `.${C}__intro`, `.${C}__try p`, `.${C}__try .${C}__cta`, `.${C}__web`];
+        if (!ready) parts.push(`.${C}__recheck`, `.${C}__browsers`, `.${C}__n`, `.${C}__step-head`, `.${C}__more`, `.${C}__steps .${C}__cta`);
+        const low: string[] = [];
+        for (const sel of parts) {
+          const el = ctl.element.querySelector<HTMLElement>(sel);
+          expect(el, sel).not.toBeNull();
+          const { ratio } = ratioOver(inkOf(el!), backdropOf(el!));
+          const bar = isLargeText(el!) ? LARGE_TEXT_BAR : TEXT_BAR;
+          if (ratio < bar) low.push(`${sel} ${ratio.toFixed(2)} < ${bar}`);
+        }
+        expect(low).toEqual([]);
       });
     }
   }
@@ -177,7 +223,10 @@ describe('6.1 — keyboard and names', () => {
     const focusable = [...ctl.element.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, [tabindex]')].filter(shown);
     expect(focusable.map((el) => el.textContent)).toEqual([ONBOARDING_COPY.openDetails]);
     (document.activeElement as HTMLElement | null)?.blur();
+    // 0.1.2: the page is now taller than the window, so the browser may make its scroll box a Tab stop first
+    // (keyboard scrolling); the button is the first CONTROL.
     await userEvent.tab();
+    if (document.activeElement === ctl.element) await userEvent.tab();
     expect(document.activeElement, 'Tab reaches the button').toBe(focusable[0]);
     await userEvent.keyboard('{Enter}');
     await waitFor(() => opened === 1, 'Enter activates it');
@@ -186,7 +235,10 @@ describe('6.1 — keyboard and names', () => {
     expect(page.elementLocator(main).getByRole('heading', { level: 1, name: ONBOARDING_COPY.title }).query()).not.toBeNull();
     expect(page.elementLocator(main).getByRole('region', { name: ONBOARDING_COPY.title }).query()).not.toBeNull();
     expect(page.elementLocator(main).getByRole('button', { name: ONBOARDING_COPY.openDetails }).query()).not.toBeNull();
-    expect(access(ctl).getAttribute('role')).toBe('status');
+    // 0.1.2: the label and the state's sentence are one live region (the status block).
+    const status = ctl.element.querySelector<HTMLElement>('[data-part="status"]')!;
+    expect(status.getAttribute('role')).toBe('status');
+    expect(status.contains(access(ctl))).toBe(true);
     for (const n of ctl.element.querySelectorAll(`.${C}__n`)) expect(n.getAttribute('aria-hidden'), 'step numbers are decoration').toBe('true');
   });
 

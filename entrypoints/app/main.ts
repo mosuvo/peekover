@@ -2,6 +2,7 @@ import { mountAppShell } from '../../src/app/appShell';
 import { folderSourceFromHandle } from '../../src/app/chromiumFolderSource';
 import type { OpenFolderOutcome } from '../../src/app/folderSource';
 import { browser } from 'wxt/browser';
+import { sampleFile, wantsSample } from '../../src/app/sample';
 
 // Bootstrap for the bundled app page (spec 002). Side-effects only — the entrypoint
 // binds the DOM to the shell, mirroring how the content entrypoint only calls
@@ -86,6 +87,10 @@ if (root) {
         }
       : { version, build },
   );
+
+  // "Try it" in the setup guide (0.1.2, D4): `?sample` shows the bundled sample through the shell's store-free
+  // seam — nothing is stored and nothing is requested (src/app/sample.ts). Query-inert on every other visit.
+  if (wantsSample(location.href)) void app.selectFile(sampleFile());
 
   if (isHarness) {
     (
