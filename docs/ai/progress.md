@@ -1,7 +1,7 @@
 # Progress — Peekover
 *The file every session reads first. Keep the "Now" section honest.*
 
-*Updated: 2026-11-15 (AMO approved 0.1.0, tentatively; GO-LIVE 8.1, 8.2 and 8.4 Firefox parts; 8.3 Firefox PASSED; AMO 0.1.1 submitted, Awaiting Review.) Earlier: 2026-11-14 (v0.1.1 RELEASED - Release run 43596256620, all four jobs green; the Chrome Web Store job submitted 0.1.1, PENDING_REVIEW, the first sign-in under the repository-ID WIF condition; issues #6 and #7 closed. Next: Chrome approval, then the Chrome screenshots; AMO 0.1.1 after AMO approves 0.1.0; then 0.1.2.) Earlier: 2026-11-11 (M13 CLOSED - 67 / 67 tasks; 9.5 close figures at HEAD: .output 6,660,128 / 6,660,114 B, content script 350,235 B; the 9.3 pick made by the reviewer under the human's delegation; M13's narrative moved to progress-archive.md. Next: docs/store/GO-LIVE.md. Earlier bylines: progress-archive.md, M13.)*
+*Updated: 2026-11-16 (0.1.1 approved in both stores; screenshot retakes postponed until after 0.1.2; 0.1.2 Phase A started.) Earlier: 2026-11-15 (AMO approved 0.1.0, tentatively; GO-LIVE 8.1, 8.2 and 8.4 Firefox parts; 8.3 Firefox PASSED; AMO 0.1.1 submitted, Awaiting Review.) Earlier: 2026-11-14 (v0.1.1 RELEASED - Release run 43596256620, all four jobs green; the Chrome Web Store job submitted 0.1.1, PENDING_REVIEW, the first sign-in under the repository-ID WIF condition; issues #6 and #7 closed. Next: Chrome approval, then the Chrome screenshots; AMO 0.1.1 after AMO approves 0.1.0; then 0.1.2.) Earlier: 2026-11-11 (M13 CLOSED - 67 / 67 tasks; 9.5 close figures at HEAD: .output 6,660,128 / 6,660,114 B, content script 350,235 B; the 9.3 pick made by the reviewer under the human's delegation; M13's narrative moved to progress-archive.md. Next: docs/store/GO-LIVE.md. Earlier bylines: progress-archive.md, M13.)*
 
 > **Closed-milestone narrative lives in [`progress-archive.md`](progress-archive.md).** This file is the
 > working set: what is true today, what is next, what is carried, and the current numbers. If you want the
@@ -11,13 +11,20 @@
 
 ## Now (start here)
 
+**0.1.2 PHASE A (design and plan only) STARTED 2026-11-16.** 0.1.1 is approved in both stores: Chrome published it
+(by 2026-11-16); AMO approved it Sun 2026-11-15, 8:46 PM local ("tentatively approved"). The 0.1.1 download folder is
+deleted. The store screenshot retakes (Chrome and AMO) are **postponed until after 0.1.2** (the UI changes again).
+0.1.2 scope: the collapsible sidebar, the setup-guide redesign, the `thirdPartyLicences` and Firefox `diffView` flakes,
+the GitHub Actions Node 20 upgrades. No product code is committed until the human approves the plan (`decisions.md`,
+"0.1.1 APPROVED IN BOTH STORES").
+
 **AMO APPROVED 0.1.0 (2026-11-15), tentatively** ("passed our automated screening and is tentatively approved"; a
 human review may still follow). Listing https://addons.mozilla.org/firefox/addon/peekover/ (GO-LIVE Done note 8.1
 (Firefox)). GO-LIVE 8.1 done; 8.2 and 8.4 (Firefox parts) committed: README and the site name the AMO listing, the
 site has a Firefox Add-ons button beside each Chrome one, and the ☰ breakpoint moved from 940 to 1100 px
 (`decisions.md`, "SITE: ☰ BREAKPOINT 1100 PX"). **Next:** (1) the human pushes, then runs GO-LIVE 3.2; (2) AMO 0.1.1 SUBMITTED 2026-11-15 (Upload New
 Version, listed; both zips from the v0.1.1 release; the approved notes), status Awaiting Review, 0.1.0 stays public
-(GO-LIVE Done notes, Later releases); compare its validation report with the 17 warnings; (3) the Chrome and AMO screenshot retakes; ~~(4) the post-launch cleanup~~ **DONE 2026-11-16** (`decisions.md`,
+(GO-LIVE Done notes, Later releases); compare its validation report with the 17 warnings; (3) the Chrome and AMO screenshot retakes (postponed until after 0.1.2, 2026-11-16); ~~(4) the post-launch cleanup~~ **DONE 2026-11-16** (`decisions.md`,
 "LOCAL FILES AND THE SOURCES ZIP", the DONE addendum): shots and the AMO test kit in `D:\Dev\peekover-keep\`, `video/`
 now `.local/video/`. 8.3 (Firefox) PASSED 2026-11-15,
 so GO-LIVE 8.1 and 8.3 are done for both stores.

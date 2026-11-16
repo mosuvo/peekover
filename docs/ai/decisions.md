@@ -1,6 +1,16 @@
 # Decisions — Peekover
 *Append-only. Newest first. Format: date · decision · why · revisit-when.*
 
+- **2026-11-16 · 0.1.1 APPROVED IN BOTH STORES; SCREENSHOT RETAKES POSTPONED; 0.1.2 STARTED (HUMAN RULING).**
+  Chrome Web Store: Google approved and published 0.1.1 (by 2026-11-16). AMO: 0.1.1 approved Sun 2026-11-15, 8:46 PM
+  local, "tentatively approved". The 0.1.1 download folder (`C:\Users\User\peekover-v0.1.1\`, the "Revisit" of
+  "LOCAL FILES AND THE SOURCES ZIP") is deleted. **The store screenshot retakes (Chrome and AMO) are postponed until
+  after 0.1.2**, because 0.1.2 changes the UI again (the collapsible sidebar, the setup-guide redesign). 0.1.2 starts
+  with Phase A, design and plan only: no product code is committed until the human approves the plan. Scope (the
+  human): the collapsible sidebar; the setup-guide redesign ("not very readable and user friendly"); the two flaky
+  tests (`thirdPartyLicences`, Firefox `diffView`), fixed at the cause; the GitHub Actions Node 20 deprecation.
+  GO-LIVE Done notes (Later releases). Revisit: at the human's approval of the 0.1.2 plan.
+
 - **2026-11-15 · LOCAL FILES AND THE SOURCES ZIP; POST-LAUNCH CLEANUP (HUMAN APPROVAL of CC's plan, 2026-11-15).**
   - **Layout.** Local-only working files go in `.local/` inside the repo (gitignored; a local README says what goes
     there). Things kept for safety go in one folder outside the repo, `D:\Dev\peekover-keep\`, whose `README.md` lists

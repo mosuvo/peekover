@@ -594,6 +594,8 @@ retired.*
 
 *From 0.1.1 on: one note per release, with the same evidence as 5.1–5.5 and 10.2.*
 
+- **0.1.1 approved in both stores · recorded 2026-11-16 · the human:** **Chrome Web Store:** Google approved and published 0.1.1 (by 2026-11-16; auto-publish on, 10.2). **AMO:** approved 0.1.1 on Sun 2026-11-15, 8:46 PM local, "tentatively approved" (the same wording as 0.1.0's; a human review may still follow). The local 0.1.1 download folder (`C:\Users\User\peekover-v0.1.1\`) is deleted. The store screenshot retakes (Chrome and AMO, 8.5) are **postponed until after 0.1.2**, whose sidebar and setup-guide changes alter the UI again. Not recorded: the comparison of AMO's 0.1.1 validation report with the 17 warnings (previous note).
+
 - **0.1.1 to AMO (7.2 for a new version) · texts approved by the human 2026-11-15; submitted the same day (next note):** upload `peekover-0.1.1-firefox.zip` and, when asked for source code, `peekover-0.1.1-sources.zip`, both from the v0.1.1 release (check them with `sha256sum --check --ignore-missing SHA256SUMS`). Paste these two texts as they stand. Then compare the upload's validation report with the warning counts in the reviewer notes (a local addons-linter 10.15.0 run, 2026-11-15: 0 errors, 17 warnings, 4 eval + 13 innerHTML, the same sites as 0.1.0).
   - **Version notes (public):**
     ```
