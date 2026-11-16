@@ -11,6 +11,14 @@
 
 ## Now (start here)
 
+**0.1.2 PHASE B, 2026-11-16 (Phase A approved; `decisions.md`, "0.1.2 PHASE A APPROVED").** Committed on `main`, not
+pushed: B1 actions on Node 24 (`c97bb85`), B2 the two flakes (`2264259`), B3 the setup guide with `options_ui`
+(`da02f9e`). **Waiting:** (1) the human pushes, then CI and Supply chain show no Node 20 annotation and a `release.yml`
+dry run (`gh workflow run release.yml --ref main -f dry_run=true`) shows pnpm 10.33.0 and `REPRODUCIBLE`; then Dependabot
+#2 and #3 can be closed (superseded); (2) the human's approval of the sidebar toggle prototype (the plan page,
+"Toggle (new)"), then B4 the sidebar; (3) the CHANGELOG wording; then version 0.1.2 and the full Verify. The 0.1.2 AMO
+reviewer notes must state the `options_ui` manifest change.
+
 **0.1.2 PHASE A (design and plan only) STARTED 2026-11-16.** 0.1.1 is approved in both stores: Chrome published it
 (by 2026-11-16); AMO approved it Sun 2026-11-15, 8:46 PM local ("tentatively approved"). The 0.1.1 download folder is
 deleted. The store screenshot retakes (Chrome and AMO) are **postponed until after 0.1.2** (the UI changes again).
