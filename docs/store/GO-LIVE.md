@@ -175,6 +175,8 @@ Pages works on public repositories only on this plan, so this comes after step 2
     | URL or channel | What "good" looks like | Ledger rows |
     |---|---|---|
     | https://peekover.dev | The Peekover site | #465, #508, #542 |
+    | https://peekover.dev/ | The Peekover site; its head carries the social preview tags, `og:url` this URL (added 2026-11-17, before the X launch) | #655 |
+    | https://peekover.dev/og-image.png | 200, `content-type: image/png`, 1200 × 630: the social preview image (added 2026-11-17) | #656 |
     | https://peekover.dev/privacy/ | The privacy policy, the same text as `docs/trust/PRIVACY.md` | #339, #463, #475, #506, #510, #540, #552, #617 |
     | https://github.com/mosuvo/peekover | The repository, signed out | #63, #64, #187, #196, #464, #507, #541 |
     | https://github.com/mosuvo/peekover#build-from-source | The README, scrolled to "Build from source" | #70 |
