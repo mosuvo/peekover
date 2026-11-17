@@ -428,23 +428,24 @@ describe('the site says only what ships (013 task 1.3, D-12; F-3)', () => {
     expect(unmarked, 'site URLs without a "live at release" row').toEqual([]);
   });
 
-  it('the social preview descriptions (og:description, twitter:description) of both pages say only ledgered sentences', () => {
-    // X and other link previews show these <head> values as the card's text, so they are claims like the visible text.
+  it('the <head> descriptions (description, og:description, twitter:description) of both pages say only ledgered sentences', () => {
+    // Search results and link previews show these <head> values as the page's text, so they are claims like the visible
+    // text. The plain description joined 2026-11-17, when the home page's still named a planned feature (on-device AI).
     const known = new Set(ledgerRows().filter((r) => r.surface === 'site' && r.status !== 'withdrawn').map((r) => r.sentence));
     const said = ['site/index.html', 'site/privacy/index.html'].flatMap((p) =>
       socialHead(read(p))
-        .filter((t) => /^(og|twitter):description$/.test(t.key))
+        .filter((t) => /^((og|twitter):)?description$/.test(t.key))
         .flatMap((t) => t.value.split(/(?<=\.)\s+(?=[A-Z])/).map((s) => `${p} ${t.key}: ${s.trim()}`)),
     );
-    expect(said.length, 'both pages carry the descriptions').toBeGreaterThanOrEqual(4);
+    expect(said.length, 'both pages carry the three descriptions').toBeGreaterThanOrEqual(6);
     expect(said.filter((s) => !known.has(s.replace(/^\S+ \S+: /, ''))), 'social description sentences with no site row').toEqual([]);
   });
 });
 
-/** The Open Graph and Twitter <meta> values in a page's <head>: what a link preview shows. */
+/** The description, Open Graph and Twitter <meta> values in a page's <head>: what search results and link previews show. */
 export function socialHead(html: string): Array<{ key: string; value: string }> {
   const head = /<head\b[^>]*>([\s\S]*?)<\/head>/i.exec(html)?.[1] ?? '';
-  return [...head.matchAll(/<meta\s+(?:property|name)="((?:og|twitter):[^"]+)"\s+content="([^"]*)">/g)].map((m) => ({ key: m[1], value: decode(m[2]) }));
+  return [...head.matchAll(/<meta\s+(?:property|name)="((?:og|twitter):[^"]+|description)"\s+content="([^"]*)">/g)].map((m) => ({ key: m[1], value: decode(m[2]) }));
 }
 
 // ── 013 task 9.2: the setup guide (`src/app/onboarding.ts`, surface "onboarding", rows since 6.1) sentence by sentence.
